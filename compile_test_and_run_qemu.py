@@ -5,7 +5,8 @@ import time
 
 
 TEST_SOURCE_PATH = '/mnt/hgfs/CSL_QEMU_memory_tracer/qemu_automation/test.c'
-RUN_QEMU_SCRIPT_PATH = '/mnt/hgfs/CSL_QEMU_memory_tracer/qemu_automation/run_qemu.bash'
+RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH = (
+    '/mnt/hgfs/CSL_QEMU_memory_tracer/qemu_automation/run_qemu_and_test.exp')
 TEST_ELF_NAME = 'test_elf'
 TEST_OUTPUT_PATH = 'test_output.txt'
 
@@ -29,7 +30,7 @@ compile_cmd = (f'gcc -Werror -Wall -pedantic '
 # subprocess.run(compile_cmd, shell=True, check=True, stdout=out2_file)
 subprocess.run(compile_cmd, shell=True, check=True)
 
-subprocess.run(RUN_QEMU_SCRIPT_PATH, shell=True, check=True)
+subprocess.run(RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH, shell=True, check=True)
 
 
 output = read_txt_file_when_it_exists(TEST_OUTPUT_PATH)
