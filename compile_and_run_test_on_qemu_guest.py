@@ -4,9 +4,9 @@ import os.path
 import time
 
 
-TEST_SOURCE_PATH = '/mnt/hgfs/CSL_QEMU_memory_tracer/qemu_automation/test.c'
+TEST_SOURCE_PATH = '/mnt/hgfs/qemu_automation/test.c'
 RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH = (
-    '/mnt/hgfs/CSL_QEMU_memory_tracer/qemu_automation/run_qemu_and_test.exp')
+    '/mnt/hgfs/qemu_automation/run_qemu_and_test.sh')
 TEST_ELF_NAME = 'test_elf'
 TEST_OUTPUT_PATH = 'test_output.txt'
 
@@ -20,8 +20,13 @@ def read_txt_file(file_path):
     with open(file_path) as f:
         return f.read()
 
+def try_to_remove(file_path):
+    try:
+        os.remove(file_path)
+    except OSError:
+        pass
 
-os.remove(TEST_OUTPUT_PATH)
+try_to_remove(TEST_OUTPUT_PATH)
 
 subprocess.run('cd ~', shell=True, check=True)
 
