@@ -1,17 +1,24 @@
 #!/usr/bin/expect -f
 
-
-# The host's password chars, separated by spaces. E.g. my host's password
-# is "123456".
-set HOST_PASSWORD_CHARS [list 1 2 3 4 5 6]
-
-set GUEST_IMAGE_PATH "oren_vm_disk2.qcow2"
-
+set host_password_chars [lindex $argv 0]
+set guest_image_path [lindex $argv 1]
+set pipe_for_serial [lindex $argv 2]
 
 # start qemu with the monitor redirected to our process' stdin and stdout.
 # start the guest not running (-S), as we load a snapshot anyway.
-spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
-    -hda $GUEST_IMAGE_PATH -monitor stdio -S
+# spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
+#     -hda $guest_image_path -monitor stdio -S
+
+spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
+    -hda $guest_image_path -monitor stdio \
+    -serial pipe:$pipe_for_serial 
+    # -serial pipe:pipe_for_serial
+
+    # -nographic    #-serial mon:stdio
+    # -chardev stdio,mux=on,id=stdio_char_dev \
+    # -serial chardev:stdio_char_dev \
+    # -serial chardev:stdio_char_dev \
+    # -monitor chardev:stdio_char_dev
 
 # (required if -nographic was used)
 # Switch to monitor interface 
@@ -32,7 +39,7 @@ sleep 3
 
 # type the password.
 
-foreach pass_char $HOST_PASSWORD_CHARS {
+foreach pass_char $host_password_chars {
     send "sendkey $pass_char\r"
 }
 # send "sendkey 2\r"
