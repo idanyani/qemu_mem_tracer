@@ -34,15 +34,19 @@ sleep 3
 foreach pass_char $host_password_chars {
     send "sendkey $pass_char\r"
 }
-# send "sendkey 2\r"
-# send "sendkey 3\r"
-# send "sendkey 4\r"
-# send "sendkey 5\r"
-# send "sendkey 6\r"
 send "sendkey ret\r"
 
 # the guest would now download elf_test and run it.
 
-interact
-expect "Ready for trace."
 
+### arggg the expect doesn't really work, it seems. maybe because of the
+# weird redirection?? not sure... i think it is because it goes right into stdout...
+expect "Ready for trace. Press any key to continue."
+
+
+send "sendkey ret\r"
+
+# expect "End running etest."
+
+
+interact
