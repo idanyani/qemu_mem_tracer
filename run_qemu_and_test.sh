@@ -4,21 +4,13 @@ set host_password_chars [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
 set pipe_for_serial [lindex $argv 2]
 
-# start qemu with the monitor redirected to our process' stdin and stdout.
-# start the guest not running (-S), as we load a snapshot anyway.
-# spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
-#     -hda $guest_image_path -monitor stdio -S
-
+# Start qemu while:
+#   The monitor is redirected to our process' stdin and stdout.
+#   /dev/ttyS0 of the guest is redirected to pipe_for_serial.
+#   The guest doesn't start running (-S), as we load a snapshot anyway.
 spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
     -serial pipe:$pipe_for_serial 
-    # -serial pipe:pipe_for_serial
-
-    # -nographic    #-serial mon:stdio
-    # -chardev stdio,mux=on,id=stdio_char_dev \
-    # -serial chardev:stdio_char_dev \
-    # -serial chardev:stdio_char_dev \
-    # -monitor chardev:stdio_char_dev
 
 # (required if -nographic was used)
 # Switch to monitor interface 
