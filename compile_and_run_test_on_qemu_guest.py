@@ -42,18 +42,23 @@ subprocess.run(compile_cmd, shell=True, check=True)
 
 try_to_remove(PIPE_FOR_SERIAL_NAME)
 subprocess.run(f'mkfifo {PIPE_FOR_SERIAL_NAME}', shell=True, check=True)
-subprocess.run(f'cat < {PIPE_FOR_SERIAL_NAME} &', shell=True, check=True)
+# subprocess.run(f'cat < {PIPE_FOR_SERIAL_NAME} &', shell=True, check=True)
 # Conveniently, the process that redirects the pipe to stdout dies when this
 # Python script ends. Use this line instead (and then later `kill -0 <pid>`)
 # if you wish to verify that.
 # subprocess.run(f'cat < {PIPE_FOR_SERIAL_NAME} &\n echo $!', shell=True, check=True)
 
 host_password_chars = " ".join(list(HOST_PASSWORD))
-subprocess.run(f'{RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH} '
-               f'"{host_password_chars}" "{GUEST_IMAGE_PATH}" '
-               f'{PIPE_FOR_SERIAL_NAME} ',
-               shell=True, check=True)
+print('aoeu')
+try:
+    subprocess.run(f'{RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH} '
+                   f'"{host_password_chars}" "{GUEST_IMAGE_PATH}" '
+                   f'{PIPE_FOR_SERIAL_NAME}',
+                   shell=True, check=True)
+finally:
+    os.remove(PIPE_FOR_SERIAL_NAME)
 
 
-output = read_txt_file_when_it_exists(TEST_OUTPUT_PATH)
+
+# output = read_txt_file_when_it_exists(TEST_OUTPUT_PATH)
 
