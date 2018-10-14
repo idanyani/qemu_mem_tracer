@@ -3,14 +3,15 @@ import os
 import os.path
 import time
 
-# External constants
+# External constants (with regard to this script and the scripts it spawns)
 TEST_SOURCE_PATH = '/mnt/hgfs/qemu_automation/test.c'
 RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH = (
     '/mnt/hgfs/qemu_automation/run_qemu_and_test.sh')
 HOST_PASSWORD = "123456"
 GUEST_IMAGE_PATH = "oren_vm_disk2.qcow2"
+SNAPSHOT_NAME = "ready_for_test4"
 
-# Internal constants
+# Internal constants (with regard to this script and the scripts it spawns)
 TEST_ELF_NAME = 'test_elf'
 TEST_OUTPUT_PATH = 'test_output.txt'
 PIPE_FOR_SERIAL_NAME = 'pipe_for_serial'
@@ -49,11 +50,12 @@ subprocess.run(f'mkfifo {PIPE_FOR_SERIAL_NAME}', shell=True, check=True)
 # subprocess.run(f'cat < {PIPE_FOR_SERIAL_NAME} &\n echo $!', shell=True, check=True)
 
 host_password_chars = " ".join(list(HOST_PASSWORD))
-print('aoeu')
+print('running run_qemu_and_test.sh')
 try:
     subprocess.run(f'{RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH} '
                    f'"{host_password_chars}" "{GUEST_IMAGE_PATH}" '
-                   f'{PIPE_FOR_SERIAL_NAME}',
+                   f'{PIPE_FOR_SERIAL_NAME} "{SNAPSHOT_NAME}" '
+                   f'"{HOST_PASSWORD}"',
                    shell=True, check=True)
 finally:
     os.remove(PIPE_FOR_SERIAL_NAME)
