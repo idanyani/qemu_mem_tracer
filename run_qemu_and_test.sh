@@ -75,6 +75,16 @@ exec echo $host_password > $guest_stdout_and_stderr_pty
 
 # the guest would now download elf_test and run it.
 
+puts "\n---expecting test info---\n"
+expect -i $guest_stdout_and_stderr_reader_id -indices -re \
+        "-----begin test info-----(.*)-----end test info-----" {
+    set test_info $expect_out(1,string)
+}
+exec echo "$test_info" > test_info.txt
+
+expect -i $guest_stdout_and_stderr_reader_id "Ready for trace. Press any key to continue."
+
+
 puts "\n---expecting ready for trace message---\n"
 expect -i $guest_stdout_and_stderr_reader_id "Ready for trace. Press any key to continue."
 
@@ -82,12 +92,13 @@ expect -i $guest_stdout_and_stderr_reader_id "Ready for trace. Press any key to 
 close -i $password_prompt_reader_id
 
 puts "\n---starting to trace---\n"
+send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 
+# Resume the test.
 send -i $monitor_id "sendkey ret\r"
-
 
 
 expect -i $guest_stdout_and_stderr_reader_id "End running test."
 
 
-interact -i $monitor_id
+# interact -i $monitor_id
