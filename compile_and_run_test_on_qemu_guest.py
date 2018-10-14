@@ -9,7 +9,7 @@ RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH = (
     '/mnt/hgfs/qemu_automation/run_qemu_and_test.sh')
 HOST_PASSWORD = "123456"
 GUEST_IMAGE_PATH = "oren_vm_disk2.qcow2"
-SNAPSHOT_NAME = "ready_for_test6"
+SNAPSHOT_NAME = "ready_for_test2"
 
 # Internal constants (with regard to this script and the scripts it spawns)
 TEST_ELF_NAME = 'test_elf'

@@ -26,11 +26,11 @@ proc get_pty {monitor_id} {
         }
     }
 }
-set guest_stdout_pty [get_pty monitor_id]
+set guest_stdout_and_stderr_pty [get_pty monitor_id]
 set guest_password_prompt_pty [get_pty monitor_id]
 
-spawn cat $guest_stdout_pty
-set guest_stdout_reader_id $spawn_id
+spawn cat $guest_stdout_and_stderr_pty
+set guest_stdout_and_stderr_reader_id $spawn_id
 
 spawn cat $guest_password_prompt_pty
 set password_prompt_reader_id $spawn_id
@@ -60,7 +60,7 @@ send -i $monitor_id "sendkey ret\r"
 # I didn't manage to make /dev/ttyS1 work, so I redirected both the password
 # prompt and stdout to /dev/ttyS0.
 # https://stackoverflow.com/questions/52801787/qemu-doesnt-create-a-second-serial-port-ubuntu-x86-64-guest-and-host
-expect -i guest_stdout_reader_id "password:"
+expect -i guest_stdout_and_stderr_reader_id "password:"
 puts "\n---authenticating (scp)---\n"
 
 # type the password.
@@ -71,12 +71,12 @@ puts "\n---authenticating (scp)---\n"
 # exec echo $host_password > $guest_password_prompt_pty
 ######
 # Dito "didn't manage to make /dev/ttyS1 work..." comment.
-exec echo $host_password > $guest_stdout_pty
+exec echo $host_password > $guest_stdout_and_stderr_pty
 
 # the guest would now download elf_test and run it.
 
 puts "\n---expecting ready for trace message---\n"
-expect -i $guest_stdout_reader_id "Ready for trace. Press any key to continue."
+expect -i $guest_stdout_and_stderr_reader_id "Ready for trace. Press any key to continue."
 
 # We don't need the password prompt reader anymore.
 close -i $password_prompt_reader_id
@@ -87,7 +87,7 @@ send -i $monitor_id "sendkey ret\r"
 
 
 
-expect -i $guest_stdout_reader_id "End running test."
+expect -i $guest_stdout_and_stderr_reader_id "End running test."
 
 
 interact -i $monitor_id
