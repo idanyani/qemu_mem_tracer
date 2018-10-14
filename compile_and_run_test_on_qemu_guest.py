@@ -9,7 +9,7 @@ RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH = (
     '/mnt/hgfs/qemu_automation/run_qemu_and_test.sh')
 HOST_PASSWORD = "123456"
 GUEST_IMAGE_PATH = "oren_vm_disk2.qcow2"
-SNAPSHOT_NAME = "ready_for_test4"
+SNAPSHOT_NAME = "ready_for_test6"
 
 # Internal constants (with regard to this script and the scripts it spawns)
 TEST_ELF_NAME = 'test_elf'
@@ -43,19 +43,12 @@ subprocess.run(compile_cmd, shell=True, check=True)
 
 try_to_remove(PIPE_FOR_SERIAL_NAME)
 subprocess.run(f'mkfifo {PIPE_FOR_SERIAL_NAME}', shell=True, check=True)
-# subprocess.run(f'cat < {PIPE_FOR_SERIAL_NAME} &', shell=True, check=True)
-# Conveniently, the process that redirects the pipe to stdout dies when this
-# Python script ends. Use this line instead (and then later `kill -0 <pid>`)
-# if you wish to verify that.
-# subprocess.run(f'cat < {PIPE_FOR_SERIAL_NAME} &\n echo $!', shell=True, check=True)
 
-host_password_chars = " ".join(list(HOST_PASSWORD))
 print('running run_qemu_and_test.sh')
 try:
     subprocess.run(f'{RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH} '
-                   f'"{host_password_chars}" "{GUEST_IMAGE_PATH}" '
-                   f'{PIPE_FOR_SERIAL_NAME} "{SNAPSHOT_NAME}" '
-                   f'"{HOST_PASSWORD}"',
+                   f'"{HOST_PASSWORD}" "{GUEST_IMAGE_PATH}" '
+                   f'{PIPE_FOR_SERIAL_NAME} "{SNAPSHOT_NAME}"',
                    shell=True, check=True)
 finally:
     os.remove(PIPE_FOR_SERIAL_NAME)

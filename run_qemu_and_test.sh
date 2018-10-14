@@ -1,18 +1,12 @@
 #!/usr/bin/expect -f
 # exp_internal 1
 
-set host_password_chars [lindex $argv 0]
+set host_password [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
 set pipe_for_serial [lindex $argv 2]
 set snapshot_name [lindex $argv 3]
-set host_password [lindex $argv 4]
 
 set timeout 5
-
-# spawn sudo chmod 666 /dev/ttyS4
-# set serial_chmod_id $spawn_id
-# expect -i serial_chmod_id "sudo] password "
-# send -i serial_chmod_id "$host_password\r"
 
 
 # Start qemu while:
@@ -21,43 +15,30 @@ set timeout 5
 #   The guest doesn't start running (-S), as we load a snapshot anyway.
 spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
-    -serial pty \
-    -serial pty
+    -serial pty -serial pty
 set monitor_id $spawn_id
-expect -i $monitor_id "serial pty: char device redirected to " {
-    expect -i $monitor_id -re {^/dev/pts/\d+} {
-        set guest_stdout_pty $expect_out(0,string)
+
+
+proc get_pty {monitor_id} {
+    expect -i $monitor_id "serial pty: char device redirected to " {
+        expect -i $monitor_id -re {^/dev/pts/\d+} {
+            return $expect_out(0,string)
+        }
     }
 }
+set guest_stdout_pty [get_pty monitor_id]
+set guest_password_prompt_pty [get_pty monitor_id]
 
-# puts "-----------------$serial0_pty-----------------"
-expect -i $monitor_id "serial pty: char device redirected to " {
-    expect -i $monitor_id -re {^/dev/pts/\d+} {
-        set password_prompt_pty $expect_out(0,string)
-    }
-}
-# puts "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-# puts "-----------------$serial1_pty-----------------"
-# puts "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+spawn cat $guest_stdout_pty
+set guest_stdout_reader_id $spawn_id
 
-# expect -i $monitor_id "(qemu) "
-
-# expect -i monitor_id "sudo] password "
-# send -i monitor_id "$host_password\r"
-
-# spawn cat $pipe_for_serial
-spawn cat $serial_pty
-# exec cat $pipe_for_serial &
-set serial_reader_id $spawn_id
-# expect -i serial_reader_id "sudo] password "
-# send -i serial_reader_id "$host_password\r"
+spawn cat $guest_password_prompt_pty
+set password_prompt_reader_id $spawn_id
 
 # (required if -nographic was used)
 # Switch to monitor interface 
 # send "\x01"
 # send "c"
-
-# expect -i $monitor_id "(qemu) "
 
 puts "\n---loading snapshot---"
 send -i $monitor_id "loadvm $snapshot_name\r"
@@ -68,39 +49,45 @@ puts "---copying test_elf from host---\n"
 
 send -i $monitor_id "sendkey ret\r"
 # IIUC, the following line doesn't manage to simulate "hitting Enter" in the
-# guest, because the guest
+# guest, because the guest's /dev/tty is already open when we overwrite
+# /dev/tty with a hard link to the file that /dev/ttyS0 points to.
 # exec echo > $serial_pty
 
-
 # wait for the scp connection to be established.
-# Unfortunately, I didn't manage to remove this ugly hacky sleep, as when scp
-# asks for the password, it is neither to stdout nor to stderr! can remove this maybe! and make the test simpler...
-# first do bash | tee /dev/ttyS4, and then do everything from there!
-# sleep 3
-expect -i serial_reader_id "password:"
+######
+# expect -i password_prompt_reader_id "password:"
+######
+# I didn't manage to make /dev/ttyS1 work, so I redirected both the password
+# prompt and stdout to /dev/ttyS0.
+# https://stackoverflow.com/questions/52801787/qemu-doesnt-create-a-second-serial-port-ubuntu-x86-64-guest-and-host
+expect -i guest_stdout_reader_id "password:"
 puts "\n---authenticating (scp)---\n"
-sleep 0.1
 
 # type the password.
-exec echo $host_password > $serial_pty
-# foreach pass_char $host_password_chars {
-#     send -i $monitor_id "sendkey $pass_char\r"
-# }
-# send -i $monitor_id "sendkey ret\r"
+# This works because scp directly opens /dev/tty, which we have overwritten in
+# advance, so it is as if scp opens the serial port which is connected to
+# guest_password_prompt_pty.
+######
+# exec echo $host_password > $guest_password_prompt_pty
+######
+# Dito "didn't manage to make /dev/ttyS1 work..." comment.
+exec echo $host_password > $guest_stdout_pty
 
 # the guest would now download elf_test and run it.
 
 puts "\n---expecting ready for trace message---\n"
-expect -i $serial_reader_id "Ready for trace. Press any key to continue."
+expect -i $guest_stdout_reader_id "Ready for trace. Press any key to continue."
+
+# We don't need the password prompt reader anymore.
+close -i $password_prompt_reader_id
 
 puts "\n---starting to trace---\n"
 
-# send -i $monitor_id "sendkey ret\r"
-exec echo > $serial_pty
+send -i $monitor_id "sendkey ret\r"
 
 
 
-expect -i $serial_reader_id "End running test."
+expect -i $guest_stdout_reader_id "End running test."
 
 
-interact
+interact -i $monitor_id
