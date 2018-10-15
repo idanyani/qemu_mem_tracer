@@ -4,17 +4,18 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define PRINT_STR(str) { \
     puts(str);           \
     fflush(stdout);      \
 }
 
-int global_var;
-
 int main() {
+    int *buf = (int *)malloc(sizeof(int));
+
     PRINT_STR("-----begin test info-----");
-    printf("&global_var: %p\n", (void *)&global_var);
+    printf("&buf: %p\n", (void *)&buf);
     PRINT_STR("-----end test info-----");
 
 
@@ -22,9 +23,9 @@ int main() {
     getchar(); /* The host would use 'sendkey' when it is ready. */
 
 
-    global_var = 0;
+    buf = 0;
     for (int i = 0; i < 100; ++i) {
-        ++global_var;
+        ++buf;
     }
 
 

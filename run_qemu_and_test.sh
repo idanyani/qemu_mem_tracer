@@ -6,19 +6,21 @@ set guest_image_path [lindex $argv 1]
 set pipe_for_serial [lindex $argv 2]
 set snapshot_name [lindex $argv 3]
 
-set timeout 5
+set timeout 15
 
 
 # Start qemu while:
 #   The monitor is redirected to our process' stdin and stdout.
 #   /dev/ttyS4 of the guest is redirected to pipe_for_serial.
 #   The guest doesn't start running (-S), as we load a snapshot anyway.
+puts "---starting qemu---"
 spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
     -serial pty -serial pty
 set monitor_id $spawn_id
 
 
+puts "---parsing qemu's message about pseudo-terminals that it opened---"
 proc get_pty {monitor_id} {
     expect -i $monitor_id "serial pty: char device redirected to " {
         expect -i $monitor_id -re {^/dev/pts/\d+} {
@@ -45,7 +47,7 @@ send -i $monitor_id "loadvm $snapshot_name\r"
 send -i $monitor_id "cont\r"
 
 # run scp to download test_elf
-puts "---copying test_elf from host---\n"
+puts "---copying test_elf from host---"
 
 send -i $monitor_id "sendkey ret\r"
 # IIUC, the following line doesn't manage to simulate "hitting Enter" in the
@@ -61,7 +63,7 @@ send -i $monitor_id "sendkey ret\r"
 # prompt and stdout to /dev/ttyS0.
 # https://stackoverflow.com/questions/52801787/qemu-doesnt-create-a-second-serial-port-ubuntu-x86-64-guest-and-host
 expect -i guest_stdout_and_stderr_reader_id "password:"
-puts "\n---authenticating (scp)---\n"
+puts "\n---authenticating (scp)---"
 
 # type the password.
 # This works because scp directly opens /dev/tty, which we have overwritten in
@@ -75,23 +77,23 @@ exec echo $host_password > $guest_stdout_and_stderr_pty
 
 # the guest would now download elf_test and run it.
 
-puts "\n---expecting test info---\n"
+puts "\n---expecting test info---"
 expect -i $guest_stdout_and_stderr_reader_id -indices -re \
         "-----begin test info-----(.*)-----end test info-----" {
     set test_info $expect_out(1,string)
 }
-exec echo "$test_info" > test_info.txt
+exec echo -n "$test_info" > test_info.txt
 
+puts "\n---expecting ready for trace message---"
 expect -i $guest_stdout_and_stderr_reader_id "Ready for trace. Press any key to continue."
 
 
-puts "\n---expecting ready for trace message---\n"
-expect -i $guest_stdout_and_stderr_reader_id "Ready for trace. Press any key to continue."
 
 # We don't need the password prompt reader anymore.
+puts "\n---closing password_prompt_reader---"
 close -i $password_prompt_reader_id
 
-puts "\n---starting to trace---\n"
+puts "---starting to trace---"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 
 # Resume the test.
@@ -100,5 +102,7 @@ send -i $monitor_id "sendkey ret\r"
 
 expect -i $guest_stdout_and_stderr_reader_id "End running test."
 
+
+puts "\n---end run_qemu_and_test.sh---"
 
 # interact -i $monitor_id
