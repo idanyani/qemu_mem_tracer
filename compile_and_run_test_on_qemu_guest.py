@@ -28,14 +28,6 @@ parser.add_argument('--disable_debug_in_qemu', dest='debug_flag',
                     help='If specified (in case --compile_qemu was specified),'
                          ' --disable-debug is passed to the configure script '
                          'of qemu instead of --enable-debug (the default).')
-parser.add_argument('--git_pull_qemu', dest='git_pull_qemu',
-                    action='store_const', const=True, default=False,
-                    help='If specified (in case --compile_qemu was specified),'
-                         ' first pull into qemu_mem_tracer from branch '
-                         'mem_tracer. (This might be convenient for someone '
-                         'that wants to edit the sources on a Windows machine,'
-                         ' and uses git to synchronize between the Linux '
-                         'machine on which they compile qemu.)')
 args = parser.parse_args()
 
 guest_image_path = os.path.realpath(args.guest_image_path)
@@ -60,10 +52,6 @@ def try_to_remove(file_path):
 
 
 if args.compile_qemu:
-    if args.git_pull_qemu:
-        subprocess.run('git pull origin mem_tracer', shell=True, check=True,
-                       cwd=qemu_mem_tracer_path)
-
     configure_cmd = (f'./configure --target-list=x86_64-softmmu '
                      f'--enable-trace-backends=simple {args.debug_flag}')
     print("running qemu's configure")
