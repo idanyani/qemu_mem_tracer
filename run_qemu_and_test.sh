@@ -3,10 +3,9 @@
 
 set host_password [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
-set pipe_for_serial [lindex $argv 2]
-set snapshot_name [lindex $argv 3]
+set snapshot_name [lindex $argv 2]
 
-set timeout 15
+set timeout 20
 
 
 # Start qemu while:

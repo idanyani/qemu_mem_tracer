@@ -2,20 +2,46 @@ import subprocess
 import os
 import os.path
 import time
+import argparse
 
-# External constants (with regard to this script and the scripts it spawns)
-TEST_SOURCE_PATH = '/mnt/hgfs/qemu_automation/test.c'
-RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH = (
-    '/mnt/hgfs/qemu_automation/run_qemu_and_test.sh')
-HOST_PASSWORD = "123456"
-GUEST_IMAGE_PATH = "oren_vm_disk2.qcow2"
-SNAPSHOT_NAME = "ready_for_test2"
 
-# Internal constants (with regard to this script and the scripts it spawns)
-TEST_ELF_NAME = 'test_elf'
-TEST_OUTPUT_PATH = 'test_output.txt'
-PIPE_FOR_SERIAL_NAME = 'pipe_for_serial'
+parser = argparse.ArgumentParser(description='Run a test on the qemu guest.')
+parser.add_argument('guest_image_path', type=str,
+                    help='The path of the qcow2 file which is the image of the'
+                         ' guest.')
+parser.add_argument('snapshot_name', type=str,
+                    help='The name of the snapshot saved by the monitor '
+                         'command `savevm`, which was specially constructed '
+                         'for running a test.')
+parser.add_argument('test_source_path', type=str,
+                    help='The path of the test\'s C source file.')
+parser.add_argument('host_password', type=str)
+parser.add_argument('qemu_mem_tracer_path', type=str,
+                    help='The path of qemu_mem_tracer.')
+parser.add_argument('--compile_qemu', dest='compile_qemu', action='store_const',
+                    const=True, default=False,
+                    help='If specified, this script also configures and '
+                         'compiles qemu.')
+parser.add_argument('--disable_debug_in_qemu', dest='debug_flag',
+                    action='store_const',
+                    const='--disable-debug', default='--enable-debug',
+                    help='If specified (in case --compile_qemu was specified),'
+                         ' --disable-debug is passed to the configure script '
+                         'of qemu instead of --enable-debug (the default).')
+parser.add_argument('--git_pull_qemu', dest='git_pull_qemu',
+                    action='store_const', const=True, default=False,
+                    help='If specified (in case --compile_qemu was specified),'
+                         ' first pull into qemu_mem_tracer from branch '
+                         'mem_tracer. (This might be convenient for someone '
+                         'that wants to edit the sources on a Windows machine,'
+                         ' and uses git to synchronize between the Linux '
+                         'machine on which they compile qemu.)')
+args = parser.parse_args()
 
+guest_image_path = os.path.realpath(args.guest_image_path)
+test_source_path = os.path.realpath(args.test_source_path)
+qemu_mem_tracer_path = os.path.realpath(args.qemu_mem_tracer_path)
+qemu_mem_tracer_location = os.path.split(qemu_mem_tracer_path)[0]
 
 def read_txt_file_when_it_exists(file_path):
     while not os.path.isfile(file_path):
@@ -32,28 +58,45 @@ def try_to_remove(file_path):
     except OSError:
         pass
 
-try_to_remove(TEST_ELF_NAME)
-try_to_remove(TEST_OUTPUT_PATH)
 
-subprocess.run('cd ~', shell=True, check=True)
+if args.compile_qemu:
+    if args.git_pull_qemu:
+        subprocess.run('git pull origin mem_tracer', shell=True, check=True,
+                       cwd=qemu_mem_tracer_path)
 
-compile_cmd = (f'gcc -Werror -Wall -pedantic '
-               f'{TEST_SOURCE_PATH} -o {TEST_ELF_NAME}')
-subprocess.run(compile_cmd, shell=True, check=True)
+    configure_cmd = (f'./configure --target-list=x86_64-softmmu '
+                     f'--enable-trace-backends=simple {args.debug_flag}')
+    print("running qemu's configure")
+    subprocess.run(configure_cmd, shell=True, check=True, cwd=qemu_mem_tracer_path)
+    print("running qemu's make")
+    subprocess.run('make', shell=True, check=True, cwd=qemu_mem_tracer_path)
 
-try_to_remove(PIPE_FOR_SERIAL_NAME)
-subprocess.run(f'mkfifo {PIPE_FOR_SERIAL_NAME}', shell=True, check=True)
+
+this_script_path = os.path.realpath(__file__)
+this_script_location = os.path.split(this_script_path)[0]
+# I am assuming here that this script and run_qemu_and_test.sh are in the same
+# folder.
+run_qemu_and_test_expect_script_path = os.path.join(this_script_location,
+                                                    'run_qemu_and_test.sh')
+
+test_elf_path = os.path.join(qemu_mem_tracer_location, 'test_elf')
+test_output_path = os.path.join(qemu_mem_tracer_location, 'test_output.txt')
+
+try_to_remove(test_elf_path)
+try_to_remove(test_output_path)
+
+compile_test_cmd = (f'gcc -Werror -Wall -pedantic '
+                    f'{test_source_path} -o {test_elf_path}')
+subprocess.run(compile_test_cmd, shell=True, check=True,
+               cwd=qemu_mem_tracer_location)
 
 print('running run_qemu_and_test.sh')
-try:
-    subprocess.run(f'{RUN_QEMU_AND_TEST_EXPECT_SCRIPT_PATH} '
-                   f'"{HOST_PASSWORD}" "{GUEST_IMAGE_PATH}" '
-                   f'{PIPE_FOR_SERIAL_NAME} "{SNAPSHOT_NAME}"',
-                   shell=True, check=True)
-finally:
-    os.remove(PIPE_FOR_SERIAL_NAME)
+subprocess.run(f'{run_qemu_and_test_expect_script_path} '
+               f'"{args.host_password}" "{guest_image_path}" '
+               f'"{args.snapshot_name}"',
+               shell=True, check=True, cwd=qemu_mem_tracer_location)
 
 
 
-# output = read_txt_file_when_it_exists(TEST_OUTPUT_PATH)
+# output = read_txt_file_when_it_exists(test_output_path)
 
