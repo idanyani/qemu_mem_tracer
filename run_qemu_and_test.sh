@@ -5,7 +5,7 @@ set host_password [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
 set snapshot_name [lindex $argv 2]
 
-set timeout 20
+set timeout 40
 
 
 # Start qemu while:
@@ -93,15 +93,42 @@ puts "\n---closing password_prompt_reader---"
 close -i $password_prompt_reader_id
 
 puts "---starting to trace---"
+# send -i $monitor_id "enable_tracing_single_event_optimization\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
+
+set test_start_time [timestamp]
+# set test_start_time [clock seconds]
 
 # Resume the test.
 send -i $monitor_id "sendkey ret\r"
 
-interact -i $monitor_id
+# interact -i $monitor_id
+
 expect -i $guest_stdout_and_stderr_reader_id "End running test."
+send -i $monitor_id "stop\r"
+
+set test_end_time [timestamp]
+# set test_end_time [clock seconds]
+
+set test_time [expr $test_end_time - $test_start_time]
+exec echo "test_time: $test_time" >> test_info.txt
+
+
+
+send -i $monitor_id "get_compiled_analysis_tool_result\r"
+
+
+expect -i $monitor_id "compiled analysis tool result: === " {
+    expect -i $monitor_id -re {^\d+} {
+        set analysis_tool_result $expect_out(0,string)
+    }
+}
+
+exec echo "analysis_tool_result: $analysis_tool_result" >> test_info.txt
+puts "\ntest_time: $test_time"
 
 
 puts "\n---end run_qemu_and_test.sh---"
+
 
 # interact -i $monitor_id

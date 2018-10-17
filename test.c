@@ -11,11 +11,13 @@
     fflush(stdout);      \
 }
 
+#define ARR_LEN 20000
+
 int main() {
-    int *buf = (int *)malloc(sizeof(int));
+    int *arr = (int *)malloc(ARR_LEN * sizeof(int));
 
     PRINT_STR("-----begin test info-----");
-    printf("&buf: %p\n", (void *)&buf);
+    printf("&arr: %p\n", (void *)&arr);
     PRINT_STR("-----end test info-----");
 
 
@@ -23,9 +25,8 @@ int main() {
     getchar(); /* The host would use 'sendkey' when it is ready. */
 
 
-    buf = 0;
-    for (int i = 0; i < 10; ++i) {
-        ++buf;
+    for (int i = 0; i < ARR_LEN; ++i) {
+        arr[i] = i;
     }
 
 
