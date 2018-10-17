@@ -7,6 +7,9 @@ set snapshot_name [lindex $argv 2]
 
 set timeout 40
 
+# exec mkfifo trace_fifo
+set gcc_cmd [list gcc -Werror -Wall -pedantic /mnt/hgfs/qemu_automation/simple_analysis.c -o analysis.o]
+eval exec $gcc_cmd
 
 # Start qemu while:
 #   The monitor is redirected to our process' stdin and stdout.
@@ -15,7 +18,7 @@ set timeout 40
 puts "---starting qemu---"
 spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
-    -serial pty -serial pty
+    -serial pty -serial pty -trace file=trace_fifo
 set monitor_id $spawn_id
 
 
@@ -92,12 +95,15 @@ expect -i $guest_stdout_and_stderr_reader_id "Ready for trace. Press any key to 
 puts "\n---closing password_prompt_reader---"
 close -i $password_prompt_reader_id
 
+
+send -i $monitor_id "trace-file guest_mem_before_exec on\r"
+
+
 puts "---starting to trace---"
 # send -i $monitor_id "enable_tracing_single_event_optimization\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 
 set test_start_time [timestamp]
-# set test_start_time [clock seconds]
 
 # Resume the test.
 send -i $monitor_id "sendkey ret\r"
@@ -108,23 +114,21 @@ expect -i $guest_stdout_and_stderr_reader_id "End running test."
 send -i $monitor_id "stop\r"
 
 set test_end_time [timestamp]
-# set test_end_time [clock seconds]
 
 set test_time [expr $test_end_time - $test_start_time]
 exec echo "test_time: $test_time" >> test_info.txt
 
 
 
-send -i $monitor_id "get_compiled_analysis_tool_result\r"
 
+# send -i $monitor_id "get_compiled_analysis_tool_result\r"
+# expect -i $monitor_id "compiled analysis tool result: === " {
+#     expect -i $monitor_id -re {^\d+} {
+#         set analysis_tool_result $expect_out(0,string)
+#     }
+# }
+# exec echo "analysis_tool_result: $analysis_tool_result" >> test_info.txt
 
-expect -i $monitor_id "compiled analysis tool result: === " {
-    expect -i $monitor_id -re {^\d+} {
-        set analysis_tool_result $expect_out(0,string)
-    }
-}
-
-exec echo "analysis_tool_result: $analysis_tool_result" >> test_info.txt
 puts "\ntest_time: $test_time"
 
 
