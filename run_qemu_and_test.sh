@@ -98,7 +98,7 @@ send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 # Resume the test.
 send -i $monitor_id "sendkey ret\r"
 
-
+interact -i $monitor_id
 expect -i $guest_stdout_and_stderr_reader_id "End running test."
 
 
