@@ -116,8 +116,9 @@ send -i $monitor_id "set_our_buf_address $test_info\r"
 puts "---getting ready to trace---"
 send -i $monitor_id "enable_tracing_single_event_optimization\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
-set simple_analysis_pid [spawn ./simple_analysis $fifo_name]
+spawn ./simple_analysis $fifo_name
 set simple_analysis_id $spawn_id
+set simple_analysis_pid [exp_pid -i $simple_analysis_id]
 
 exec kill -SIGKILL $temp_fifo_reader_pid
 
@@ -135,8 +136,8 @@ send -i $monitor_id "stop\r"
 exec kill -SIGUSR1 $simple_analysis_pid
 
 puts "\n---expecting simple_analysis output---"
-expect -i $simple_analysis_id -indices -re "num_of_mem_accesses: (\d+)" {
-    set simple_analysis_output $expect_out(0,string)
+expect -i $simple_analysis_id -indices -re {num_of_mem_accesses: (\d+)} {
+    set simple_analysis_output $expect_out(1,string)
 }
 
 set test_end_time [timestamp]
