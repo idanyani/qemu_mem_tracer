@@ -107,7 +107,7 @@ send -i $monitor_id "set_our_buf_address $test_info\r"
 
 
 puts "---starting to trace---"
-# send -i $monitor_id "enable_tracing_single_event_optimization\r"
+send -i $monitor_id "enable_tracing_single_event_optimization\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 
 set test_start_time [timestamp]

@@ -1,2 +1,2 @@
-with_compiling_qemu_compile_and_run_test_on_qemu_guest
+with_compiling_qemu_compile_and_run_test_on_qemu_guest.bash
 without_compiling_qemu_compile_and_run_test_on_qemu_guest.bash
