@@ -15,7 +15,8 @@
 }
 
 #define MEM_ACCESS_TRACE_RECORD_SIZE    (0x30)
-#define LOCAL_BUF_SIZE                  (1 << 16)
+#define PIPE_MAX_SIZE_ON_MY_UBUNTU      (1 << 20)
+#define LOCAL_BUF_SIZE                  (PIPE_MAX_SIZE_ON_MY_UBUNTU)
 
 bool end_analysis = false;
 unsigned long long num_of_mem_accesses = 0; 

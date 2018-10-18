@@ -15,18 +15,21 @@
 int main(int argc, char **argv) {
     int ret_val = 0;
     int pipe_fd = open(argv[1], O_RDONLY | O_NONBLOCK);
-    if (pipe_fd == -1) {
-        printf("creating fifo.\n");
-        mkfifo(argv[1], 0666);
-        pipe_fd = open(argv[1], O_RDONLY | O_NONBLOCK);
-
-        if (pipe_fd == -1) {
-            printf("failed to open fifo after running mkfifo.\n");
-            return 1;
-        }
+    if (pipe_fd != -1) {
+        printf("fifo already exists. This is considered a problem because "
+               "if there might be some other process that reads from theFIFO, "
+               "and so we would miss some of the data.\n");
+        ret_val = 1;
+        goto cleanup;
     }
-    else {
-        printf("fifo already exists.\n");
+
+    printf("creating fifo.\n");
+    mkfifo(argv[1], 0666);
+    pipe_fd = open(argv[1], O_RDONLY | O_NONBLOCK);
+
+    if (pipe_fd == -1) {
+        printf("failed to open fifo after running mkfifo.\n");
+        return 1;
     }
 
     int original_size = fcntl(pipe_fd, F_GETPIPE_SZ);
