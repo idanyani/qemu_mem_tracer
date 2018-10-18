@@ -32,7 +32,7 @@ int main() {
     }
 
 
-    PRINT_STR("End running test.");
+    PRINT_STR("End running test.\n");
 
     return 0;
 }

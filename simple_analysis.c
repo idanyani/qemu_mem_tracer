@@ -5,38 +5,58 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include <fcntl.h>
+#include <errno.h>
+#include <stdbool.h>
+#include <signal.h>
 
 #define PRINT_STR(str) { \
     puts(str);           \
     fflush(stdout);      \
 }
 
+#define MEM_ACCESS_TRACE_RECORD_SIZE    (0x30)
+#define LOCAL_BUF_SIZE                  (1 << 16)
+
+bool end_analysis = false;
+
+void handle_end_analysis_signal(int unused_signum) {
+    end_analysis = true;
+    printf("SIGUSR1 signal caught.\n");
+}
 
 int main(int argc, char **argv) {
-
-    int pipe_fd = open(argv[1], O_RDONLY);
+    int ret_val = 0;
+    PRINT_STR("opening fifo.\n");
+    int pipe_fd = open(argv[1], O_RDONLY | O_NONBLOCK);
     if (pipe_fd == -1) {
-        mkfifo(argv[1], 0666);
-        pipe_fd = open(argv[1], O_RDONLY);
-        assert(pipe_fd != -1);
+        PRINT_STR("failed to open fifo.\n");
+        return 1;
     }
 
-    fcntl(pipe_fd, F_SETPIPE_SZ, 1 << 19);
+    signal(SIGUSR1, handle_end_analysis_signal);
+    unsigned long long num_of_mem_accesses = 0; 
+    ssize_t num_of_bytes_read = 0;
+    ssize_t leftovers_size = 0;
+    char buf[LOCAL_BUF_SIZE];
 
 
-
-    PRINT_STR("Ready for trace. Press any key to continue.");
-    getchar(); /* The host would use 'sendkey' when it is ready. */
-
-
-    for (int i = 0; i < ARR_LEN; ++i) {
-        arr[i] = i;
+    while (!end_analysis) {
+        num_of_bytes_read = read(pipe_fd, buf, LOCAL_BUF_SIZE);
+        if (num_of_bytes_read == -1 && errno != EAGAIN) {
+            printf("read failed. errno: %d\n", errno);
+            ret_val = 1;
+            goto cleanup;
+        }
+        num_of_mem_accesses += (leftovers_size + num_of_bytes_read) /
+                               MEM_ACCESS_TRACE_RECORD_SIZE;
+        leftovers_size = (leftovers_size + num_of_bytes_read) %
+                         MEM_ACCESS_TRACE_RECORD_SIZE;
     }
+    printf("num_of_mem_accesses: %llu\n", num_of_mem_accesses);
+    // printf("num_of_mem_accesses: %zd\n", num_of_mem_accesses);
 
-
-    PRINT_STR("End running test.");
-
-    return 0;
+cleanup:
+    close(pipe_fd);
+    return ret_val;
 }
 

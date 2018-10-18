@@ -15,8 +15,14 @@ eval exec $gcc_cmd
 puts "---make big fifo---"
 exec ./make_big_fifo $fifo_name 1048576
 
-puts "---cat fifo to /dev/null---"
-exec cat $fifo_name > /dev/null &
+puts "---cat fifo to should_be_empty.bin---"
+set temp_fifo_reader_pid [spawn cat $fifo_name > should_be_empty.bin]
+
+set gcc_cmd2 [list gcc -Werror -Wall -pedantic /mnt/hgfs/qemu_automation/simple_analysis.c -o simple_analysis]
+eval exec $gcc_cmd2
+
+spawn cat $fifo_name > simp.bin &
+set temp_fifo_reader_id $spawn_id
 
 # Start qemu while:
 #   The monitor is redirected to our process' stdin and stdout.
@@ -43,7 +49,7 @@ set guest_password_prompt_pty [get_pty monitor_id]
 spawn cat $guest_stdout_and_stderr_pty
 set guest_stdout_and_stderr_reader_id $spawn_id
 
-spawn cat $guest_password_prompt_pty
+set password_prompt_reader_pid [spawn cat $guest_password_prompt_pty]
 set password_prompt_reader_id $spawn_id
 
 # (required if -nographic was used)
@@ -99,17 +105,23 @@ expect -i $guest_stdout_and_stderr_reader_id "Ready for trace. Press any key to 
 
 
 # We don't need the password prompt reader anymore.
-puts "\n---closing password_prompt_reader---"
+puts "\n---killing and closing password_prompt_reader---"
+exec kill -SIGKILL $password_prompt_reader_pid
 close -i $password_prompt_reader_id
 
 
 send -i $monitor_id "set_our_buf_address $test_info\r"
 
 
-puts "---starting to trace---"
+puts "---getting ready to trace---"
 send -i $monitor_id "enable_tracing_single_event_optimization\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
+set simple_analysis_pid [spawn ./simple_analysis $fifo_name]
+set simple_analysis_id $spawn_id
 
+exec kill -SIGKILL $temp_fifo_reader_pid
+
+puts "---starting to trace---"
 set test_start_time [timestamp]
 
 # Resume the test.
@@ -120,13 +132,17 @@ send -i $monitor_id "sendkey ret\r"
 expect -i $guest_stdout_and_stderr_reader_id "End running test."
 send -i $monitor_id "stop\r"
 
+exec kill -SIGUSR1 $simple_analysis_pid
+
+puts "\n---expecting simple_analysis output---"
+expect -i $simple_analysis_id -indices -re "num_of_mem_accesses: (\d+)" {
+    set simple_analysis_output $expect_out(0,string)
+}
+
 set test_end_time [timestamp]
 
 set test_time [expr $test_end_time - $test_start_time]
 exec echo "test_time: $test_time" >> test_info.txt
-
-
-
 
 send -i $monitor_id "get_compiled_analysis_tool_result\r"
 # expect -i $monitor_id "compiled analysis tool result: === " {
@@ -137,6 +153,7 @@ send -i $monitor_id "get_compiled_analysis_tool_result\r"
 # exec echo "analysis_tool_result: $analysis_tool_result" >> test_info.txt
 
 puts "\ntest_time: $test_time"
+puts "simple_analysis_output: $simple_analysis_output"
 
 
 puts "\n---end run_qemu_and_test.sh---"
