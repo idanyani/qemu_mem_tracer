@@ -12,14 +12,13 @@
     fflush(stdout);      \
 }
 
-#define FIFO_NAME "trace_fifo"
 
-int main() {
+int main(int argc, char **argv) {
 
-    int pipe_fd = open(FIFO_NAME, O_RDONLY);
+    int pipe_fd = open(argv[1], O_RDONLY);
     if (pipe_fd == -1) {
-        mkfifo(FIFO_NAME, 0666);
-        pipe_fd = open(FIFO_NAME, O_RDONLY);
+        mkfifo(argv[1], 0666);
+        pipe_fd = open(argv[1], O_RDONLY);
         assert(pipe_fd != -1);
     }
 

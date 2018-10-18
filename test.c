@@ -17,7 +17,8 @@ int main() {
     int *arr = (int *)malloc(ARR_LEN * sizeof(int));
 
     PRINT_STR("-----begin test info-----");
-    printf("&arr: %p\n", (void *)&arr);
+    // printf("&arr: %p\n", (void *)&arr);
+    printf("%p", (void *)arr);
     PRINT_STR("-----end test info-----");
 
 
@@ -25,8 +26,9 @@ int main() {
     getchar(); /* The host would use 'sendkey' when it is ready. */
 
 
-    for (int i = 0; i < ARR_LEN; ++i) {
+    for (int i = 0; i < 10000; ++i) {
         arr[i] = i;
+        // printf("%p\n", (void *)&arr[i]);
     }
 
 

@@ -5,11 +5,18 @@ set host_password [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
 set snapshot_name [lindex $argv 2]
 
+set fifo_name "trace_fifo"
+
 set timeout 40
 
-# exec mkfifo trace_fifo
-set gcc_cmd [list gcc -Werror -Wall -pedantic /mnt/hgfs/qemu_automation/simple_analysis.c -o analysis.o]
+set gcc_cmd [list gcc -Werror -Wall -pedantic /mnt/hgfs/qemu_automation/make_big_fifo.c -o make_big_fifo]
 eval exec $gcc_cmd
+
+puts "---make big fifo---"
+exec ./make_big_fifo $fifo_name 1048576
+
+puts "---cat fifo to /dev/null---"
+exec cat $fifo_name > /dev/null &
 
 # Start qemu while:
 #   The monitor is redirected to our process' stdin and stdout.
@@ -18,7 +25,7 @@ eval exec $gcc_cmd
 puts "---starting qemu---"
 spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
-    -serial pty -serial pty -trace file=trace_fifo
+    -serial pty -serial pty -trace file=$fifo_name
 set monitor_id $spawn_id
 
 
@@ -82,7 +89,7 @@ exec echo $host_password > $guest_stdout_and_stderr_pty
 puts "\n---expecting test info---"
 expect -i $guest_stdout_and_stderr_reader_id -indices -re \
         "-----begin test info-----(.*)-----end test info-----" {
-    set test_info $expect_out(1,string)
+    set test_info [string trim $expect_out(1,string)]
 }
 exec echo -n "$test_info" > test_info.txt
 
@@ -96,7 +103,7 @@ puts "\n---closing password_prompt_reader---"
 close -i $password_prompt_reader_id
 
 
-send -i $monitor_id "trace-file guest_mem_before_exec on\r"
+send -i $monitor_id "set_our_buf_address $test_info\r"
 
 
 puts "---starting to trace---"
@@ -121,7 +128,7 @@ exec echo "test_time: $test_time" >> test_info.txt
 
 
 
-# send -i $monitor_id "get_compiled_analysis_tool_result\r"
+send -i $monitor_id "get_compiled_analysis_tool_result\r"
 # expect -i $monitor_id "compiled analysis tool result: === " {
 #     expect -i $monitor_id -re {^\d+} {
 #         set analysis_tool_result $expect_out(0,string)
@@ -135,4 +142,4 @@ puts "\ntest_time: $test_time"
 puts "\n---end run_qemu_and_test.sh---"
 
 
-# interact -i $monitor_id
+interact -i $monitor_id
