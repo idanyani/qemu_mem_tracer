@@ -7,22 +7,44 @@ set host_password [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
 set snapshot_name [lindex $argv 2]
 
+set make_big_fifo_source_path "/mnt/hgfs/qemu_automation/make_big_fifo.c"
+set simple_analysis_source_path "/mnt/hgfs/qemu_automation/simple_analysis.c"
+set dummy_fifo_reader_path "/mnt/hgfs/qemu_automation/dummy_fifo_reader.bash"
+
 set fifo_name "trace_fifo"
+set fifo_name "trace_fifo_[timestamp]"
 
-exec rm $fifo_name
-
-set gcc_cmd [list gcc -Werror -Wall -pedantic /mnt/hgfs/qemu_automation/make_big_fifo.c -o make_big_fifo]
+set gcc_cmd [list gcc -Werror -Wall -pedantic $make_big_fifo_source_path -o make_big_fifo]
 eval exec $gcc_cmd
 
-puts "---make big fifo---"
+puts "---create big fifo---"
 exec ./make_big_fifo $fifo_name 1048576
+puts "---done creating big fifo $fifo_name---"
 
-puts "---cat fifo to should_be_empty.bin---"
-set temp_fifo_reader_pid [spawn cat $fifo_name > should_be_empty.bin]
+# sleep 5
+# set create_dummy_fifo_writer_cmd [list sleep 10000 > $fifo_name &]
+# set create_dummy_fifo_writer_cmd [list (while cat $fifo_name; do : Nothing; done &)]
+# eval exec $create_dummy_fifo_writer_cmd
+# eval exec $create_dummy_fifo_writer_cmd
+# exec sleep 10000 > $fifo_name &
+# puts "---spawn temp_fifo_reader---"
+# set temp_fifo_reader_pid [spawn cat $fifo_name > trace_events_mapping]
+# puts "---spawn temp_fifo_reader $temp_fifo_reader_pid---"
+# set temp_fifo_reader_id $spawn_id
+
+# set temp_fifo_reader_pid [spawn cat $fifo_name &]
+set temp_fifo_reader_pid [spawn $dummy_fifo_reader_path $fifo_name "trace_events_mapping"]
 set temp_fifo_reader_id $spawn_id
-
-set gcc_cmd2 [list gcc -Werror -Wall -pedantic /mnt/hgfs/qemu_automation/simple_analysis.c -o simple_analysis]
+set gcc_cmd2 [list gcc -Werror -Wall -pedantic $simple_analysis_source_path -o simple_analysis]
 eval exec $gcc_cmd2
+
+# set gcc_cmd3 [list gcc -Werror -Wall -pedantic $dummy_fifo_reader_path -o dummy_fifo_reader]
+# eval exec $gcc_cmd3
+puts "---spawn a dummy process to prevent sending EOF to readers of $fifo_name---"
+
+# exec echo "come on already" > $fifo_name
+# exec echo "come on already" > $fifo_name
+# exec echo "come on already" > $fifo_name
 
 
 # Start qemu while:
@@ -35,6 +57,15 @@ spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -serial pty -serial pty -trace file=$fifo_name
     # -serial pty -serial pty -trace file=my_trace_file
 set monitor_id $spawn_id
+
+sleep 0.4
+puts "snth"
+exec echo 1 > $fifo_name
+puts "snth2"
+sleep 0.4
+exec echo 2 > $fifo_name
+# exec echo 3 > $fifo_name
+# exec echo 4 > $fifo_name
 
 
 puts "---parsing qemu's message about pseudo-terminals that it opened---"
@@ -121,7 +152,10 @@ send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
 set simple_analysis_id $spawn_id
 
+puts "\n---killing and closing temp_fifo_reader---"
 exec kill -SIGKILL $temp_fifo_reader_pid
+close -i $temp_fifo_reader_id
+
 
 puts "---starting to trace---"
 set test_start_time [timestamp]
@@ -135,7 +169,7 @@ expect -i $guest_stdout_and_stderr_reader_id "End running test."
 send -i $monitor_id "stop\r"
 set test_end_time [timestamp]
 
-sleep 2
+sleep 1
 
 exec kill -SIGUSR1 $simple_analysis_pid
 
@@ -155,5 +189,7 @@ puts "simple_analysis_output: $simple_analysis_output"
 
 puts "\n---end run_qemu_and_test.sh---"
 
+
+exec rm $fifo_name
 
 interact -i $monitor_id

@@ -71,30 +71,31 @@ int main(int argc, char **argv) {
 
 
     while (!end_analysis) {
-        num_of_trace_records_read = fread(&trace_record, sizeof(trace_record), 1,
-                                  qemu_trace_fifo);
-        if (num_of_trace_records_read != 1) {
+        num_of_trace_records_read = fread(&trace_record, sizeof(trace_record),
+                                          1, qemu_trace_fifo);
+        if (num_of_trace_records_read == 1) {
+            uint64_t virt_addr = trace_record.virtual_addr;
+            if (virt_addr < LINUX_USER_SPACE_END_ADDR) {
+                ++num_of_mem_accesses_to_user_memory;
+                if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
+                    ++num_of_mem_accesses_to_our_buf;
+                }
+            }
+            else {
+                ++num_of_mem_accesses_to_kernel_memory;
+            }
+        }
+        else {
             printf("read failed.\n"
                    "num_of_trace_records_read: %zu, ferror: %d, feof: %d\n",
                    num_of_trace_records_read,
                    ferror(qemu_trace_fifo), feof(qemu_trace_fifo));
-            ret_val = 1;
-            goto cleanup;
-        }
-
-        uint64_t virt_addr = trace_record.virtual_addr;
-        if (virt_addr < LINUX_USER_SPACE_END_ADDR) {
-            ++num_of_mem_accesses_to_user_memory;
-            if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
-                ++num_of_mem_accesses_to_our_buf;
-            }
-        }
-        else {
-            ++num_of_mem_accesses_to_kernel_memory;
+            // ret_val = 1;
+            // goto cleanup;
         }
     }
 
-cleanup:
+// cleanup:
     fclose(qemu_trace_fifo);
     return ret_val;
 }
