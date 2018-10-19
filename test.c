@@ -26,9 +26,11 @@ int main() {
     getchar(); /* The host would use 'sendkey' when it is ready. */
 
 
-    for (int i = 0; i < ARR_LEN; ++i) {
-        arr[i] = i;
-        // printf("%p\n", (void *)&arr[i]);
+    for (int j = 0; j < 4; ++j) {
+        for (int i = 0; i < ARR_LEN; ++i) {
+            arr[i] = i;
+            // printf("%p\n", (void *)&arr[i]);
+        }
     }
 
 

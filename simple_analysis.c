@@ -14,7 +14,7 @@
     fflush(stdout);      \
 }
 
-#define MEM_ACCESS_TRACE_RECORD_SIZE    (0x30)
+#define MEM_ACCESS_TRACE_RECORD_SIZE    (0x20)
 #define PIPE_MAX_SIZE_ON_MY_UBUNTU      (1 << 20)
 #define LOCAL_BUF_SIZE                  (PIPE_MAX_SIZE_ON_MY_UBUNTU)
 

@@ -33,6 +33,7 @@ puts "---starting qemu---"
 spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
     -serial pty -serial pty -trace file=$fifo_name
+    # -serial pty -serial pty -trace file=my_trace_file
 set monitor_id $spawn_id
 
 
@@ -115,7 +116,7 @@ send -i $monitor_id "set_our_buf_address $test_info\r"
 
 
 puts "---getting ready to trace---"
-send -i $monitor_id "enable_tracing_single_event_optimization\r"
+send -i $monitor_id "enable_tracing_single_event_optimization 2\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 set simple_analysis_pid [spawn ./simple_analysis $fifo_name]
 set simple_analysis_id $spawn_id
