@@ -147,13 +147,7 @@ expect -i $simple_analysis_id -indices -re {num_of_mem_accesses: (\d+)} {
 set test_time [expr $test_end_time - $test_start_time]
 exec echo "test_time: $test_time" >> test_info.txt
 
-send -i $monitor_id "get_compiled_analysis_tool_result\r"
-# expect -i $monitor_id "compiled analysis tool result: === " {
-#     expect -i $monitor_id -re {^\d+} {
-#         set analysis_tool_result $expect_out(0,string)
-#     }
-# }
-# exec echo "analysis_tool_result: $analysis_tool_result" >> test_info.txt
+send -i $monitor_id "print_trace_results\r"
 
 puts "\ntest_time: $test_time"
 puts "simple_analysis_output: $simple_analysis_output"

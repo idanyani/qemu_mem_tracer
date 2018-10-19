@@ -28,8 +28,8 @@
 typedef struct {
     uint64_t event; /* event ID value */
     // uint64_t timestamp_ns;
-    uint32_t length;   /*    in bytes */
-    uint32_t padding;
+    // uint32_t length;   /*    in bytes */
+    // uint32_t padding;
     // uint32_t pid;
     uint64_t virtual_addr;
     uint64_t info;
