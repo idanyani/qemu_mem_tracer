@@ -118,7 +118,7 @@ send -i $monitor_id "set_our_buf_address $test_info\r"
 puts "---getting ready to trace---"
 send -i $monitor_id "enable_tracing_single_event_optimization 2\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
-set simple_analysis_pid [spawn ./simple_analysis $fifo_name]
+set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
 set simple_analysis_id $spawn_id
 
 exec kill -SIGKILL $temp_fifo_reader_pid
