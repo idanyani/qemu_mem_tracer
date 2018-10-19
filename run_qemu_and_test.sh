@@ -21,35 +21,16 @@ puts "---create big fifo---"
 exec ./make_big_fifo $fifo_name 1048576
 puts "---done creating big fifo $fifo_name---"
 
-# sleep 5
-# set create_dummy_fifo_writer_cmd [list sleep 10000 > $fifo_name &]
-# set create_dummy_fifo_writer_cmd [list (while cat $fifo_name; do : Nothing; done &)]
-# eval exec $create_dummy_fifo_writer_cmd
-# eval exec $create_dummy_fifo_writer_cmd
-# exec sleep 10000 > $fifo_name &
-# puts "---spawn temp_fifo_reader---"
-# set temp_fifo_reader_pid [spawn cat $fifo_name > trace_events_mapping]
-# puts "---spawn temp_fifo_reader $temp_fifo_reader_pid---"
-# set temp_fifo_reader_id $spawn_id
-
-# set temp_fifo_reader_pid [spawn cat $fifo_name &]
+puts "---spawn a temp reader of $fifo_name to read the mapping of trace events---"
 set temp_fifo_reader_pid [spawn $dummy_fifo_reader_path $fifo_name "trace_events_mapping"]
 set temp_fifo_reader_id $spawn_id
+
 set gcc_cmd2 [list gcc -Werror -Wall -pedantic $simple_analysis_source_path -o simple_analysis]
 eval exec $gcc_cmd2
 
-# set gcc_cmd3 [list gcc -Werror -Wall -pedantic $dummy_fifo_reader_path -o dummy_fifo_reader]
-# eval exec $gcc_cmd3
-puts "---spawn a dummy process to prevent sending EOF to readers of $fifo_name---"
-
-# exec echo "come on already" > $fifo_name
-# exec echo "come on already" > $fifo_name
-# exec echo "come on already" > $fifo_name
-
-
 # Start qemu while:
 #   The monitor is redirected to our process' stdin and stdout.
-#   /dev/ttyS4 of the guest is redirected to pipe_for_serial.
+#   /dev/ttyS0 of the guest is redirected to pipe_for_serial.
 #   The guest doesn't start running (-S), as we load a snapshot anyway.
 puts "---starting qemu---"
 spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
@@ -57,16 +38,6 @@ spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -serial pty -serial pty -trace file=$fifo_name
     # -serial pty -serial pty -trace file=my_trace_file
 set monitor_id $spawn_id
-
-sleep 0.4
-puts "snth"
-exec echo 1 > $fifo_name
-puts "snth2"
-sleep 0.4
-exec echo 2 > $fifo_name
-# exec echo 3 > $fifo_name
-# exec echo 4 > $fifo_name
-
 
 puts "---parsing qemu's message about pseudo-terminals that it opened---"
 proc get_pty {monitor_id} {
@@ -162,8 +133,6 @@ set test_start_time [timestamp]
 
 # Resume the test.
 send -i $monitor_id "sendkey ret\r"
-
-# interact -i $monitor_id
 
 expect -i $guest_stdout_and_stderr_reader_id "End running test."
 send -i $monitor_id "stop\r"
