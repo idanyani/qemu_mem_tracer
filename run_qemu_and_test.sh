@@ -91,9 +91,6 @@ exec echo -n "$test_info" > test_info.txt
 puts "\n---expecting ready for trace message---"
 expect -i $guest_ttyS0_reader_id "Ready for trace. Press any key to continue."
 
-interact -i $monitor_id
-
-
 send -i $monitor_id "set_our_buf_address $test_info\r"
 
 puts "---getting ready to trace---"
@@ -140,3 +137,4 @@ puts "\n---end run_qemu_and_test.sh---"
 
 exec rm $fifo_name
 
+interact -i $monitor_id
