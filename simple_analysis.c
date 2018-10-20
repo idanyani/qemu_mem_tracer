@@ -108,11 +108,11 @@ int main(int argc, char **argv) {
                 }
             }
             else {
-                if (cpl == 3 &&
-                    (virt_addr < CPU_ENTRY_AREA_START_ADDR ||
-                     virt_addr > CPU_ENTRY_AREA_END_ADDR)) {
+                if (cpl == 3) {
                     printf("cpl: %u, virt_addr: %lx\n", cpl, virt_addr);
-                }
+                    assert(virt_addr >= CPU_ENTRY_AREA_START_ADDR &&
+                           virt_addr <= CPU_ENTRY_AREA_END_ADDR);
+                } 
                 // assert(cpl != 3);
                 ++num_of_mem_accesses_to_kernel_memory;
             }
