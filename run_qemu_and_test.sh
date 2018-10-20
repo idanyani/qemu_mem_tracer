@@ -118,9 +118,9 @@ sleep 1
 
 exec kill -SIGUSR1 $simple_analysis_pid
 
-expect -i $simple_analysis_id -indices -re {num_of_mem_accesses: (\d+)} {
-    set simple_analysis_output $expect_out(1,string)
-}
+# expect -i $simple_analysis_id -indices -re {num_of_mem_accesses: (\d+)} {
+#     set simple_analysis_output $expect_out(1,string)
+# }
 
 
 set test_time [expr $test_end_time - $test_start_time]
@@ -129,7 +129,7 @@ exec echo "test_time: $test_time" >> test_info.txt
 send -i $monitor_id "print_trace_results\r"
 
 puts "\ntest_time: $test_time"
-puts "simple_analysis_output: $simple_analysis_output"
+# puts "simple_analysis_output: $simple_analysis_output"
 
 
 puts "\n---end run_qemu_and_test.sh---"
