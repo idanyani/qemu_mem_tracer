@@ -21,12 +21,11 @@ int main() {
     printf("%p", (void *)arr);
     PRINT_STR("-----end test info-----");
 
-
     PRINT_STR("Ready for trace. Press any key to continue.");
     getchar(); /* The host would use 'sendkey' when it is ready. */
 
 
-    for (int j = 0; j < 50; ++j) {
+    for (int j = 0; j < 70; ++j) {
         for (int i = 0; i < ARR_LEN; ++i) {
             ++arr[i];
             // printf("%p\n", (void *)&arr[i]);

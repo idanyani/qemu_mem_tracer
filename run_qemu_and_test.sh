@@ -6,6 +6,7 @@ set timeout 40
 set host_password [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
 set snapshot_name [lindex $argv 2]
+# set snapshot_name fresh
 
 set make_big_fifo_source_path "/mnt/hgfs/qemu_automation/make_big_fifo.c"
 set simple_analysis_source_path "/mnt/hgfs/qemu_automation/simple_analysis.c"
@@ -35,8 +36,8 @@ eval exec $gcc_cmd2
 puts "---starting qemu---"
 spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
-    -serial pty -trace file=$fifo_name
-    # -serial pty -trace file=my_trace_file
+    -serial pty -serial pty -trace file=$fifo_name
+    # -serial pty -serial pty -trace file=my_trace_file
 set monitor_id $spawn_id
 
 puts "---parsing qemu's message about pseudo-terminals that it opened---"
@@ -90,16 +91,7 @@ exec echo -n "$test_info" > test_info.txt
 puts "\n---expecting ready for trace message---"
 expect -i $guest_ttyS0_reader_id "Ready for trace. Press any key to continue."
 
-
-
-# We don't need the password prompt reader anymore.
-puts "\n---killing and closing password_prompt_reader---"
-exec kill -SIGKILL $password_prompt_reader_pid
-close -i $password_prompt_reader_id
-
-
 send -i $monitor_id "set_our_buf_address $test_info\r"
-
 
 puts "---getting ready to trace---"
 send -i $monitor_id "enable_tracing_single_event_optimization 2\r"
