@@ -51,8 +51,6 @@ guest_image_path = os.path.realpath(args.guest_image_path)
 test_source_path = os.path.realpath(args.test_source_path)
 qemu_mem_tracer_path = os.path.realpath(args.qemu_mem_tracer_path)
 qemu_mem_tracer_location = os.path.split(qemu_mem_tracer_path)[0]
-GMBE_block_len = 2 ** args.log_of_GMBE_block_len
-GMBE_tracing_ratio = 2 ** args.log_of_GMBE_tracing_ratio
 
 def read_txt_file_when_it_exists(file_path):
     while not os.path.isfile(file_path):
@@ -101,7 +99,7 @@ print('running run_qemu_and_test.sh')
 subprocess.run(f'{run_qemu_and_test_expect_script_path} '
                f'"{args.host_password}" "{guest_image_path}" '
                f'"{args.snapshot_name}" {args.trace_only_user_code_GMBE} '
-               f'{GMBE_block_len} {GMBE_tracing_ratio}',
+               f'{args.log_of_GMBE_block_len} {args.log_of_GMBE_tracing_ratio}',
                shell=True, check=True, cwd=qemu_mem_tracer_location)
 
 
