@@ -93,6 +93,7 @@ exec echo -n "$test_info" > test_info.txt
 
 puts "\n---expecting ready for trace message---"
 expect -i $guest_ttyS0_reader_id "Ready for trace. Press any key to continue."
+send -i $monitor_id "stop\r"
 
 send -i $monitor_id "set_our_buf_address $test_info\r"
 
@@ -114,6 +115,7 @@ puts "---starting to trace---"
 set test_start_time [timestamp]
 
 # Resume the test.
+send -i $monitor_id "cont\r"
 send -i $monitor_id "sendkey ret\r"
 
 expect -i $guest_ttyS0_reader_id "End running test."
