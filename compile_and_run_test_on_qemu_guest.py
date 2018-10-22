@@ -26,15 +26,15 @@ parser.add_argument('--trace_only_user_code_GMBE',
                          'by user code. Otherwise, qemu would trace all '
                          'accesses.')
 parser.add_argument('--log_of_GMBE_block_len', type=int, default=0,
-                    help='Log of the amount of memory accesses in a block. '
-                         '(It is used when determining whether to trace a '
-                         'GMBE event.)')
+                    help='Log of the length of a GMBE_block, i.e. the number '
+                         'of GMBE events in a GMBE_block. (It is used when '
+                         'determining whether to trace a GMBE event.)')
 parser.add_argument('--log_of_GMBE_tracing_ratio', type=int, default=0,
                     help='Log of the ratio between the number of blocks '
                          'of GMBE events we trace to the '
                          'total number of blocks. E.g. if GMBE_tracing_ratio '
-                         'is 16, we skip 15 blocks, then trace 1, then skip '
-                         '15, then trace 1, and so on...')
+                         'is 16, we trace 1 block, then skip 15 blocks, then '
+                         'trace 1, then skip 15, and so on...')
 parser.add_argument('--compile_qemu', action='store_const',
                     const=True, default=False,
                     help='If specified, this script also configures and '
