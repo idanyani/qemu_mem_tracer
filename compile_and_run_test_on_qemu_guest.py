@@ -5,7 +5,8 @@ import time
 import argparse
 
 
-parser = argparse.ArgumentParser(description='Run a test on the qemu guest.')
+parser = argparse.ArgumentParser(description='Run a test on the qemu guest.\n'
+                                             '(GMBE = guest_mem_before_exec)')
 parser.add_argument('guest_image_path', type=str,
                     help='The path of the qcow2 file which is the image of the'
                          ' guest.')
@@ -18,7 +19,23 @@ parser.add_argument('test_source_path', type=str,
 parser.add_argument('host_password', type=str)
 parser.add_argument('qemu_mem_tracer_path', type=str,
                     help='The path of qemu_mem_tracer.')
-parser.add_argument('--compile_qemu', dest='compile_qemu', action='store_const',
+parser.add_argument('--trace_only_user_code_GMBE',
+                    action='store_const',
+                    const='on', default='off',
+                    help='If specified, qemu would only trace memory accesses '
+                         'by user code. Otherwise, qemu would trace all '
+                         'accesses.')
+parser.add_argument('--log_of_GMBE_block_len', type=int, default=0,
+                    help='Log of the amount of memory accesses in a block. '
+                         '(It is used when determining whether to trace a '
+                         'GMBE event.)')
+parser.add_argument('--log_of_GMBE_tracing_ratio', type=int, default=0,
+                    help='Log of the ratio between the number of blocks '
+                         'of GMBE events we trace to the '
+                         'total number of blocks. E.g. if GMBE_tracing_ratio '
+                         'is 16, we skip 15 blocks, then trace 1, then skip '
+                         '15, then trace 1, and so on...')
+parser.add_argument('--compile_qemu', action='store_const',
                     const=True, default=False,
                     help='If specified, this script also configures and '
                          'compiles qemu.')
@@ -34,6 +51,8 @@ guest_image_path = os.path.realpath(args.guest_image_path)
 test_source_path = os.path.realpath(args.test_source_path)
 qemu_mem_tracer_path = os.path.realpath(args.qemu_mem_tracer_path)
 qemu_mem_tracer_location = os.path.split(qemu_mem_tracer_path)[0]
+GMBE_block_len = 2 ** args.log_of_GMBE_block_len
+GMBE_tracing_ratio = 2 ** args.log_of_GMBE_tracing_ratio
 
 def read_txt_file_when_it_exists(file_path):
     while not os.path.isfile(file_path):
@@ -81,7 +100,8 @@ subprocess.run(compile_test_cmd, shell=True, check=True,
 print('running run_qemu_and_test.sh')
 subprocess.run(f'{run_qemu_and_test_expect_script_path} '
                f'"{args.host_password}" "{guest_image_path}" '
-               f'"{args.snapshot_name}"',
+               f'"{args.snapshot_name}" {args.trace_only_user_code_GMBE} '
+               f'{GMBE_block_len} {GMBE_tracing_ratio}',
                shell=True, check=True, cwd=qemu_mem_tracer_location)
 
 

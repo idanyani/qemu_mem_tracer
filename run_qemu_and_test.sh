@@ -6,6 +6,9 @@ set timeout 40
 set host_password [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
 set snapshot_name [lindex $argv 2]
+set trace_only_user_code_GMBE [lindex $argv 3]
+set GMBE_block_len [lindex $argv 4]
+set GMBE_tracing_ratio [lindex $argv 5]
 # set snapshot_name fresh
 
 set make_big_fifo_source_path "/mnt/hgfs/qemu_automation/make_big_fifo.c"
@@ -96,6 +99,9 @@ send -i $monitor_id "set_our_buf_address $test_info\r"
 puts "---getting ready to trace---"
 send -i $monitor_id "enable_tracing_single_event_optimization 2\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
+send -i $monitor_id "update_trace_only_user_code_GMBE $trace_only_user_code_GMBE\r"
+send -i $monitor_id "set_GMBE_block_len $GMBE_block_len\r"
+send -i $monitor_id "set_GMBE_tracing_ratio $GMBE_tracing_ratio\r"
 set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
 set simple_analysis_id $spawn_id
 

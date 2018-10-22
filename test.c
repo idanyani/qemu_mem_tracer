@@ -36,7 +36,7 @@ int main() {
     // getchar(); /* The host would use 'sendkey' when it is ready. */
     // printf("check3.\n");
 
-    for (int j = 0; j < 60; ++j) {
+    for (int j = 0; j < 10; ++j) {
         for (int i = 0; i < ARR_LEN; ++i) {
             ++arr[i];
             // printf("%p\n", (void *)&arr[i]);
