@@ -49,6 +49,8 @@ uint64_t num_of_mem_accesses_to_user_memory = 0;
 uint64_t num_of_mem_accesses_to_kernel_memory = 0; 
 uint64_t num_of_mem_accesses_to_our_buf = 0; 
 uint64_t curr_offset = 0; 
+uint64_t num_of_read_failures = 0; 
+uint64_t num_of_read_failures_with_feof_1 = 0; 
 
 void handle_end_analysis_signal(int unused_signum) {
     end_analysis = true;
@@ -60,7 +62,13 @@ void handle_end_analysis_signal(int unused_signum) {
            num_of_mem_accesses_to_kernel_memory,
            num_of_mem_accesses_to_user_memory + num_of_mem_accesses_to_kernel_memory,
            num_of_mem_accesses_to_our_buf);
-    // printf("num_of_mem_accesses: %zd\n", num_of_mem_accesses);
+    if (num_of_read_failures != 0) {
+        printf("- - - - - ATTENTION - - - - -:\n"
+               "num_of_read_failures: %lu\n"
+               "num_of_read_failures_with_feof_1: %lu\n",
+               num_of_read_failures, num_of_read_failures_with_feof_1);
+
+    }
 }
 
 int main(int argc, char **argv) {
@@ -118,10 +126,16 @@ int main(int argc, char **argv) {
             }
         }
         else {
-            printf("read failed.\n"
-                   "num_of_trace_records_read: %zu, ferror: %d, feof: %d\n",
-                   num_of_trace_records_read,
-                   ferror(qemu_trace_fifo), feof(qemu_trace_fifo));
+            num_of_read_failures++;
+            if (feof(qemu_trace_fifo) == 1) {
+                num_of_read_failures_with_feof_1++;
+            }
+            // printf("read failed.\n"
+            //        "num_of_trace_records_read: %zu, ferror: %d, feof: %d\n",
+            //        num_of_trace_records_read,
+            //        ferror(qemu_trace_fifo), feof(qemu_trace_fifo));
+            
+
             // ret_val = 1;
             // goto cleanup;
         }

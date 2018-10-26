@@ -1,7 +1,7 @@
 #!/usr/bin/expect -f
 # exp_internal 1
 
-set timeout 40
+set timeout 360000
 
 set host_password [lindex $argv 0]
 set guest_image_path [lindex $argv 1]
@@ -37,11 +37,16 @@ eval exec $gcc_cmd2
 #   /dev/ttyS0 of the guest is redirected to a pty that qemu creates.
 #   The guest doesn't start running (-S), as we load a snapshot anyway.
 puts "---starting qemu---"
-spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
-    -hda $guest_image_path -monitor stdio \
-    -serial pty -serial pty -trace file=$fifo_name
+spawn gdb ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64
+# spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
+#     -hda $guest_image_path -monitor stdio \
+#     -serial pty -serial pty -trace file=$fifo_name
     # -serial pty -serial pty -trace file=my_trace_file
 set monitor_id $spawn_id
+
+expect -i $monitor_id "(gdb) "
+send -i $monitor_id "r -m 2560 -S -hda $guest_image_path -monitor stdio -serial pty -serial pty -trace file=$fifo_name\r"
+# interact -i $monitor_id
 
 puts "---parsing qemu's message about pseudo-terminals that it opened---"
 expect -i $monitor_id "serial pty: char device redirected to " {
@@ -118,6 +123,8 @@ set test_start_time [timestamp]
 send -i $monitor_id "cont\r"
 send -i $monitor_id "sendkey ret\r"
 
+interact -i $monitor_id
+
 expect -i $guest_ttyS0_reader_id "End running test."
 send -i $monitor_id "stop\r"
 set test_end_time [timestamp]
@@ -146,3 +153,4 @@ puts "\n---end run_qemu_and_test.sh---"
 exec rm $fifo_name
 
 interact -i $monitor_id
+
