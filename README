@@ -1,0 +1,80 @@
+usage: qemu_mem_tracer_runner.py [-h] [--workload_dir_path WORKLOAD_DIR_PATH]
+                                 [--trace_only_user_code_GMBE]
+                                 [--log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN]
+                                 [--log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO]
+                                 [--dont_exit_qemu_when_done]
+                                 guest_image_path snapshot_name
+                                 workload_runner_path host_password
+                                 qemu_mem_tracer_path
+
+Run a workload on the QEMU guest while writing optimized GMBE trace records to a FIFO.
+
+GMBE is short for guest_mem_before_exec. This is an event in upstream QEMU 3.0.0 that occurs on every attempt of the QEMU guest to access a virtual memory address.
+
+We optimized QEMU's tracing code for the case in which only trace records of GMBE are gathered (we call it GMBE only optimization - GMBEOO).
+When GMBEOO is enabled, a trace record is structured as follows:
+
+struct GMBEOO_TraceRecord {
+    uint8_t size_shift : 3; /* interpreted as "1 << size_shift" bytes */
+    bool    sign_extend: 1; /* whether it is a sign-extended operation */
+    uint8_t endianness : 1; /* 0: little, 1: big */
+    bool    store      : 1; /* whether it is a store operation */
+    uint8_t cpl        : 2;
+    uint64_t unused2   : 56;
+    uint64_t virt_addr : 64;
+};
+
+positional arguments:
+  guest_image_path      The path of the qcow2 file which is the image of the
+                        guest.
+  snapshot_name         The name of the snapshot saved by the monitor command
+                        `savevm`, which was specially constructed for running
+                        a workload with GMBE tracing.
+  workload_runner_path  The path of the workload_runner script.
+                        workload_runner would be downloaded and executed by
+                        the qemu guest. Make sure either workload_runner or
+                        the workload itself prints "Ready to trace. Press
+                        enter to continue.", then waits until enter is
+                        pressed, and only then starts executing the code you
+                        wish to trace. Finally, it (either workload_runner or
+                        the workload itself) must print "Stop tracing." when
+                        you wish the tracing to stop. (If "Stop tracing." is
+                        never printed, it will seem like qemu_mem_tracer is
+                        stuck.) Note that workload_runner can also be an ELF
+                        that includes the workload and the aforementioned
+                        prints.
+  host_password         If you don’t like the idea of your password in plain
+                        text, feel free to patch our code so that scp would
+                        use keys instead.
+  qemu_mem_tracer_path  The path of qemu_mem_tracer.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --workload_dir_path WORKLOAD_DIR_PATH
+                        The path of a directory that would be downloaded by
+                        the qemu guest into its home directory, and named
+                        qemu_mem_tracer_workload. (This is meant for
+                        convenience, e.g. in case your workload includes
+                        multiple small files that workload_runner executes
+                        sequentially. If your workload is heavy and
+                        unchanging, it would probably be faster to download it
+                        to the QEMU guest, use `savevm`, and later pass that
+                        snapshot's name as the snapshot_name argument.
+  --trace_only_user_code_GMBE
+                        If specified, qemu would only trace memory accesses by
+                        user code. Otherwise, qemu would trace all accesses.
+  --log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN
+                        Log of the length of a GMBE_block, i.e. the number of
+                        GMBE events in a GMBE_block. (It is used when
+                        determining whether to trace a GMBE event.)
+  --log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO
+                        Log of the ratio between the number of blocks of GMBE
+                        events we trace to the total number of blocks. E.g. if
+                        GMBE_tracing_ratio is 16, we trace 1 block, then skip
+                        15 blocks, then trace 1, then skip 15, and so on...
+  --dont_exit_qemu_when_done
+                        If specified, qemu won't be terminated after running
+                        the workload. Remember that the guest would probably
+                        be in the state it was before running the workload,
+                        which is probably a quite uncommon state, e.g.
+                        /dev/tty is overwritten by /dev/ttyS0.

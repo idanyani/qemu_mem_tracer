@@ -19,13 +19,26 @@ shutil.rmtree(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH, ignore_errors=True)
 os.mkdir(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH)
 
 parser = argparse.ArgumentParser(
+    formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Run a workload on the QEMU guest while writing optimized GMBE '
-                'traces to a FIFO.\n\n'
+                'trace records to a FIFO.\n\n'
                 'GMBE is short for guest_mem_before_exec. This is an event in '
                 'upstream QEMU 3.0.0 that occurs on every attempt of the QEMU '
-                'guest to access a virtual memory address.\n'
-                'The trace record of GMBE includes the virtual address that '
-                'the guest attempted to access.')
+                'guest to access a virtual memory address.\n\n'
+                'We optimized QEMU\'s tracing code for the case in which only '
+                'trace records of GMBE are gathered (we call it GMBE only '
+                'optimization - GMBEOO).\n'
+                'When GMBEOO is enabled, a trace record is structured as '
+                'follows:\n\n'
+                'struct GMBEOO_TraceRecord {\n'
+                '    uint8_t size_shift : 3; /* interpreted as "1 << size_shift" bytes */\n'
+                '    bool    sign_extend: 1; /* whether it is a sign-extended operation */\n'
+                '    uint8_t endianness : 1; /* 0: little, 1: big */\n'
+                '    bool    store      : 1; /* whether it is a store operation */\n'
+                '    uint8_t cpl        : 2;\n'
+                '    uint64_t unused2   : 56;\n'
+                '    uint64_t virt_addr : 64;\n'
+                '};')
 parser.add_argument('guest_image_path', type=str,
                     help='The path of the qcow2 file which is the image of the'
                          ' guest.')
@@ -47,7 +60,10 @@ parser.add_argument('workload_runner_path', type=str,
                          'will seem like qemu_mem_tracer is stuck.)\n\n'
                          'Note that workload_runner can also be an ELF that '
                          'includes the workload and the aforementioned prints.')
-parser.add_argument('host_password', type=str)
+parser.add_argument('host_password', type=str,
+                    help='If you don’t like the idea of your password in plain '
+                         'text, feel free to patch our code so that scp would '
+                         'use keys instead.')
 parser.add_argument('qemu_mem_tracer_path', type=str,
                     help='The path of qemu_mem_tracer.')
 parser.add_argument('--workload_dir_path', type=str, default=None,
@@ -77,16 +93,6 @@ parser.add_argument('--log_of_GMBE_tracing_ratio', type=int, default=0,
                          'total number of blocks. E.g. if GMBE_tracing_ratio '
                          'is 16, we trace 1 block, then skip 15 blocks, then '
                          'trace 1, then skip 15, and so on...')
-parser.add_argument('--compile_qemu', action='store_const',
-                    const=True, default=False,
-                    help='If specified, this script also configures and '
-                         'compiles qemu.')
-parser.add_argument('--disable_debug_in_qemu', dest='debug_flag',
-                    action='store_const',
-                    const='--disable-debug', default='--enable-debug',
-                    help='If specified (in case --compile_qemu was specified),'
-                         ' --disable-debug is passed to the configure script '
-                         'of qemu instead of --enable-debug (the default).')
 parser.add_argument('--dont_exit_qemu_when_done', action='store_const',
                     const=True, default=False,
                     help='If specified, qemu won\'t be terminated after running '
