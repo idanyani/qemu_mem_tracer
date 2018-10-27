@@ -15,7 +15,6 @@ set tracer_runner_dir_path [lindex $argv 6]
 set make_big_fifo_source_path "$tracer_runner_dir_path/make_big_fifo.c"
 set simple_analysis_source_path "$tracer_runner_dir_path/simple_analysis.c"
 set dummy_fifo_reader_path "$tracer_runner_dir_path/dummy_fifo_reader.bash"
-set dummy_fifo_reader_path "$tracer_runner_dir_path/dummy_fifo_reader.bash"
 
 set fifo_name "trace_fifo"
 set fifo_name "trace_fifo_[timestamp]"
@@ -60,7 +59,9 @@ set guest_ttyS0_reader_id $spawn_id
 # send "\x01"
 # send "c"
 
-# exec cp $tracer_runner_dir_path/copy_test_from_ubuntu_and_run_it.bash qemu_mem_tracer_workload_runner.bash
+# puts "\ncp $tracer_runner_dir_path/copy_workload_from_host_and_run_it.bash ~/qemu_mem_tracer_temp_dir_for_guest_to_download_from/workload_runner.bash"
+# set aoeu_cmd [list cp $tracer_runner_dir_path/copy_workload_from_host_and_run_it.bash /home/orenmn/qemu_mem_tracer_workload_runner.bash]
+# eval exec $aoeu_cmd 
 
 puts "\n---loading snapshot---"
 send -i $monitor_id "loadvm $snapshot_name\r"
@@ -126,7 +127,7 @@ send -i $monitor_id "sendkey ret\r"
 
 # interact -i $monitor_id
 
-expect -i $guest_ttyS0_reader_id "End running test."
+expect -i $guest_ttyS0_reader_id "Stop tracing."
 send -i $monitor_id "stop\r"
 set test_end_time [timestamp]
 
