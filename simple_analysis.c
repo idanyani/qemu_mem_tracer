@@ -102,6 +102,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    PRINT_STR("Ready to analyze.");
     while (!end_analysis) {
         num_of_trace_records_read = fread(&trace_record, sizeof(trace_record),
                                           1, qemu_trace_fifo);

@@ -32,7 +32,7 @@ int main() {
     printf("%p\n", (void *)arr);
     PRINT_STR("-----end test info-----");
 
-    PRINT_STR("Ready for trace. Press any key to continue.");
+    PRINT_STR("Ready to trace. Press enter to continue.");
     getchar(); /* The host would use 'sendkey' when it is ready. */
 
 

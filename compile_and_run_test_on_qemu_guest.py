@@ -14,11 +14,23 @@ parser.add_argument('snapshot_name', type=str,
                     help='The name of the snapshot saved by the monitor '
                          'command `savevm`, which was specially constructed '
                          'for running a test.')
-parser.add_argument('test_source_path', type=str,
-                    help='The path of the test\'s C source file.')
+parser.add_argument('workload_runner_path', type=str,
+                    help='The path of the workload_runner script.\n'
+                         'workload_runner would be downloaded and executed by '
+                         'the qemu guest.\n'
+                         'Make sure either workload_runner or the workload '
+                         'itself prints "Ready to trace. Press enter to continue.", '
+                         'then waits until enter is pressed, and only then '
+                         'starts executing the code you wish to trace.')
 parser.add_argument('host_password', type=str)
 parser.add_argument('qemu_mem_tracer_path', type=str,
                     help='The path of qemu_mem_tracer.')
+parser.add_argument('--workload_dir_path', type=str, default=0,
+                    help='Log of the ratio between the number of blocks '
+                         'of GMBE events we trace to the '
+                         'total number of blocks. E.g. if GMBE_tracing_ratio '
+                         'is 16, we trace 1 block, then skip 15 blocks, then '
+                         'trace 1, then skip 15, and so on...')
 parser.add_argument('--trace_only_user_code_GMBE',
                     action='store_const',
                     const='on', default='off',
@@ -48,7 +60,7 @@ parser.add_argument('--disable_debug_in_qemu', dest='debug_flag',
 args = parser.parse_args()
 
 guest_image_path = os.path.realpath(args.guest_image_path)
-test_source_path = os.path.realpath(args.test_source_path)
+workload_runner_path = os.path.realpath(args.workload_runner_path)
 qemu_mem_tracer_path = os.path.realpath(args.qemu_mem_tracer_path)
 qemu_mem_tracer_location = os.path.split(qemu_mem_tracer_path)[0]
 
@@ -102,7 +114,7 @@ try_to_remove(test_elf_path)
 try_to_remove(test_output_path)
 
 compile_test_cmd = (f'gcc -Werror -Wall -pedantic '
-                    f'{test_source_path} -o {test_elf_path}')
+                    f'{workload_runner_path} -o {test_elf_path}')
 subprocess.run(compile_test_cmd, shell=True, check=True,
                cwd=qemu_mem_tracer_location)
 

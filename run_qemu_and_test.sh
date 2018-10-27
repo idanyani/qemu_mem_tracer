@@ -9,13 +9,13 @@ set snapshot_name [lindex $argv 2]
 set trace_only_user_code_GMBE [lindex $argv 3]
 set log_of_GMBE_block_len [lindex $argv 4]
 set log_of_GMBE_tracing_ratio [lindex $argv 5]
-set qemu_automation_dir [lindex $argv 5]
+set tracer_runner_dir_path [lindex $argv 6]
 # set snapshot_name fresh
 
-set make_big_fifo_source_path "/mnt/hgfs/qemu_automation/make_big_fifo.c"
-set simple_analysis_source_path "/mnt/hgfs/qemu_automation/simple_analysis.c"
-set dummy_fifo_reader_path "/mnt/hgfs/qemu_automation/dummy_fifo_reader.bash"
-set dummy_fifo_reader_path "/mnt/hgfs/qemu_automation/dummy_fifo_reader.bash"
+set make_big_fifo_source_path "$tracer_runner_dir_path/make_big_fifo.c"
+set simple_analysis_source_path "$tracer_runner_dir_path/simple_analysis.c"
+set dummy_fifo_reader_path "$tracer_runner_dir_path/dummy_fifo_reader.bash"
+set dummy_fifo_reader_path "$tracer_runner_dir_path/dummy_fifo_reader.bash"
 
 set fifo_name "trace_fifo"
 set fifo_name "trace_fifo_[timestamp]"
@@ -60,7 +60,7 @@ set guest_ttyS0_reader_id $spawn_id
 # send "\x01"
 # send "c"
 
-# exec cp /mnt/hgfs/qemu_automation/copy_test_from_ubuntu_and_run_it.bash qemu_mem_tracer_workload_runner.bash
+# exec cp $tracer_runner_dir_path/copy_test_from_ubuntu_and_run_it.bash qemu_mem_tracer_workload_runner.bash
 
 puts "\n---loading snapshot---"
 send -i $monitor_id "loadvm $snapshot_name\r"
@@ -96,7 +96,7 @@ expect -i $guest_ttyS0_reader_id -indices -re \
 exec echo -n "$test_info" > test_info.txt
 
 puts "\n---expecting ready for trace message---"
-expect -i $guest_ttyS0_reader_id "Ready for trace. Press any key to continue."
+expect -i $guest_ttyS0_reader_id "Ready to trace. Press enter to continue."
 send -i $monitor_id "stop\r"
 
 send -i $monitor_id "set_our_buf_address $test_info\r"
@@ -109,7 +109,7 @@ send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
 set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
 set simple_analysis_id $spawn_id
-sleep 1
+expect -i $guest_ttyS0_reader_id "Ready to analyze."
 
 puts "\n---killing and closing temp_fifo_reader---"
 exec kill -SIGKILL $temp_fifo_reader_pid
