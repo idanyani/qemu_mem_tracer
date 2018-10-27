@@ -121,11 +121,12 @@ this_script_path = os.path.realpath(__file__)
 this_script_location = os.path.split(this_script_path)[0]
 this_script_location_dir_name = os.path.split(this_script_location)[-1]
 if this_script_location_dir_name != 'qemu_mem_tracer_runner':
-    print(f'This script assumes that other scripts in qemu_mem_tracer_runner '
+    print(f'Attention:\n'
+          f'This script assumes that other scripts in qemu_mem_tracer_runner '
           f'are in the same folder as this script (i.e. in the folder '
           f'"{this_script_location}").\n'
           f'However, "{this_script_location_dir_name}" != "qemu_mem_tracer_runner".\n'
-          f'Enter "y" if wish to proceed anyway.')
+          f'Enter "y" if you wish to proceed anyway.')
     while True:
         user_input = input()
         if user_input == 'y':
