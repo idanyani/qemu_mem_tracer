@@ -55,7 +55,6 @@ uint64_t num_of_read_failures = 0;
 uint64_t num_of_read_failures_with_feof_1 = 0; 
 
 void handle_end_analysis_signal(int unused_signum) {
-    end_analysis = true;
     printf("num_of_mem_accesses_by_user_code:              %lu\n"
            "num_of_mem_accesses_by_kernel_code:            %lu\n"
            "num_of_mem_accesses_by_CPL3_to_cpu_entry_area: %lu\n"
@@ -74,6 +73,7 @@ void handle_end_analysis_signal(int unused_signum) {
                num_of_read_failures, num_of_read_failures_with_feof_1);
 
     }
+    end_analysis = true;
 }
 
 int main(int argc, char **argv) {

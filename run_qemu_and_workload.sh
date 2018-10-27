@@ -23,8 +23,9 @@ set gcc_cmd [list gcc -Werror -Wall -pedantic $make_big_fifo_source_path -o make
 eval exec $gcc_cmd
 
 puts "---create big fifo---"
-exec ./make_big_fifo $fifo_name 1048576
-puts "---done creating big fifo $fifo_name---"
+set fifo_size [exec cat /proc/sys/fs/pipe-max-size]
+exec ./make_big_fifo $fifo_name $fifo_size
+puts "---done creating big fifo $fifo_name (size: $fifo_size)---"
 
 puts "---spawn a temp reader of $fifo_name to read the mapping of trace events---"
 set temp_fifo_reader_pid [spawn $dummy_fifo_reader_path $fifo_name "trace_events_mapping"]

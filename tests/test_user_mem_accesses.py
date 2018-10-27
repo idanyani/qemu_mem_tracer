@@ -6,6 +6,12 @@ import argparse
 import shutil
 import pathlib
 
+
+python3.7 /mnt/hgfs/qemu_mem_tracer_runner/compile_and_run_test_on_qemu_guest.py \
+          oren_vm_disk2.qcow2 ready_for_test4 /mnt/hgfs/qemu_mem_tracer_runner/test.c \
+          123456 ~/qemu_mem_tracer \
+          --log_of_GMBE_block_len 0 --log_of_GMBE_tracing_ratio 0 \
+
 TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_NAME = (
     'qemu_mem_tracer_temp_dir_for_guest_to_download_from')
 TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH = os.path.join(
