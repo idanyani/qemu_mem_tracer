@@ -39,14 +39,16 @@ typedef struct {
 
 typedef struct {
     uint64_t event; /* event ID value */
+    uint64_t padding;
     uint64_t virtual_addr;
     info_t   info;
 } OptimizedTraceRecord;
 
 
 bool end_analysis = false;
-uint64_t num_of_mem_accesses_to_user_memory = 0; 
-uint64_t num_of_mem_accesses_to_kernel_memory = 0; 
+uint64_t num_of_mem_accesses_by_user_code = 0; 
+uint64_t num_of_mem_accesses_by_kernel_code = 0; 
+uint64_t num_of_mem_accesses_by_CPL3_to_cpu_entry_area = 0; 
 uint64_t num_of_mem_accesses_to_our_buf = 0; 
 uint64_t curr_offset = 0; 
 uint64_t num_of_read_failures = 0; 
@@ -54,13 +56,16 @@ uint64_t num_of_read_failures_with_feof_1 = 0;
 
 void handle_end_analysis_signal(int unused_signum) {
     end_analysis = true;
-    printf("num_of_mem_accesses_to_user_memory: %lu\n"
-           "num_of_mem_accesses_to_kernel_memory: %lu\n"
-           "num_of_mem_accesses: %lu\n"
-           "num_of_mem_accesses_to_our_buf: %lu\n",
-           num_of_mem_accesses_to_user_memory,
-           num_of_mem_accesses_to_kernel_memory,
-           num_of_mem_accesses_to_user_memory + num_of_mem_accesses_to_kernel_memory,
+    printf("num_of_mem_accesses_by_user_code:              %lu\n"
+           "num_of_mem_accesses_by_kernel_code:            %lu\n"
+           "num_of_mem_accesses_by_CPL3_to_cpu_entry_area: %lu\n"
+           "num_of_mem_accesses:                           %lu\n"
+           "num_of_mem_accesses_to_our_buf:                %lu\n",
+           num_of_mem_accesses_by_user_code,
+           num_of_mem_accesses_by_kernel_code,
+           num_of_mem_accesses_by_CPL3_to_cpu_entry_area,
+           num_of_mem_accesses_by_user_code + num_of_mem_accesses_by_kernel_code +
+           num_of_mem_accesses_by_CPL3_to_cpu_entry_area,
            num_of_mem_accesses_to_our_buf);
     if (num_of_read_failures != 0) {
         printf("- - - - - ATTENTION - - - - -:\n"
@@ -109,20 +114,21 @@ int main(int argc, char **argv) {
             uint8_t cpl = trace_record.info.cpl;
             uint64_t virt_addr = trace_record.virtual_addr;
 
-            if (virt_addr < LINUX_USER_SPACE_END_ADDR) {
-                ++num_of_mem_accesses_to_user_memory;
-                if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
-                    ++num_of_mem_accesses_to_our_buf;
+            if (cpl == 3) {
+                if (virt_addr >= CPU_ENTRY_AREA_START_ADDR &&
+                    virt_addr <= CPU_ENTRY_AREA_END_ADDR)
+                {
+                    ++num_of_mem_accesses_by_CPL3_to_cpu_entry_area;
+                }
+                else {
+                    ++num_of_mem_accesses_by_user_code;
+                    if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
+                        ++num_of_mem_accesses_to_our_buf;
+                    }
                 }
             }
             else {
-                if (cpl == 3) {
-                    // printf("cpl: %u, virt_addr: %lx\n", cpl, virt_addr);
-                    assert(virt_addr >= CPU_ENTRY_AREA_START_ADDR &&
-                           virt_addr <= CPU_ENTRY_AREA_END_ADDR);
-                } 
-                // assert(cpl != 3);
-                ++num_of_mem_accesses_to_kernel_memory;
+                ++num_of_mem_accesses_by_kernel_code;
             }
         }
         else {
@@ -131,9 +137,9 @@ int main(int argc, char **argv) {
                 num_of_read_failures_with_feof_1++;
             }
             // printf("read failed.\n"
-            //        "num_of_trace_records_read: %zu, ferror: %d, feof: %d\n",
+            //        "num_of_trace_records_read: %zu, ferror: %d, feof: %d, errno: %d\n",
             //        num_of_trace_records_read,
-            //        ferror(qemu_trace_fifo), feof(qemu_trace_fifo));
+            //        ferror(qemu_trace_fifo), feof(qemu_trace_fifo), errno);
             
 
             // ret_val = 1;

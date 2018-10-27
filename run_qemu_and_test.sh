@@ -13,7 +13,14 @@ set log_of_GMBE_tracing_ratio [lindex $argv 5]
 
 set make_big_fifo_source_path "/mnt/hgfs/qemu_automation/make_big_fifo.c"
 set simple_analysis_source_path "/mnt/hgfs/qemu_automation/simple_analysis.c"
+set simple_analysis_py_path "/mnt/hgfs/qemu_automation/simple_analysis.py"
 set dummy_fifo_reader_path "/mnt/hgfs/qemu_automation/dummy_fifo_reader.bash"
+
+# exec cp $simple_analysis_py_path "simple_analysis.py"
+# set simple_analysis_py_path "simple_analysis.py"
+# set dos2unix_cmd [list dos2unix -q $simple_analysis_py_path]
+# eval exec $dos2unix_cmd
+# exec dos2unix $simple_analysis_py_path
 
 set fifo_name "trace_fifo"
 set fifo_name "trace_fifo_[timestamp]"
@@ -37,16 +44,11 @@ eval exec $gcc_cmd2
 #   /dev/ttyS0 of the guest is redirected to a pty that qemu creates.
 #   The guest doesn't start running (-S), as we load a snapshot anyway.
 puts "---starting qemu---"
-spawn gdb ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64
-# spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
-#     -hda $guest_image_path -monitor stdio \
-#     -serial pty -serial pty -trace file=$fifo_name
+spawn ./qemu_mem_tracer/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
+    -hda $guest_image_path -monitor stdio \
+    -serial pty -serial pty -trace file=$fifo_name
     # -serial pty -serial pty -trace file=my_trace_file
 set monitor_id $spawn_id
-
-expect -i $monitor_id "(gdb) "
-send -i $monitor_id "r -m 2560 -S -hda $guest_image_path -monitor stdio -serial pty -serial pty -trace file=$fifo_name\r"
-# interact -i $monitor_id
 
 puts "---parsing qemu's message about pseudo-terminals that it opened---"
 expect -i $monitor_id "serial pty: char device redirected to " {
@@ -108,7 +110,8 @@ send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 send -i $monitor_id "update_trace_only_user_code_GMBE $trace_only_user_code_GMBE\r"
 send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
-set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
+# set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
+set simple_analysis_pid [spawn python3.7 $simple_analysis_py_path $fifo_name $test_info]
 set simple_analysis_id $spawn_id
 
 puts "\n---killing and closing temp_fifo_reader---"
@@ -123,7 +126,7 @@ set test_start_time [timestamp]
 send -i $monitor_id "cont\r"
 send -i $monitor_id "sendkey ret\r"
 
-interact -i $monitor_id
+# interact -i $monitor_id
 
 expect -i $guest_ttyS0_reader_id "End running test."
 send -i $monitor_id "stop\r"
@@ -133,7 +136,7 @@ sleep 1
 
 exec kill -SIGUSR1 $simple_analysis_pid
 
-expect -i $simple_analysis_id -indices -re {num_of_mem_accesses: (\d+)} {
+expect -i $simple_analysis_id -indices -re {num_of_mem_accesses: +(\d+)} {
     set simple_analysis_output $expect_out(1,string)
 }
 
@@ -143,11 +146,11 @@ exec echo "test_time: $test_time" >> test_info.txt
 
 send -i $monitor_id "print_trace_results\r"
 
-puts "\ntest_time: $test_time"
+puts "test_time: $test_time"
 puts "simple_analysis_output: $simple_analysis_output"
 
 
-puts "\n---end run_qemu_and_test.sh---"
+puts "---end run_qemu_and_test.sh---"
 
 
 exec rm $fifo_name
