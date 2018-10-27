@@ -79,6 +79,17 @@ if args.compile_qemu:
 
 this_script_path = os.path.realpath(__file__)
 this_script_location = os.path.split(this_script_path)[0]
+this_script_location_dir_name = os.path.split(this_script_location)[-1]
+if this_script_location_dir_name != 'qemu_mem_tracer_runner':
+    print(f'This script assumes that other scripts in qemu_mem_tracer_runner '
+          f'are in the same folder as this script (i.e. in the folder '
+          f'"{this_script_location}").\n'
+          f'However, "{this_script_location_dir_name}" != "qemu_mem_tracer_runner".\n'
+          f'Enter "y" if wish to proceed anyway.')
+    while True:
+        user_input = input()
+        if user_input == 'y':
+            break
 # I am assuming here that this script and run_qemu_and_test.sh are in the same
 # folder.
 run_qemu_and_test_expect_script_path = os.path.join(this_script_location,
@@ -99,7 +110,8 @@ print('running run_qemu_and_test.sh')
 subprocess.run(f'{run_qemu_and_test_expect_script_path} '
                f'"{args.host_password}" "{guest_image_path}" '
                f'"{args.snapshot_name}" {args.trace_only_user_code_GMBE} '
-               f'{args.log_of_GMBE_block_len} {args.log_of_GMBE_tracing_ratio}',
+               f'{args.log_of_GMBE_block_len} {args.log_of_GMBE_tracing_ratio} '
+               f'{this_script_location}',
                shell=True, check=True, cwd=qemu_mem_tracer_location)
 
 

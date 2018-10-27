@@ -9,18 +9,13 @@ set snapshot_name [lindex $argv 2]
 set trace_only_user_code_GMBE [lindex $argv 3]
 set log_of_GMBE_block_len [lindex $argv 4]
 set log_of_GMBE_tracing_ratio [lindex $argv 5]
+set qemu_automation_dir [lindex $argv 5]
 # set snapshot_name fresh
 
 set make_big_fifo_source_path "/mnt/hgfs/qemu_automation/make_big_fifo.c"
 set simple_analysis_source_path "/mnt/hgfs/qemu_automation/simple_analysis.c"
-set simple_analysis_py_path "/mnt/hgfs/qemu_automation/simple_analysis.py"
 set dummy_fifo_reader_path "/mnt/hgfs/qemu_automation/dummy_fifo_reader.bash"
-
-# exec cp $simple_analysis_py_path "simple_analysis.py"
-# set simple_analysis_py_path "simple_analysis.py"
-# set dos2unix_cmd [list dos2unix -q $simple_analysis_py_path]
-# eval exec $dos2unix_cmd
-# exec dos2unix $simple_analysis_py_path
+set dummy_fifo_reader_path "/mnt/hgfs/qemu_automation/dummy_fifo_reader.bash"
 
 set fifo_name "trace_fifo"
 set fifo_name "trace_fifo_[timestamp]"
@@ -65,17 +60,18 @@ set guest_ttyS0_reader_id $spawn_id
 # send "\x01"
 # send "c"
 
+# exec cp /mnt/hgfs/qemu_automation/copy_test_from_ubuntu_and_run_it.bash qemu_mem_tracer_workload_runner.bash
+
 puts "\n---loading snapshot---"
 send -i $monitor_id "loadvm $snapshot_name\r"
 send -i $monitor_id "cont\r"
 
 # run scp to download test_elf
 puts "---copying test_elf from host---"
-
-# IIUC, the following line doesn't manage to simulate "hitting Enter" in the
+# IIUC, `exec echo > $serial_pty` doesn't simulate "hitting Enter" in the
 # guest, because the guest's /dev/tty is already open when we overwrite
 # /dev/tty with a hard link to the file that /dev/ttyS0 points to.
-#     exec echo > $serial_pty
+#     
 # therefore, we use `sendkey`.
 send -i $monitor_id "sendkey ret\r"
 
@@ -90,6 +86,7 @@ puts "\n---authenticating (scp)---"
 exec echo $host_password > $guest_ttyS0_pty_pid
 
 # the guest would now download elf_test and run it.
+# interact -i $monitor_id
 
 puts "\n---expecting test info---"
 expect -i $guest_ttyS0_reader_id -indices -re \
@@ -110,14 +107,14 @@ send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 send -i $monitor_id "update_trace_only_user_code_GMBE $trace_only_user_code_GMBE\r"
 send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
-# set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
-set simple_analysis_pid [spawn python3.7 $simple_analysis_py_path $fifo_name $test_info]
+set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
 set simple_analysis_id $spawn_id
 sleep 1
 
 puts "\n---killing and closing temp_fifo_reader---"
 exec kill -SIGKILL $temp_fifo_reader_pid
 close -i $temp_fifo_reader_id
+exec 
 
 
 puts "---starting to trace---"
