@@ -56,10 +56,13 @@ with open(args.pipe_name, 'rb') as pipe:
         trace_record = pipe.read(TRACE_RECORD_SIZE)
         num_of_mem_accesses += 1
         virt_addr_bytes = trace_record[VIRT_ADDR_OFFSET:][:ADDR_SIZE]
-        virt_addr = struct.unpack('<Q', virt_addr_bytes)[0]
-        # print(virt_addr)
-        if args.our_buf_addr <= virt_addr < our_buf_end_addr:
-            num_of_mem_accesses_to_our_buf += 1
+        # comment the next line, and python might keep up with QEMU, but my
+        # guess is that even without it, it causes QEMU to block on writing to
+        # the FIFO...
+        virt_addr = struct.unpack('<Q', virt_addr_bytes)[0] 
+        # print(hex(virt_addr))
+        # if args.our_buf_addr <= virt_addr < our_buf_end_addr:
+        #     num_of_mem_accesses_to_our_buf += 1
 
 
 

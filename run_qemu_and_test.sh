@@ -113,6 +113,7 @@ send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
 # set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
 set simple_analysis_pid [spawn python3.7 $simple_analysis_py_path $fifo_name $test_info]
 set simple_analysis_id $spawn_id
+sleep 1
 
 puts "\n---killing and closing temp_fifo_reader---"
 exec kill -SIGKILL $temp_fifo_reader_pid
