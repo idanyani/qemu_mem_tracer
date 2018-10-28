@@ -7,12 +7,18 @@ import shutil
 import pathlib
 import unittest
 
-class TestUserMemAccesses(unittest.TestCase):
-    def test_user_mem_accesses(self):
-        cmd
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description='Check whether qemu_mem_tracer produces trace records as '
+                'expected.\n\n'
+                'Run `qemu_mem_tracer_runner -h` for help about the cmd '
+                'arguments.')
+parser.add_argument('qemu_mem_tracer_path', type=str)
+parser.add_argument('guest_image_path', type=str)
+parser.add_argument('snapshot_name', type=str)
+parser.add_argument('host_password', type=str)
+args = parser.parse_args()
 
-if __name__ == '__main__':
-    unittest.main()
 
 # python3.7 /mnt/hgfs/qemu_mem_tracer_runner/compile_and_run_test_on_qemu_guest.py \
 #           oren_vm_disk2.qcow2 ready_for_test4 /mnt/hgfs/qemu_mem_tracer_runner/test.c \

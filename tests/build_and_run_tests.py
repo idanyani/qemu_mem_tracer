@@ -65,10 +65,5 @@ compile_c_files(this_script_location)
 run_test_scripts(this_script_location, args.qemu_mem_tracer_path,
                  args.guest_image_path, args.snapshot_name, args.host_password)
 
-# result = unittest.TextTestRunner(verbosity=2).run(tests)
-# if result.wasSuccessful():
-#     exit(0)
-# else:
-#     exit(1)
 
 
