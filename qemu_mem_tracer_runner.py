@@ -148,7 +148,7 @@ run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                              f'{args.log_of_GMBE_block_len} '
                              f'{args.log_of_GMBE_tracing_ratio} '
                              f'{this_script_location}')
-print(f'running cmd: {run_qemu_and_workload_cmd}')
+print(f'executing cmd: {run_qemu_and_workload_cmd}')
 subprocess.run(run_qemu_and_workload_cmd,
                shell=True, check=True, cwd=qemu_mem_tracer_location)
 

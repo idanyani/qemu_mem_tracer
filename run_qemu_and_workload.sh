@@ -9,7 +9,8 @@ set snapshot_name [lindex $argv 2]
 set trace_only_user_code_GMBE [lindex $argv 3]
 set log_of_GMBE_block_len [lindex $argv 4]
 set log_of_GMBE_tracing_ratio [lindex $argv 5]
-set tracer_runner_dir_path [lindex $argv 6]
+set make_big_fifo_path [lindex $argv 6]
+set simple_analysis_path [lindex $argv 7]
 # set snapshot_name fresh
 
 set make_big_fifo_source_path "$tracer_runner_dir_path/make_big_fifo.c"
@@ -19,12 +20,9 @@ set dummy_fifo_reader_path "$tracer_runner_dir_path/dummy_fifo_reader.bash"
 set fifo_name "trace_fifo"
 set fifo_name "trace_fifo_[timestamp]"
 
-set gcc_cmd [list gcc -Werror -Wall -pedantic $make_big_fifo_source_path -o make_big_fifo]
-eval exec $gcc_cmd
-
 puts "---create big fifo---"
 set fifo_size [exec cat /proc/sys/fs/pipe-max-size]
-exec ./make_big_fifo $fifo_name $fifo_size
+exec $make_big_fifo_path $fifo_name $fifo_size
 puts "---done creating big fifo $fifo_name (size: $fifo_size)---"
 
 puts "---spawn a temp reader of $fifo_name to read the mapping of trace events---"
@@ -109,9 +107,12 @@ send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 send -i $monitor_id "update_trace_only_user_code_GMBE $trace_only_user_code_GMBE\r"
 send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
-set simple_analysis_pid [spawn ./simple_analysis $fifo_name $test_info]
-set simple_analysis_id $spawn_id
-expect -i $guest_ttyS0_reader_id "Ready to analyze."
+
+if {$simple_analysis_path != ""} {
+    set simple_analysis_pid [spawn simple_analysis_path $fifo_name $test_info]
+    set simple_analysis_id $spawn_id
+    expect -i $simple_analysis_id "Ready to analyze."
+}
 
 puts "\n---killing and closing temp_fifo_reader---"
 exec kill -SIGKILL $temp_fifo_reader_pid
