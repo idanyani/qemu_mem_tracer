@@ -3,19 +3,19 @@
 
 set timeout 360000
 
-set host_password [lindex $argv 0]
+
 set guest_image_path [lindex $argv 1]
 set snapshot_name [lindex $argv 2]
+set host_password [lindex $argv 0]
 set trace_only_user_code_GMBE [lindex $argv 3]
 set log_of_GMBE_block_len [lindex $argv 4]
 set log_of_GMBE_tracing_ratio [lindex $argv 5]
-set make_big_fifo_path [lindex $argv 6]
-set simple_analysis_path [lindex $argv 7]
-# set snapshot_name fresh
+set qemu_mem_tracer_dir_path [lindex $argv 6]
+set analysis_tool_path [lindex $argv 7]
 
-set make_big_fifo_source_path "$tracer_runner_dir_path/make_big_fifo.c"
-set simple_analysis_source_path "$tracer_runner_dir_path/simple_analysis.c"
-set dummy_fifo_reader_path "$tracer_runner_dir_path/dummy_fifo_reader.bash"
+set make_big_fifo_path "$qemu_mem_tracer_dir_path/tracer_bin/make_big_fifo"
+set dummy_fifo_reader_path "$qemu_mem_tracer_dir_path/dummy_fifo_reader.bash"
+# set snapshot_name fresh
 
 set fifo_name "trace_fifo"
 set fifo_name "trace_fifo_[timestamp]"
@@ -58,8 +58,8 @@ set guest_ttyS0_reader_id $spawn_id
 # send "\x01"
 # send "c"
 
-# puts "\ncp $tracer_runner_dir_path/copy_workload_from_host_and_run_it.bash ~/qemu_mem_tracer_temp_dir_for_guest_to_download_from/workload_runner.bash"
-# set aoeu_cmd [list cp $tracer_runner_dir_path/copy_workload_from_host_and_run_it.bash /home/orenmn/qemu_mem_tracer_workload_runner.bash]
+# puts "\ncp $qemu_mem_tracer_dir_path/copy_workload_from_host_and_run_it.bash ~/qemu_mem_tracer_temp_dir_for_guest_to_download_from/workload_runner.bash"
+# set aoeu_cmd [list cp $qemu_mem_tracer_dir_path/copy_workload_from_host_and_run_it.bash /home/orenmn/qemu_mem_tracer_workload_runner.bash]
 # eval exec $aoeu_cmd 
 
 puts "\n---loading snapshot---"
@@ -108,8 +108,8 @@ send -i $monitor_id "update_trace_only_user_code_GMBE $trace_only_user_code_GMBE
 send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
 
-if {$simple_analysis_path != ""} {
-    set simple_analysis_pid [spawn simple_analysis_path $fifo_name $test_info]
+if {$analysis_tool_path != ""} {
+    set simple_analysis_pid [spawn analysis_tool_path $fifo_name $test_info]
     set simple_analysis_id $spawn_id
     expect -i $simple_analysis_id "Ready to analyze."
 }

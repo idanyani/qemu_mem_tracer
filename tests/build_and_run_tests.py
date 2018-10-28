@@ -32,25 +32,14 @@ def compile_c_files(dir_path):
                                    f'-o {bin_rel_path}')
                     execute_cmd_in_dir(compile_cmd, root_dir_path)
 
-def run_test_scripts(dir_path, qemu_mem_tracer_path, guest_image_path,
-                     snapshot_name, host_password):
-    for root_dir_path, dir_names, file_fullnames in os.walk(dir_path):
-        for fullname in file_fullnames:
-            name, ext = os.path.splitext(fullname)
-            if name.startswith(TEST_SCRIPT_PREFIX) and ext.lower() == TEST_SCRIPT_EXT:
-                run_test_cmd = (f'python3.7 {fullname} '
-                                f'{qemu_mem_tracer_path} '
-                                f'{guest_image_path} '
-                                f'{snapshot_name} '
-                                f'{host_password}')
-                execute_cmd_in_dir(run_test_cmd, root_dir_path)
-                    
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description='Build and run tests for qemu_mem_tracer_runner.\n\n'
-                'Run `qemu_mem_tracer_runner -h` for help about the cmd '
-                'arguments.')
-parser.add_argument('qemu_mem_tracer_path', type=str)
+    description='Build and run tests for qemu_mem_tracer.\n\n'
+                'Run `qemu_mem_tracer.py -h` for help about cmd '
+                'arguments that both build.py and this script receive.')
+parser.add_argument('qemu_mem_tracer_script_path', type=str,
+                    help='The path of qemu_mem_tracer.py.')
+parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('guest_image_path', type=str)
 parser.add_argument('snapshot_name', type=str)
 parser.add_argument('host_password', type=str)
@@ -62,8 +51,14 @@ this_script_location = os.path.split(this_script_path)[0]
 
 compile_c_files(this_script_location)
 
-run_test_scripts(this_script_location, args.qemu_mem_tracer_path,
-                 args.guest_image_path, args.snapshot_name, args.host_password)
-
-
-
+for root_dir_path, dir_names, file_fullnames in os.walk(this_script_location):
+    for fullname in file_fullnames:
+        name, ext = os.path.splitext(fullname)
+        if name.startswith(TEST_SCRIPT_PREFIX) and ext.lower() == TEST_SCRIPT_EXT:
+            run_test_cmd = (f'python3.7 {fullname} '
+                            f'{args.qemu_mem_tracer_script_path} '
+                            f'{args.qemu_with_GMBEOO_path} '
+                            f'{args.guest_image_path} '
+                            f'{args.snapshot_name} '
+                            f'{args.host_password}')
+            execute_cmd_in_dir(run_test_cmd, root_dir_path)

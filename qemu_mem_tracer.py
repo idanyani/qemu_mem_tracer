@@ -14,6 +14,7 @@ WORKLOAD_RUNNER_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload_runner.bash')
 WORKLOAD_DIR_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload')
+MAKE_BIG_FIFO_REL_PATH = os.path.join('tracer_bin', 'make_big_fifo')
 
 shutil.rmtree(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH, ignore_errors=True)
 os.mkdir(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH)
@@ -72,9 +73,9 @@ parser.add_argument('host_password', type=str,
                     help='If you don’t like the idea of your password in plain '
                          'text, feel free to patch our code so that scp would '
                          'use keys instead.')
-parser.add_argument('qemu_mem_tracer_path', type=str,
-                    help='The path of qemu_mem_tracer.')
-parser.add_argument('--workload_dir_path', type=str, default=None,
+parser.add_argument('qemu_with_GMBEOO_path', type=str,
+                    help='The path of qemu_with_GMBEOO.')
+parser.add_argument('--workload_dir_path', type=str,
                     help='The path of a directory that would be downloaded by '
                          'the qemu guest into its home directory, and named '
                          'qemu_mem_tracer_workload. (This is meant for '
@@ -85,12 +86,12 @@ parser.add_argument('--workload_dir_path', type=str, default=None,
                          'probably be faster to download it to the QEMU guest, '
                          'use `savevm`, and later pass that snapshot\'s name '
                          'as the snapshot_name argument.\n')
-parser.add_argument('--analysis_tool_path', type=str, default=None,
+parser.add_argument('--analysis_tool_path', type=str, default='',
                     help='Path of an analysis tool that would start executing '
                          'before the tracing starts.\n'
                          'The tracing would start after it prints '
                          '"Ready to analyze." (If this is never printed, it '
-                         'will seem like qemu_mem_tracer_runner is stuck.)')
+                         'will seem like qemu_mem_tracer.py is stuck.)')
 parser.add_argument('--trace_only_user_code_GMBE',
                     action='store_const',
                     const='on', default='off',
@@ -119,8 +120,8 @@ args = parser.parse_args()
 
 guest_image_path = os.path.realpath(args.guest_image_path)
 workload_runner_path = os.path.realpath(args.workload_runner_path)
-qemu_mem_tracer_path = os.path.realpath(args.qemu_mem_tracer_path)
-qemu_mem_tracer_location = os.path.split(qemu_mem_tracer_path)[0]
+qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
+qemu_mem_tracer_location = os.path.split(qemu_with_GMBEOO_path)[0]
 
 
 if args.workload_dir_path is None:
@@ -134,12 +135,12 @@ os.symlink(workload_runner_path, WORKLOAD_RUNNER_DOWNLOAD_PATH)
 this_script_path = os.path.realpath(__file__)
 this_script_location = os.path.split(this_script_path)[0]
 this_script_location_dir_name = os.path.split(this_script_location)[-1]
-if this_script_location_dir_name != 'qemu_mem_tracer_runner':
+if this_script_location_dir_name != 'qemu_mem_tracer':
     print(f'Attention:\n'
-          f'This script assumes that other scripts in qemu_mem_tracer_runner '
+          f'This script assumes that other scripts in qemu_mem_tracer '
           f'are in the same folder as this script (i.e. in the folder '
           f'"{this_script_location}").\n'
-          f'However, "{this_script_location_dir_name}" != "qemu_mem_tracer_runner".\n'
+          f'However, "{this_script_location_dir_name}" != "qemu_mem_tracer".\n'
           f'Enter "y" if you wish to proceed anyway.')
     while True:
         user_input = input()
@@ -148,20 +149,17 @@ if this_script_location_dir_name != 'qemu_mem_tracer_runner':
 
 run_qemu_and_workload_expect_script_path = os.path.join(this_script_location,
                                                         'run_qemu_and_workload.sh')
-
-# compile_test_cmd = (f'gcc -Werror -Wall -pedantic '
-#                     f'{workload_runner_path} -o {test_elf_path}')
-# subprocess.run(compile_test_cmd, shell=True, check=True,
-#                cwd=qemu_mem_tracer_location)
+make_big_fifo_path = os.path.join(this_script_location, MAKE_BIG_FIFO_REL_PATH)
 
 run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
-                             f'"{args.host_password}" '
                              f'"{guest_image_path}" '
                              f'"{args.snapshot_name}" '
+                             f'"{args.host_password}" '
                              f'{args.trace_only_user_code_GMBE} '
                              f'{args.log_of_GMBE_block_len} '
                              f'{args.log_of_GMBE_tracing_ratio} '
-                             f'{this_script_location}')
+                             f'{this_script_location} '
+                             f'{args.analysis_tool_path}')
 print(f'executing cmd: {run_qemu_and_workload_cmd}')
 subprocess.run(run_qemu_and_workload_cmd,
                shell=True, check=True, cwd=qemu_mem_tracer_location)

@@ -35,15 +35,12 @@ workload_runner_path = os.path.join(this_script_location,
 analysis_tool_path = os.path.join(this_script_location, ANALYSIS_TOOL_REL_PATH)
 
 run_qemu_mem_tracer_cmd = (f'python3.7 {args.qemu_mem_tracer_script_path} '
-                           f'"{args.guest_image_path}" '
+                           f'"{guest_image_path}" '
                            f'"{args.snapshot_name}" '
                            f'"{workload_runner_path}" '
                            f'"{args.host_password}" '
-                           f'"{args.qemu_with_GMBEOO_path}" ')
-                           # f'--analysis_tool_path "{analysis_tool_path}"')
-execute_cmd_in_dir(run_qemu_mem_tracer_cmd)
-
-
+                           f'"{args.qemu_with_GMBEOO_path}" '
+                           f'--analysis_tool_path "{analysis_tool_path}" '
 # python3.7 /mnt/hgfs/qemu_mem_tracer_runner/compile_and_run_test_on_qemu_guest.py \
 #           oren_vm_disk2.qcow2 ready_for_test4 /mnt/hgfs/qemu_mem_tracer_runner/test.c \
 #           123456 ~/qemu_mem_tracer \
