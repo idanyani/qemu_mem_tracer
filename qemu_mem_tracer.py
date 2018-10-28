@@ -5,6 +5,7 @@ import time
 import argparse
 import shutil
 import pathlib
+import tempfile
 
 TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_NAME = (
     'qemu_mem_tracer_temp_dir_for_guest_to_download_from')
@@ -121,7 +122,6 @@ args = parser.parse_args()
 guest_image_path = os.path.realpath(args.guest_image_path)
 workload_runner_path = os.path.realpath(args.workload_runner_path)
 qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
-qemu_mem_tracer_location = os.path.split(qemu_with_GMBEOO_path)[0]
 
 
 if args.workload_dir_path is None:
@@ -159,8 +159,11 @@ run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                              f'{args.log_of_GMBE_block_len} '
                              f'{args.log_of_GMBE_tracing_ratio} '
                              f'{this_script_location} '
+                             f'{qemu_with_GMBEOO_path} '
                              f'{args.analysis_tool_path}')
 print(f'executing cmd: {run_qemu_and_workload_cmd}')
-subprocess.run(run_qemu_and_workload_cmd,
-               shell=True, check=True, cwd=qemu_mem_tracer_location)
+
+with tempfile.TemporaryDirectory() as temp_dir_name:
+    subprocess.run(run_qemu_and_workload_cmd,
+                   shell=True, check=True, cwd=temp_dir_name)
 
