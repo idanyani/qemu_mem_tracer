@@ -50,14 +50,22 @@ parser.add_argument('workload_runner_path', type=str,
                     help='The path of the workload_runner script.\n'
                          'workload_runner would be downloaded and executed by '
                          'the qemu guest.\n\n'
-                         'Make sure either workload_runner or the workload '
-                         'itself prints "Ready to trace. Press enter to continue.", '
-                         'then waits until enter is pressed, and only then '
-                         'starts executing the code you wish to trace. Finally, '
-                         'it (either workload_runner or the workload itself) '
-                         'must print "Stop tracing." when you wish the tracing '
-                         'to stop. (If "Stop tracing." is never printed, it '
-                         'will seem like qemu_mem_tracer is stuck.)\n\n'
+                         'Either workload_runner or the workload itself must '
+                         'do the following:\n'
+                         '1. Print "-----begin test info-----".\n'
+                         '2. Print runtime info of the test. This info '
+                         'would be written to stdout, as well as passed as cmd '
+                         'arguments to the analysis tool in case of '
+                         '--analysis_tool_path was specified. (Print nothing '
+                         'if you don\'t need any runtime info.)\n'
+                         '3. Print "-----end test info-----".\n'
+                         '4. Print "Ready to trace. Press enter to continue." '
+                         'when you wish the tracing to start.\n'
+                         '5. Wait until enter is pressed, and only then '
+                         'start executing the code you wish to run while '
+                         'tracing.\n'
+                         '6. Print "Stop tracing." when you wish the tracing '
+                         'to stop.\n\n'
                          'Note that workload_runner can also be an ELF that '
                          'includes the workload and the aforementioned prints.')
 parser.add_argument('host_password', type=str,
@@ -77,6 +85,12 @@ parser.add_argument('--workload_dir_path', type=str, default=None,
                          'probably be faster to download it to the QEMU guest, '
                          'use `savevm`, and later pass that snapshot\'s name '
                          'as the snapshot_name argument.\n')
+parser.add_argument('--analysis_tool_path', type=str, default=None,
+                    help='Path of an analysis tool that would start executing '
+                         'before the tracing starts.\n'
+                         'The tracing would start after it prints '
+                         '"Ready to analyze." (If this is never printed, it '
+                         'will seem like qemu_mem_tracer_runner is stuck.)')
 parser.add_argument('--trace_only_user_code_GMBE',
                     action='store_const',
                     const='on', default='off',

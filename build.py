@@ -23,9 +23,11 @@ def execute_cmd_in_dir(cmd, dir_path='.'):
 #                           capture_output=True).stdout.strip().decode()
 
 parser = argparse.ArgumentParser(
-    description='Build qemu_mem_tracer_runner.')
-parser.add_argument('qemu_mem_tracer_path', type=str,
-                    help='The path of qemu_mem_tracer.')
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description='Build qemu_mem_tracer_runner.\n\n'
+                'Run `qemu_mem_tracer_runner -h` for help about arguments '
+                'that both scripts receive.')
+parser.add_argument('qemu_mem_tracer_path', type=str)
 parser.add_argument('--enable-debug', dest='debug_flag',
                     action='store_const',
                     const='--enable-debug', default='--disable-debug',
@@ -36,11 +38,14 @@ parser.add_argument('--dont_compile_qemu', action='store_const',
                     const=True, default=False,
                     help='If specified, this script doesn\'t build '
                          'qemu_mem_tracer.')
-parser.add_argument('--dont_run_tests', action='store_const',
+parser.add_argument('--run_tests', action='store_const',
                     const=True, default=False,
                     help='If specified, this script doesn\'t run tests (that '
                          'check whether qemu_mem_tracer_runner works as '
                          'expected).')
+parser.add_argument('--guest_image_path', type=str)
+parser.add_argument('--snapshot_name', type=str)
+parser.add_argument('--host_password', type=str)
 args = parser.parse_args()
 
 this_script_path = os.path.realpath(__file__)
@@ -75,8 +80,16 @@ if not args.dont_compile_qemu:
                       f'{args.qemu_mem_tracer_path} {args.debug_flag}')
     execute_cmd_in_dir(build_qemu_cmd, this_script_location)
 
-if not args.dont_run_tests:
+if args.run_tests:
+    for arg_name in ('guest_image_path', 'snapshot_name', 'host_password'):
+        if getattr(args, arg_name) is None:
+            raise RuntimeError(f'--run_tests was specified, but '
+                               f'--{arg_name} was not specified.')
     build_and_run_tests_script_path = os.path.join(
         this_script_location, BUILD_AND_RUN_TESTS_SCRIPT_REL_PATH)
-    execute_cmd_in_dir(f'python3.7 {build_and_run_tests_script_path}')
+    execute_cmd_in_dir(f'python3.7 {build_and_run_tests_script_path} '
+                       f'{args.qemu_mem_tracer_path} '
+                       f'{args.guest_image_path} '
+                       f'{args.snapshot_name} '
+                       f'{args.host_password}')
 
