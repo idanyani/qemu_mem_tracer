@@ -75,7 +75,7 @@ def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pa
     assert(analysis_cmd_args[5] == 'arg5')
     assert(analysis_cmd_args[6] == 'arg6')
 
-def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(this_script_location,
@@ -87,7 +87,7 @@ def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                                               'simple_user_memory_intensive_workload',
                                               'simple_analysis')
     
-    # print(mem_tracer_output)
+    print(mem_tracer_output)
     workload_info_as_str, analysis_output_as_str = re.match(
         '^workload info:(.*)analysis output:(.*)analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL).group(1, 2)

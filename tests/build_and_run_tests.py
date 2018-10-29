@@ -60,4 +60,5 @@ for attr in dir(tests):
                   args.qemu_with_GMBEOO_path, args.guest_image_path,
                   args.snapshot_name, args.host_password)
         print(f'---{attr} completed successfully---\n')
+print(f'--------done running tests--------\n')
 

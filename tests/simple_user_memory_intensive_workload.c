@@ -11,11 +11,11 @@
     fflush(stdout);      \
 }
 
-#define ARR_LEN 10000
+#define OUR_ARR_LEN 10000
 
 void memory_intensive_loop(int *arr) {
     for (int j = 0; j < 5; ++j) {
-        for (int i = 0; i < ARR_LEN; ++i) {
+        for (int i = 0; i < OUR_ARR_LEN; ++i) {
             ++arr[0];
             // ++arr[i];
             // printf("%p\n", (void *)&arr[i]);
@@ -24,7 +24,7 @@ void memory_intensive_loop(int *arr) {
 }
 
 int main() {
-    int *arr = (int *)malloc(ARR_LEN * sizeof(int));
+    int *arr = (int *)malloc(OUR_ARR_LEN * sizeof(int));
     // memory_intensive_loop(arr);
 
     PRINT_STR("-----begin workload info-----");

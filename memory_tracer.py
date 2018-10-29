@@ -38,9 +38,10 @@ parser = argparse.ArgumentParser(
                 '    uint64_t unused2   : 56;\n'
                 '    uint64_t virt_addr : 64;\n'
                 '};\n\n'
-                'memory_tracer.py prints the workload info that'
-                'If --analysis_tool_path is specified, then memory_tracer.py '
-                'prints the '
+                'memory_tracer.py also prints the workload info (in case it '
+                'isn\'t the empty string).\n'
+                'In case --analysis_tool_path is specified, memory_tracer.py '
+                'also prints the output of the analysis tool.'
                 )
 parser.add_argument('guest_image_path', type=str,
                     help='The path of the qcow2 file which is the image of the'
@@ -101,7 +102,7 @@ parser.add_argument('--analysis_tool_path', type=str, default='/dev/null',
                          '  a. Print "-----begin analysis output-----".\n'
                          '  b. Print the output of the analysis tool (when the '
                          'analysis tool '
-                         '2. Print "Ready to analyze" when you wish the '
+                         '3. Print "Ready to analyze" when you wish the '
                          '(If any of the messages isn\'t printed, it will '
                          'probably seem like memory_tracer.py is stuck.)')
 parser.add_argument('--trace_only_user_code_GMBE',

@@ -65,7 +65,7 @@ spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
 set monitor_id $spawn_id
 
 debug_print "---parsing qemu's message about pseudo-terminals that it opened---\n"
-expect -i $monitor_id -ex "serial pty: char device redirected to " {
+expect -i $monitor_id "serial pty: char device redirected to " {
     expect -i $monitor_id -re {^/dev/pts/\d+} {
          set guest_ttyS0_pty_pid $expect_out(0,string)
     }
@@ -97,8 +97,15 @@ debug_print "---copying test_elf from host---\n"
 # therefore, we use `sendkey`.
 send -i $monitor_id "sendkey ret\r"
 
-# wait for the scp connection to be established.
-expect -i guest_ttyS0_reader_id -ex "password:"
+debug_print "---expecting the password prompt of scp (created by the guest)---\n"
+expect {
+    -i $guest_ttyS0_reader_id
+    "password:" {}
+    eof {
+        debug_print "it seems that guest_ttyS0_reader terminated unexpectedly."
+        exit 1
+    }
+}
 debug_print "\n---authenticating (scp)---\n"
 
 # type the password.
@@ -113,16 +120,22 @@ debug_print "\n---expecting workload info---\n"
 expect -i $guest_ttyS0_reader_id -indices -re \
         "-----begin workload info-----(.*)-----end workload info-----" {
     set test_info [string trim $expect_out(1,string)]
-
-    if {$test_info != ""} {
-        send_user "workload info:\n"
-        send_user -- $test_info
-        send_user "\n"
-    }
+}
+if {$test_info != ""} {
+    send_user "workload info:\n"
+    send_user -- $test_info
+    send_user "\n"
 }
 
 debug_print "\n---expecting ready to trace message---\n"
-expect -i $guest_ttyS0_reader_id -ex "Ready to trace. Press enter to continue"
+expect {
+    -i $guest_ttyS0_reader_id
+    "Ready to trace. Press enter to continue" {}
+    eof {
+        debug_print "it seems that guest_ttyS0_reader terminated unexpectedly."
+        exit 1
+    }
+}
 send -i $monitor_id "stop\r"
 
 debug_print "\n---killing and closing temp_fifo_reader---\n"
@@ -130,16 +143,24 @@ kill_spawned_process $temp_fifo_reader_pid $temp_fifo_reader_id
 
 
 if {$analysis_tool_path != "/dev/null"} {
-    debug_print "\n---expecting ready to analyze message---\n"
+    debug_print "\n---spawning analysis tool---\n"
     # https://stackoverflow.com/questions/5728656/tcl-split-string-by-arbitrary-number-of-whitespaces-to-a-list/5731098#5731098
     set test_info_with_spaces [join $test_info " "]
     set analysis_tool_pid [eval spawn $analysis_tool_path $fifo_name $test_info_with_spaces]
     set analysis_tool_id $spawn_id
-    expect -i $analysis_tool_id -ex "Ready to analyze"
+    debug_print "\n---expecting ready to analyze message---\n"
+    expect {
+        -i $analysis_tool_id
+        "Ready to analyze" {}
+        eof {
+            debug_print "it seems that $analysis_tool_path terminated unexpectedly."
+            exit 1
+        }
+    }
 }
 
 debug_print "---configure qemu_with_GMBEOO for tracing---\n"
-send -i $monitor_id "enable_tracing_single_event_optimization 2\r"
+send -i $monitor_id "enable_GMBEOO\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 send -i $monitor_id "update_trace_only_user_code_GMBE $trace_only_user_code_GMBE\r"
 send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
@@ -154,7 +175,14 @@ send -i $monitor_id "sendkey ret\r"
 
 # interact -i $monitor_id
 
-expect -i $guest_ttyS0_reader_id -ex "Stop tracing"
+expect {
+    -i $guest_ttyS0_reader_id
+    "Stop tracing" {}
+    eof {
+        debug_print "it seems that guest_ttyS0_reader terminated unexpectedly."
+        exit 1
+    }
+}
 send -i $monitor_id "stop\r"
 set tracing_end_time [timestamp]
 
