@@ -12,7 +12,7 @@ WORKLOAD_RUNNER_REL_PATH = os.path.join('tests_bin',
 ANALYSIS_TOOL_REL_PATH = os.path.join('tests_bin', 'simple_analysis')
 
 def execute_cmd_in_dir(cmd, dir_path='.'):
-    print(f'executing cmd (in {dir_path}): {cmd}')
+    print(f'executing cmd (in {dir_path}): {cmd}\n')
     subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
 
 parser = argparse.ArgumentParser(
@@ -39,8 +39,10 @@ run_qemu_mem_tracer_cmd = (f'python3.7 {args.qemu_mem_tracer_script_path} '
                            f'"{args.snapshot_name}" '
                            f'"{workload_runner_path}" '
                            f'"{args.host_password}" '
-                           f'"{args.qemu_with_GMBEOO_path}" ')
-                           # f'--analysis_tool_path "{analysis_tool_path}"')
+                           f'"{args.qemu_with_GMBEOO_path}" '
+                           f'--analysis_tool_path "{analysis_tool_path}" '
+                           f'--verbose ')
+                           # )
 execute_cmd_in_dir(run_qemu_mem_tracer_cmd)
 
 

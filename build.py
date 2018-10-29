@@ -6,7 +6,7 @@ import argparse
 
 BUILD_QEMU_SCRIPT_NAME = 'config_and_make_qemu_with_GMBEOO.py'
 MAKE_BIG_FIFO_SOURCE_NAME = 'make_big_fifo.c'
-QEMU_MEM_TRACER_SCRIPT_NAME = 'qemu_mem_tracer.py'
+QEMU_MEM_TRACER_SCRIPT_NAME = 'memory_tracer.py'
 MAKE_BIG_FIFO_NAME = os.path.splitext(MAKE_BIG_FIFO_SOURCE_NAME)[0]
 TESTS_DIR_NAME = 'tests'
 BUILD_AND_RUN_TESTS_SCRIPT_REL_PATH = os.path.join(TESTS_DIR_NAME,
@@ -26,8 +26,8 @@ def execute_cmd_in_dir(cmd, dir_path='.'):
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Build qemu_mem_tracer.\n\n'
-                'Run `python3.7 qemu_mem_tracer.py -h` for help about arguments '
-                'that both qemu_mem_tracer.py and this script receive.')
+                'Run `python3.7 memory_tracer.py -h` for help about arguments '
+                'that both memory_tracer.py and this script receive.')
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('--enable-debug', dest='debug_flag',
                     action='store_const',
@@ -35,12 +35,10 @@ parser.add_argument('--enable-debug', dest='debug_flag',
                     help='If specified, --enable-debug is passed to the '
                          'configure script of qemu_with_GMBEOO, instead of '
                          '--disable-debug (the default).')
-parser.add_argument('--dont_compile_qemu', action='store_const',
-                    const=True, default=False,
+parser.add_argument('--dont_compile_qemu', action='store_true',
                     help='If specified, this script doesn\'t build '
                          'qemu_with_GMBEOO.')
-parser.add_argument('--run_tests', action='store_const',
-                    const=True, default=False,
+parser.add_argument('--run_tests', action='store_true',
                     help='If specified, this script doesn\'t run tests (that '
                          'check whether qemu_mem_tracer works as '
                          'expected).')

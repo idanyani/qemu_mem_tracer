@@ -52,9 +52,12 @@ uint64_t num_of_mem_accesses_by_CPL3_to_cpu_entry_area = 0;
 uint64_t num_of_mem_accesses_to_our_buf = 0; 
 uint64_t curr_offset = 0; 
 uint64_t num_of_read_failures = 0; 
-uint64_t num_of_read_failures_with_feof_1 = 0; 
+uint64_t num_of_read_failures_with_feof_1 = 0;
+int argc_global;
+char **argv_global;
 
 void handle_end_analysis_signal(int unused_signum) {
+    printf("-----begin analysis output-----");
     printf("num_of_mem_accesses_by_user_code:              %lu\n"
            "num_of_mem_accesses_by_kernel_code:            %lu\n"
            "num_of_mem_accesses_by_CPL3_to_cpu_entry_area: %lu\n"
@@ -73,11 +76,19 @@ void handle_end_analysis_signal(int unused_signum) {
                num_of_read_failures, num_of_read_failures_with_feof_1);
 
     }
+    for (int i = 0; i < argc_global; ++i) {
+        printf("argv[%d]: %s", i, argv_global[i]);
+    }
+    printf("-----end analysis output-----");
     end_analysis = true;
 }
 
 int main(int argc, char **argv) {
     int ret_val = 0;
+
+    argc_global = argc;
+    argv_global = argv;
+
     uint64_t our_buf_addr = strtoull(argv[2], NULL, 0);
     uint64_t our_buf_end_addr = our_buf_addr + 20000 * sizeof(int);
     PRINT_STR("opening fifo.\n");

@@ -1,3 +1,4 @@
+import sys
 import subprocess
 import os
 import os.path
@@ -15,10 +16,6 @@ WORKLOAD_RUNNER_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload_runner.bash')
 WORKLOAD_DIR_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload')
-MAKE_BIG_FIFO_REL_PATH = os.path.join('tracer_bin', 'make_big_fifo')
-
-shutil.rmtree(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH, ignore_errors=True)
-os.mkdir(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH)
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -87,12 +84,12 @@ parser.add_argument('--workload_dir_path', type=str,
                          'probably be faster to download it to the QEMU guest, '
                          'use `savevm`, and later pass that snapshot\'s name '
                          'as the snapshot_name argument.\n')
-parser.add_argument('--analysis_tool_path', type=str, default='',
+parser.add_argument('--analysis_tool_path', type=str, default='/dev/null',
                     help='Path of an analysis tool that would start executing '
                          'before the tracing starts.\n'
                          'The tracing would start after it prints '
                          '"Ready to analyze." (If this is never printed, it '
-                         'will seem like qemu_mem_tracer.py is stuck.)')
+                         'will seem like memory_tracer.py is stuck.)')
 parser.add_argument('--trace_only_user_code_GMBE',
                     action='store_const',
                     const='on', default='off',
@@ -109,15 +106,25 @@ parser.add_argument('--log_of_GMBE_tracing_ratio', type=int, default=0,
                          'total number of blocks. E.g. if GMBE_tracing_ratio '
                          'is 16, we trace 1 block, then skip 15 blocks, then '
                          'trace 1, then skip 15, and so on...')
-parser.add_argument('--dont_exit_qemu_when_done', action='store_const',
-                    const=True, default=False,
+parser.add_argument('--dont_exit_qemu_when_done', action='store_true',
                     help='If specified, qemu won\'t be terminated after running '
                          'the workload.\n\n'
                          'Remember that the guest would probably be in the '
                          'state it was before running the workload, which is '
                          'probably a quite uncommon state, e.g. /dev/tty is '
                          'overwritten by /dev/ttyS0.')
+parser.add_argument('--verbose', '-v', action='store_true',
+                    help='If specified, debug messages are printed.')
 args = parser.parse_args()
+
+if args.verbose:
+    debug_print = print
+else:
+    def debug_print(*args, **kwargs):
+        return
+
+shutil.rmtree(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH, ignore_errors=True)
+os.mkdir(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH)
 
 guest_image_path = os.path.realpath(args.guest_image_path)
 workload_runner_path = os.path.realpath(args.workload_runner_path)
@@ -149,7 +156,6 @@ if this_script_location_dir_name != 'qemu_mem_tracer':
 
 run_qemu_and_workload_expect_script_path = os.path.join(this_script_location,
                                                         'run_qemu_and_workload.sh')
-make_big_fifo_path = os.path.join(this_script_location, MAKE_BIG_FIFO_REL_PATH)
 
 run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                              f'"{guest_image_path}" '
@@ -158,12 +164,15 @@ run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                              f'{args.trace_only_user_code_GMBE} '
                              f'{args.log_of_GMBE_block_len} '
                              f'{args.log_of_GMBE_tracing_ratio} '
+                             f'{args.analysis_tool_path} '
                              f'{this_script_location} '
                              f'{qemu_with_GMBEOO_path} '
-                             f'{args.analysis_tool_path}')
-print(f'executing cmd: {run_qemu_and_workload_cmd}')
+                             f'{args.verbose}')
 
-with tempfile.TemporaryDirectory() as temp_dir_name:
+with tempfile.TemporaryDirectory() as temp_dir_path:
+    debug_print(f'executing cmd (in {temp_dir_path}): {run_qemu_and_workload_cmd}')
     subprocess.run(run_qemu_and_workload_cmd,
-                   shell=True, check=True, cwd=temp_dir_name)
+                   shell=True, check=True, cwd=temp_dir_path,
+                   stdout=sys.stdout)
+
 

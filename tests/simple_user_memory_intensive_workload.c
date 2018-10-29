@@ -40,7 +40,7 @@ int main() {
 
 
 
-    PRINT_STR("End running test.\n");
+    PRINT_STR("Stop tracing.");
 
     return 0;
 }

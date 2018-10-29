@@ -2,10 +2,8 @@ import shutil
 import subprocess
 import os
 import os.path
-import unittest
 import argparse
 
-BUILD_QEMU_SCRIPT_NAME = 'config_and_make_qemu_mem_tracer.py'
 SIMPLE_ANALYSIS_SOURCE_NAME = 'simple_analysis.c'
 SIMPLE_ANALYSIS_NAME = os.path.splitext(SIMPLE_ANALYSIS_SOURCE_NAME)[0]
 # Note that this script removes this directory upon starting.
@@ -35,10 +33,10 @@ def compile_c_files(dir_path):
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Build and run tests for qemu_mem_tracer.\n\n'
-                'Run `qemu_mem_tracer.py -h` for help about cmd '
+                'Run `memory_tracer.py -h` for help about cmd '
                 'arguments that both build.py and this script receive.')
 parser.add_argument('qemu_mem_tracer_script_path', type=str,
-                    help='The path of qemu_mem_tracer.py.')
+                    help='The path of memory_tracer.py.')
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('guest_image_path', type=str)
 parser.add_argument('snapshot_name', type=str)
