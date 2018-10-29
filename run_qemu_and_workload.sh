@@ -103,6 +103,10 @@ debug_print "\n---expecting test info---\n"
 expect -i $guest_ttyS0_reader_id -indices -re \
         "-----begin test info-----(.*)-----end test info-----" {
     set test_info [string trim $expect_out(1,string)]
+
+    send_user "test info:\n"
+    send_user -- $test_info
+    send_user "\n"
 }
 
 debug_print "\n---expecting ready for trace message---\n"
@@ -117,7 +121,9 @@ send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
 
 if {$analysis_tool_path != "/dev/null"} {
-    set analysis_tool_pid [spawn $analysis_tool_path $fifo_name $test_info]
+    # https://stackoverflow.com/questions/5728656/tcl-split-string-by-arbitrary-number-of-whitespaces-to-a-list/5731098#5731098
+    set test_info_with_spaces [join $test_info " "]
+    set analysis_tool_pid [eval spawn $analysis_tool_path $fifo_name $test_info_with_spaces]
     set analysis_tool_id $spawn_id
     expect -i $analysis_tool_id -ex "Ready to analyze."
 }
@@ -154,8 +160,11 @@ if {$analysis_tool_path != "/dev/null"} {
             "-----begin analysis output-----(.*)-----end analysis output-----" {
         set analysis_output [string trim $expect_out(1,string)]
     }
+    debug_print "\n---received analysis output---\n"
 
+    send_user "analysis output:\n"
     send_user -- $analysis_output
+    send_user "\n"
     # expect -i $analysis_tool_id -indices -re {num_of_mem_accesses: +(\d+)} {
     #     set analysis_tool_output $expect_out(1,string)
     # }
@@ -175,5 +184,5 @@ debug_print "---end run_qemu_and_test.sh---\n"
 
 exec rm $fifo_name
 
-interact -i $monitor_id
+# interact -i $monitor_id
 

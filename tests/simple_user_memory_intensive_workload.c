@@ -29,7 +29,9 @@ int main() {
 
     PRINT_STR("-----begin test info-----");
     // printf("&arr: %p\n", (void *)&arr);
-    printf("%p\n", (void *)arr);
+    printf("%p ", (void *)arr);
+    printf("1234 56789\n");
+    printf("6 7 8\n");
     PRINT_STR("-----end test info-----");
 
     PRINT_STR("Ready to trace. Press enter to continue.");
