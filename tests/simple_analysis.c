@@ -64,24 +64,21 @@ void handle_end_analysis_signal(int unused_signum) {
                "num_of_read_failures_with_feof_1: %lu\n",
                num_of_read_failures, num_of_read_failures_with_feof_1);
     }
-    printf("analysis_output_dict = {\n"
-           "    'num_of_mem_accesses_by_user_code':              %lu,\n"
-           "    'num_of_mem_accesses_by_kernel_code':            %lu,\n"
-           "    'num_of_mem_accesses_by_CPL3_to_cpu_entry_area': %lu,\n"
-           "    'num_of_mem_accesses':                           %lu,\n"
-           "    'num_of_mem_accesses_to_our_buf':                %lu,\n"
-           "    }\n",
+    printf("num_of_mem_accesses_by_user_code:              %lu\n"
+           "num_of_mem_accesses_by_kernel_code:            %lu\n"
+           "num_of_mem_accesses_by_CPL3_to_cpu_entry_area: %lu\n"
+           "num_of_mem_accesses:                           %lu\n"
+           "num_of_mem_accesses_to_our_buf:                %lu\n",
            num_of_mem_accesses_by_user_code,
            num_of_mem_accesses_by_kernel_code,
            num_of_mem_accesses_by_CPL3_to_cpu_entry_area,
            num_of_mem_accesses_by_user_code + num_of_mem_accesses_by_kernel_code +
                 num_of_mem_accesses_by_CPL3_to_cpu_entry_area,
            num_of_mem_accesses_to_our_buf);
-    printf("analysis_cmd_args_list = (");
+    printf("analysis_cmd_args:");
     for (int i = 0; i < argc_global; ++i) {
-        printf("'%s', ", argv_global[i]);
+        printf("%s,", argv_global[i]);
     }
-    printf(")\n");
     PRINT_STR("-----end analysis output-----");
     end_analysis = true;
 }

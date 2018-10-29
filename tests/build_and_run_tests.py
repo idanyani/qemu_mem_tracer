@@ -3,6 +3,8 @@ import subprocess
 import os
 import os.path
 import argparse
+import tests
+
 
 SIMPLE_ANALYSIS_SOURCE_NAME = 'simple_analysis.c'
 SIMPLE_ANALYSIS_NAME = os.path.splitext(SIMPLE_ANALYSIS_SOURCE_NAME)[0]
@@ -49,14 +51,21 @@ this_script_location = os.path.split(this_script_path)[0]
 
 compile_c_files(this_script_location)
 
-for root_dir_path, dir_names, file_fullnames in os.walk(this_script_location):
-    for fullname in file_fullnames:
-        name, ext = os.path.splitext(fullname)
-        if name.startswith(TEST_SCRIPT_PREFIX) and ext.lower() == TEST_SCRIPT_EXT:
-            run_test_cmd = (f'python3.7 {fullname} '
-                            f'{args.qemu_mem_tracer_script_path} '
-                            f'{args.qemu_with_GMBEOO_path} '
-                            f'{args.guest_image_path} '
-                            f'{args.snapshot_name} '
-                            f'{args.host_password}')
-            execute_cmd_in_dir(run_test_cmd, root_dir_path)
+for attr in dir(tests):
+    if attr.startswith('test_'):
+        test_func = getattr(tests, attr)
+        test_func(this_script_location, args.qemu_mem_tracer_script_path,
+                  args.qemu_with_GMBEOO_path, args.guest_image_path,
+                  args.snapshot_name, args.host_password)
+
+# for root_dir_path, dir_names, file_fullnames in os.walk(this_script_location):
+#     for fullname in file_fullnames:
+#         name, ext = os.path.splitext(fullname)
+#         if name.startswith(TEST_SCRIPT_PREFIX) and ext.lower() == TEST_SCRIPT_EXT:
+#             run_test_cmd = (f'python3.7 {fullname} '
+#                             f'{args.qemu_mem_tracer_script_path} '
+#                             f'{args.qemu_with_GMBEOO_path} '
+#                             f'{args.guest_image_path} '
+#                             f'{args.snapshot_name} '
+#                             f'{args.host_password}')
+#             execute_cmd_in_dir(run_test_cmd, root_dir_path)

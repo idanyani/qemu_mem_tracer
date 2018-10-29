@@ -9,8 +9,7 @@ MAKE_BIG_FIFO_SOURCE_NAME = 'make_big_fifo.c'
 QEMU_MEM_TRACER_SCRIPT_NAME = 'memory_tracer.py'
 MAKE_BIG_FIFO_NAME = os.path.splitext(MAKE_BIG_FIFO_SOURCE_NAME)[0]
 TESTS_DIR_NAME = 'tests'
-BUILD_AND_RUN_TESTS_SCRIPT_REL_PATH = os.path.join(TESTS_DIR_NAME,
-                                                   'build_and_run_tests.py')
+BUILD_AND_RUN_TESTS_SCRIPT_NAME = 'build_and_run_tests.py'
 # Note that this script removes this directory upon starting.
 OUTPUT_DIR_NAME = 'tracer_bin'
 
@@ -84,8 +83,9 @@ if args.run_tests:
         if getattr(args, arg_name) is None:
             raise RuntimeError(f'--run_tests was specified, but '
                                f'--{arg_name} was not specified.')
+    tests_dir_path = os.path.join(this_script_location, TESTS_DIR_NAME)
     build_and_run_tests_script_path = os.path.join(
-        this_script_location, BUILD_AND_RUN_TESTS_SCRIPT_REL_PATH)
+        tests_dir_path, BUILD_AND_RUN_TESTS_SCRIPT_NAME)
     qemu_mem_tracer_script_path = os.path.join(
         this_script_location, QEMU_MEM_TRACER_SCRIPT_NAME)
     
@@ -94,5 +94,6 @@ if args.run_tests:
                        f'{args.qemu_with_GMBEOO_path} '
                        f'{args.guest_image_path} '
                        f'{args.snapshot_name} '
-                       f'{args.host_password}')
+                       f'{args.host_password}',
+                       tests_dir_path)
 
