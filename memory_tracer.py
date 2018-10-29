@@ -37,7 +37,11 @@ parser = argparse.ArgumentParser(
                 '    uint8_t cpl        : 2;\n'
                 '    uint64_t unused2   : 56;\n'
                 '    uint64_t virt_addr : 64;\n'
-                '};')
+                '};\n\n'
+                'memory_tracer.py prints the workload info that'
+                'If --analysis_tool_path is specified, then memory_tracer.py '
+                'prints the '
+                )
 parser.add_argument('guest_image_path', type=str,
                     help='The path of the qcow2 file which is the image of the'
                          ' guest.')
@@ -51,20 +55,22 @@ parser.add_argument('workload_runner_path', type=str,
                          'the qemu guest.\n\n'
                          'Either workload_runner or the workload itself must '
                          'do the following:\n'
-                         '1. Print "-----begin test info-----".\n'
-                         '2. Print runtime info of the test. This info '
-                         'would be written to stdout, as well as passed as cmd '
+                         '1. Print "-----begin workload info-----".\n'
+                         '2. Print runtime info of the workload. This info '
+                         'will be written to stdout, as well as passed as cmd '
                          'arguments to the analysis tool in case of '
                          '--analysis_tool_path was specified. (Print nothing '
                          'if you don\'t need any runtime info.)\n'
-                         '3. Print "-----end test info-----".\n'
-                         '4. Print "Ready to trace. Press enter to continue." '
+                         '3. Print "-----end workload info-----".\n'
+                         '4. Print "Ready to trace. Press enter to continue" '
                          'when you wish the tracing to start.\n'
                          '5. Wait until enter is pressed, and only then '
                          'start executing the code you wish to run while '
                          'tracing.\n'
-                         '6. Print "Stop tracing." when you wish the tracing '
-                         'to stop.\n\n'
+                         '6. Print "Stop tracing" when you wish the tracing '
+                         'to stop.\n'
+                         '(If any of the messages isn\'t printed, it will '
+                         'probably seem like memory_tracer.py is stuck.)\n\n'
                          'Note that workload_runner can also be an ELF that '
                          'includes the workload and the aforementioned prints.')
 parser.add_argument('host_password', type=str,
@@ -87,9 +93,17 @@ parser.add_argument('--workload_dir_path', type=str,
 parser.add_argument('--analysis_tool_path', type=str, default='/dev/null',
                     help='Path of an analysis tool that would start executing '
                          'before the tracing starts.\n'
-                         'The tracing would start after it prints '
-                         '"Ready to analyze." (If this is never printed, it '
-                         'will seem like memory_tracer.py is stuck.)')
+                         'The analysis tool must do the following:\n'
+                         '1. Print "Ready to analyze" when you wish the '
+                         'tracing to start.\n'
+                         '2. Register a handler for the signal SIGUSR1 (e.g. '
+                         'by calling the `signal` syscall). The handler must:'
+                         '  a. Print "-----begin analysis output-----".\n'
+                         '  b. Print the output of the analysis tool (when the '
+                         'analysis tool '
+                         '2. Print "Ready to analyze" when you wish the '
+                         '(If any of the messages isn\'t printed, it will '
+                         'probably seem like memory_tracer.py is stuck.)')
 parser.add_argument('--trace_only_user_code_GMBE',
                     action='store_const',
                     const='on', default='off',
@@ -108,7 +122,13 @@ parser.add_argument('--log_of_GMBE_tracing_ratio', type=int, default=0,
                          'trace 1, then skip 15, and so on...')
 parser.add_argument('--dont_exit_qemu_when_done', action='store_true',
                     help='If specified, qemu won\'t be terminated after running '
-                         'the workload.\n\n'
+                         'the workload, and you would be able to use the '
+                         'terminal to send monitor commands, as well as use '
+                         'the qemu guest directly, in case you have a graphic '
+                         'interface (which isn\'t the case if you are running '
+                         'memory_tracer.py on a remote server using ssh). '
+                         'Still, you would be able to use the qemu guest, e.g. '
+                         'by connecting to it using ssh.\n\n'
                          'Remember that the guest would probably be in the '
                          'state it was before running the workload, which is '
                          'probably a quite uncommon state, e.g. /dev/tty is '
@@ -167,7 +187,9 @@ run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                              f'{args.analysis_tool_path} '
                              f'{this_script_location} '
                              f'{qemu_with_GMBEOO_path} '
-                             f'{args.verbose}')
+                             f'{args.verbose} '
+                             f'{args.dont_exit_qemu_when_done} '
+                             )
 
 with tempfile.TemporaryDirectory() as temp_dir_path:
     debug_print(f'executing cmd (in {temp_dir_path}): {run_qemu_and_workload_cmd}')

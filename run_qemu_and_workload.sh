@@ -14,16 +14,26 @@ set analysis_tool_path [lindex $argv 6]
 set qemu_mem_tracer_dir_path [lindex $argv 7]
 set qemu_with_GMBEOO_dir_path [lindex $argv 8]
 set verbose [lindex $argv 9]
+set dont_exit_qemu_when_done [lindex $argv 10]
 
 if {$verbose == "False"} {
     log_user 0
     stty -echo
+} else {
+    send_error -- "---start run_qemu_and_workload.sh---\n"
 }
 
-proc debug_print { msg } {
+proc debug_print {msg} {
     if {$::verbose == "True"} {
-        send_user -- $msg
+        send_error -- $msg
     }
+}
+
+proc kill_spawned_process {pid id} {
+    exec kill -SIGKILL $pid
+    close -i $id
+    wait -i $id
+    exec $::verify_pid_dead_path $pid
 }
 
 set make_big_fifo_path "$qemu_mem_tracer_dir_path/tracer_bin/make_big_fifo"
@@ -99,43 +109,43 @@ exec echo $host_password > $guest_ttyS0_pty_pid
 
 # the guest would now download elf_test and run it.
 
-debug_print "\n---expecting test info---\n"
+debug_print "\n---expecting workload info---\n"
 expect -i $guest_ttyS0_reader_id -indices -re \
-        "-----begin test info-----(.*)-----end test info-----" {
+        "-----begin workload info-----(.*)-----end workload info-----" {
     set test_info [string trim $expect_out(1,string)]
 
-    send_user "test info:\n"
-    send_user -- $test_info
-    send_user "\n"
+    if {$test_info != ""} {
+        send_user "workload info:\n"
+        send_user -- $test_info
+        send_user "\n"
+    }
 }
 
-debug_print "\n---expecting ready for trace message---\n"
-expect -i $guest_ttyS0_reader_id -ex "Ready to trace. Press enter to continue."
+debug_print "\n---expecting ready to trace message---\n"
+expect -i $guest_ttyS0_reader_id -ex "Ready to trace. Press enter to continue"
 send -i $monitor_id "stop\r"
 
-debug_print "---getting ready to trace---\n"
+debug_print "\n---killing and closing temp_fifo_reader---\n"
+kill_spawned_process $temp_fifo_reader_pid $temp_fifo_reader_id
+
+
+if {$analysis_tool_path != "/dev/null"} {
+    debug_print "\n---expecting ready to analyze message---\n"
+    # https://stackoverflow.com/questions/5728656/tcl-split-string-by-arbitrary-number-of-whitespaces-to-a-list/5731098#5731098
+    set test_info_with_spaces [join $test_info " "]
+    set analysis_tool_pid [eval spawn $analysis_tool_path $fifo_name $test_info_with_spaces]
+    set analysis_tool_id $spawn_id
+    expect -i $analysis_tool_id -ex "Ready to analyze"
+}
+
+debug_print "---configure qemu_with_GMBEOO for tracing---\n"
 send -i $monitor_id "enable_tracing_single_event_optimization 2\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 send -i $monitor_id "update_trace_only_user_code_GMBE $trace_only_user_code_GMBE\r"
 send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
 
-if {$analysis_tool_path != "/dev/null"} {
-    # https://stackoverflow.com/questions/5728656/tcl-split-string-by-arbitrary-number-of-whitespaces-to-a-list/5731098#5731098
-    set test_info_with_spaces [join $test_info " "]
-    set analysis_tool_pid [eval spawn $analysis_tool_path $fifo_name $test_info_with_spaces]
-    set analysis_tool_id $spawn_id
-    expect -i $analysis_tool_id -ex "Ready to analyze."
-}
-
-debug_print "\n---killing and closing temp_fifo_reader---\n"
-exec kill -SIGKILL $temp_fifo_reader_pid
-close -i $temp_fifo_reader_id
-wait -i $temp_fifo_reader_id
-exec $verify_pid_dead_path $temp_fifo_reader_pid
-
-
-debug_print "---starting to trace---\n"
+debug_print "---storing start timestamp and starting to trace---\n"
 set tracing_start_time [timestamp]
 
 # Resume the test.
@@ -144,7 +154,7 @@ send -i $monitor_id "sendkey ret\r"
 
 # interact -i $monitor_id
 
-expect -i $guest_ttyS0_reader_id -ex "Stop tracing."
+expect -i $guest_ttyS0_reader_id -ex "Stop tracing"
 send -i $monitor_id "stop\r"
 set tracing_end_time [timestamp]
 
@@ -154,7 +164,7 @@ debug_print "\n---$analysis_tool_path---\n"
 if {$analysis_tool_path != "/dev/null"} {
     debug_print "\n---sending SIGUSR1 to $analysis_tool_path---\n"
     exec kill -SIGUSR1 $analysis_tool_pid
-
+    sleep 3
     debug_print "\n---expecting analysis output---\n"
     expect -i $analysis_tool_id -indices -re \
             "-----begin analysis output-----(.*)-----end analysis output-----" {
@@ -165,6 +175,9 @@ if {$analysis_tool_path != "/dev/null"} {
     send_user "analysis output:\n"
     send_user -- $analysis_output
     send_user "\n"
+
+    debug_print "\n---killing and closing $analysis_tool_path---\n"
+    kill_spawned_process $analysis_tool_pid $analysis_tool_id
     # expect -i $analysis_tool_id -indices -re {num_of_mem_accesses: +(\d+)} {
     #     set analysis_tool_output $expect_out(1,string)
     # }
@@ -178,11 +191,12 @@ send -i $monitor_id "print_trace_results\r"
 
 debug_print "tracing_duration_in_seconds: $tracing_duration_in_seconds\n"
 
+debug_print "---deleting $fifo_name---\n"
+exec rm $fifo_name
 
 debug_print "---end run_qemu_and_test.sh---\n"
 
-
-exec rm $fifo_name
-
-# interact -i $monitor_id
+if {$dont_exit_qemu_when_done == "True"} {
+    interact -i $monitor_id
+}
 

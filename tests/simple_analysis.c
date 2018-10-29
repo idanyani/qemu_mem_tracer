@@ -75,7 +75,7 @@ void handle_end_analysis_signal(int unused_signum) {
            num_of_mem_accesses_by_user_code + num_of_mem_accesses_by_kernel_code +
                 num_of_mem_accesses_by_CPL3_to_cpu_entry_area,
            num_of_mem_accesses_to_our_buf);
-    printf("analysis_cmd_args:");
+    printf("analysis cmd args:");
     for (int i = 0; i < argc_global; ++i) {
         printf("%s,", argv_global[i]);
     }
@@ -89,10 +89,13 @@ int main(int argc, char **argv) {
     argc_global = argc;
     argv_global = argv;
 
-    uint64_t our_buf_addr = strtoull(argv[2], NULL, 0);
-    uint64_t our_buf_end_addr = our_buf_addr + 20000 * sizeof(int);
+    uint64_t our_buf_addr = 0;
+    uint64_t our_buf_end_addr = 0;
+    if (argc > 2) {
+        our_buf_addr = strtoull(argv[2], NULL, 0);
+        our_buf_end_addr = our_buf_addr + 20000 * sizeof(int);
+    }
     PRINT_STR("opening fifo.\n");
-    
     
     FILE *qemu_trace_fifo = fopen(argv[1], "rb");
     if (qemu_trace_fifo == NULL) {
@@ -112,7 +115,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    PRINT_STR("Ready to analyze.");
+    PRINT_STR("Ready to analyze");
     while (!end_analysis) {
         num_of_trace_records_read = fread(&trace_record, sizeof(trace_record),
                                           1, qemu_trace_fifo);
