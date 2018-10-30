@@ -12,6 +12,7 @@ SIMPLE_ANALYSIS_NAME = os.path.splitext(SIMPLE_ANALYSIS_SOURCE_NAME)[0]
 OUTPUT_DIR_NAME = 'tests_bin'
 TEST_SCRIPT_PREFIX = 'test_'
 TEST_SCRIPT_EXT = '.py'
+LOADABLE_KERNEL_MODULE_SUFFIX = '_lkm'
 
 def execute_cmd_in_dir(cmd, dir_path):
     print(f'executing cmd (in {dir_path}): {cmd}')
@@ -19,14 +20,15 @@ def execute_cmd_in_dir(cmd, dir_path):
 
 def compile_c_files(dir_path):
     for root_dir_path, dir_names, file_fullnames in os.walk(dir_path):
-        if not root_dir_path.endswith(OUTPUT_DIR_NAME):
+        if (not root_dir_path.endswith(OUTPUT_DIR_NAME)) and (
+                not root_dir_path.endswith(LOADABLE_KERNEL_MODULE_SUFFIX)):
             output_dir_path = os.path.join(root_dir_path, OUTPUT_DIR_NAME)
             shutil.rmtree(output_dir_path, ignore_errors=True)
             os.mkdir(output_dir_path)
 
             for fullname in file_fullnames:
                 name, ext = os.path.splitext(fullname)
-                if ext.lower() == '.c':
+                if ext.lower() == '.c' and not name.endswith('_lkm'):
                     bin_rel_path = os.path.join(OUTPUT_DIR_NAME, name)
                     compile_cmd = (f'gcc -Werror -Wall -pedantic {fullname} '
                                    f'-o {bin_rel_path}')

@@ -134,6 +134,12 @@ int main(int argc, char **argv) {
 
             uint8_t cpl = trace_record.cpl;
             uint64_t virt_addr = trace_record.virt_addr;
+            
+            if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
+                ++num_of_mem_accesses_to_our_buf;
+                assert((virt_addr - our_buf_addr) % sizeof(int) == 0);
+                ++(counter_arr[(virt_addr - our_buf_addr) / sizeof(int)]);
+            }
 
             if (cpl == 3) {
                 if (virt_addr >= CPU_ENTRY_AREA_START_ADDR &&
@@ -143,11 +149,6 @@ int main(int argc, char **argv) {
                 }
                 else {
                     ++num_of_mem_accesses_by_user_code;
-                    if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
-                        ++num_of_mem_accesses_to_our_buf;
-                        assert((virt_addr - our_buf_addr) % sizeof(int) == 0);
-                        ++(counter_arr[(virt_addr - our_buf_addr) / sizeof(int)]);
-                    }
                 }
             }
             else {

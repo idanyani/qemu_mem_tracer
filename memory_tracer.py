@@ -14,7 +14,7 @@ TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH = os.path.join(
     pathlib.Path.home(), TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_NAME)
 WORKLOAD_RUNNER_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload_runner.bash')
-WORKLOAD_DIR_DOWNLOAD_PATH = os.path.join(
+WORKLOAD_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload')
 
 parser = argparse.ArgumentParser(
@@ -80,13 +80,11 @@ parser.add_argument('host_password', type=str,
                          'use keys instead.')
 parser.add_argument('qemu_with_GMBEOO_path', type=str,
                     help='The path of qemu_with_GMBEOO.')
-parser.add_argument('--workload_dir_path', type=str,
-                    help='The path of a directory that would be downloaded by '
-                         'the qemu guest into its home directory, and named '
-                         'qemu_mem_tracer_workload. (This is meant for '
-                         'convenience, e.g. in case your workload includes '
-                         'multiple small files that workload_runner executes '
-                         'sequentially.\n'
+parser.add_argument('--workload_path', type=str,
+                    help='The path of a file/directory that would be downloaded '
+                         'by the qemu guest into its home directory, and named '
+                         'workload. (This is meant for convenience, e.g. in '
+                         'case your workload includes more than a single file.\n'
                          'If your workload is heavy and unchanging, it would '
                          'probably be faster to download it to the QEMU guest, '
                          'use `savevm`, and later pass that snapshot\'s name '
@@ -139,7 +137,9 @@ parser.add_argument('--verbose', '-v', action='store_true',
 args = parser.parse_args()
 
 if args.verbose:
-    debug_print = print
+    def debug_print(*args, **kwargs):
+        print(*args, file=sys.stderr, **kwargs)
+    # debug_print = print
 else:
     def debug_print(*args, **kwargs):
         return
@@ -152,12 +152,14 @@ workload_runner_path = os.path.realpath(args.workload_runner_path)
 qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
 
 
-if args.workload_dir_path is None:
-    pathlib.Path(WORKLOAD_DIR_DOWNLOAD_PATH).touch()
+if args.workload_path is None:
+    pathlib.Path(WORKLOAD_DOWNLOAD_PATH).touch()
 else:
-    workload_dir_path = os.path.realpath(args.workload_dir_path)
-    os.symlink(workload_dir_path, WORKLOAD_DIR_DOWNLOAD_PATH)
+    workload_path = os.path.realpath(args.workload_path)
+    os.symlink(workload_path, WORKLOAD_DOWNLOAD_PATH)
 
+# debug_print(f'calling function: '
+#             f'os.symlink(\'{workload_runner_path}\', \'{WORKLOAD_RUNNER_DOWNLOAD_PATH}\')')
 os.symlink(workload_runner_path, WORKLOAD_RUNNER_DOWNLOAD_PATH)
 
 this_script_path = os.path.realpath(__file__)
