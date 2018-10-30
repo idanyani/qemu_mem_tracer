@@ -1,7 +1,9 @@
 import subprocess
+import shutil
 import os
 import os.path
 import time
+import tempfile
 import re
 
 # simple_user_memory_intensive_workload constants
@@ -124,6 +126,24 @@ def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
 def test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                              qemu_with_GMBEOO_path, guest_image_path,
                              snapshot_name, host_password):
+    kernel_workload_name = 'simple_kernel_memory_intensive_workload_lkm'
+    lkm_dir_path = os.path.join(this_script_location, 
+                                kernel_workload_name)
+    with tempfile.TemporaryDirectory() as temp_dir_path:
+        lkm_dir_temp_copy_path = os.path.join(temp_dir_path, kernel_workload_name)
+        shutil.copytree(lkm_dir_path, lkm_dir_temp_copy_path)
+        get_output_of_executed_cmd_in_dir('sudo make', lkm_dir_temp_copy_path)
+        print(os.listdir(lkm_dir_temp_copy_path))
+
+
+
+
+        # debug_print(f'executing cmd (in {temp_dir_path}): {run_qemu_and_workload_cmd}')
+        # subprocess.run(run_qemu_and_workload_cmd,
+        #                shell=True, check=True, cwd=temp_dir_path,
+        #                stdout=sys.stdout)
+    exit()
+
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
