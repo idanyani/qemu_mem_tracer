@@ -2,6 +2,12 @@
 # exp_internal 1
 
 set timeout 360000
+
+# Silent various messages.
+# log_user 0
+# stty -echo
+
+# necessary if workload_info or analysis_output are very large.
 match_max -d 1000000
 
 set guest_image_path [lindex $argv 0]
@@ -11,7 +17,7 @@ set trace_only_CPL3_code_GMBE [lindex $argv 3]
 set log_of_GMBE_block_len [lindex $argv 4]
 set log_of_GMBE_tracing_ratio [lindex $argv 5]
 set analysis_tool_path [lindex $argv 6]
-set qemu_mem_tracer_dir_path [lindex $argv 7]
+set trace_fifo_path [lindex $argv 7]
 set qemu_with_GMBEOO_dir_path [lindex $argv 8]
 set verbose [lindex $argv 9]
 set dont_exit_qemu_when_done [lindex $argv 10]
@@ -23,36 +29,8 @@ proc debug_print {msg} {
     }
 }
 
-# if {$verbose == "False"} {
-    log_user 0
-    stty -echo
-# }
 
 debug_print "---start run_qemu_and_workload.sh---\n"
-
-proc kill_spawned_process {pid id} {
-    exec kill -SIGKILL $pid
-    close -i $id
-    wait -i $id
-    exec $::verify_pid_dead_path $pid
-}
-
-set make_big_fifo_path "$qemu_mem_tracer_dir_path/tracer_bin/make_big_fifo"
-set dummy_fifo_reader_path "$qemu_mem_tracer_dir_path/dummy_fifo_reader.bash"
-set verify_pid_dead_path "$qemu_mem_tracer_dir_path/verify_pid_dead.bash"
-# set snapshot_name fresh
-
-set fifo_name "trace_fifo"
-set fifo_name "trace_fifo_[timestamp]"
-
-debug_print "---create big fifo---\n"
-set fifo_size [exec cat /proc/sys/fs/pipe-max-size]
-exec $make_big_fifo_path $fifo_name $fifo_size
-debug_print "---done creating big fifo $fifo_name (size: $fifo_size)---\n"
-
-debug_print "---spawn a temp reader of $fifo_name to read the mapping of trace events---\n"
-set temp_fifo_reader_pid [spawn $dummy_fifo_reader_path $fifo_name "trace_events_mapping"]
-set temp_fifo_reader_id $spawn_id
 
 # Start qemu while:
 #   The monitor is redirected to our process' stdin and stdout.
@@ -61,7 +39,7 @@ set temp_fifo_reader_id $spawn_id
 debug_print "---starting qemu---\n"
 spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
-    -serial pty -serial pty -trace file=$fifo_name
+    -serial pty -serial pty
     # -serial pty -serial pty -trace file=my_trace_file
 set monitor_id $spawn_id
 
@@ -124,8 +102,7 @@ expect -i $guest_ttyS0_reader_id -indices -re \
 }
 if {$workload_info != ""} {
     send_user "workload info:\n"
-    send_user -- $workload_info
-    send_user "\n"
+    send_user -- "$workload_info\n"
 }
 
 debug_print "\n---expecting ready to trace message---\n"
@@ -139,15 +116,13 @@ expect {
 }
 send -i $monitor_id "stop\r"
 
-debug_print "\n---killing and closing temp_fifo_reader---\n"
-kill_spawned_process $temp_fifo_reader_pid $temp_fifo_reader_id
 
 
 if {$analysis_tool_path != "/dev/null"} {
     debug_print "\n---spawning analysis tool---\n"
     # https://stackoverflow.com/questions/5728656/tcl-split-string-by-arbitrary-number-of-whitespaces-to-a-list/5731098#5731098
     set test_info_with_spaces [join $workload_info " "]
-    set analysis_tool_pid [eval spawn $analysis_tool_path $fifo_name $test_info_with_spaces]
+    set analysis_tool_pid [eval spawn $analysis_tool_path $trace_fifo_path $test_info_with_spaces]
     set analysis_tool_id $spawn_id
     debug_print "\n---expecting ready to analyze message---\n"
     expect {
@@ -162,10 +137,20 @@ if {$analysis_tool_path != "/dev/null"} {
 
 debug_print "---configure qemu_with_GMBEOO for tracing---\n"
 send -i $monitor_id "enable_GMBEOO\r"
+# Enabling GMBEOO before setting the trace file causes the mapping of events to
+# never be written to our FIFO.
+send -i $monitor_id "trace-file set $trace_fifo_path\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
 send -i $monitor_id "update_trace_only_CPL3_code_GMBE $trace_only_CPL3_code_GMBE\r"
 send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
+
+# The second GMBEOO_mask_of_GMBE_block_idx is the up to date one.
+expect -i $monitor_id -indices -re \
+        {GMBEOO_mask_of_GMBE_block_idx: __.*GMBEOO_mask_of_GMBE_block_idx: __(.*)__} {
+    set mask_of_GMBE_block_idx [string trim $expect_out(1,string)]
+}
+debug_print "GMBEOO_mask_of_GMBE_block_idx: $mask_of_GMBE_block_idx\n"
 
 debug_print "---storing start timestamp and starting to trace---\n"
 set tracing_start_time [timestamp]
@@ -194,6 +179,9 @@ send -i $monitor_id "trace-file flush\r"
 send -i $monitor_id "trace-file flush\r"
 set tracing_end_time [timestamp]
 
+set tracing_duration_in_seconds [expr $tracing_end_time - $tracing_start_time]
+send_user "tracing_duration_in_seconds:\n"
+send_user -- "$tracing_duration_in_seconds\n"
 
 debug_print "\n---$analysis_tool_path---\n"
 if {$analysis_tool_path != "/dev/null"} {
@@ -211,33 +199,24 @@ if {$analysis_tool_path != "/dev/null"} {
     debug_print "\n---received analysis output---\n"
 
     send_user "analysis output:\n"
-    send_user -- $analysis_output
-    send_user "\n"
-
-    debug_print "\n---killing and closing $analysis_tool_path---\n"
-    kill_spawned_process $analysis_tool_pid $analysis_tool_id
-    # expect -i $analysis_tool_id -indices -re {num_of_mem_accesses: +(\d+)} {
-    #     set analysis_tool_output $expect_out(1,string)
-    # }
+    send_user -- "$analysis_output\n"
 }
 
 
-set tracing_duration_in_seconds [expr $tracing_end_time - $tracing_start_time]
+if {$print_trace_info == "True"} {
+    send -i $monitor_id "print_trace_info\r"
+    debug_print "\n---expecting trace info---\n"
+    expect -i $monitor_id -indices -re \
+            "-----begin trace info-----(.*)-----end trace info-----" {
+        set trace_info [string trim $expect_out(1,string)]
+    }
+    send_user "trace info:\n"
+    send_user -- "$trace_info\n"
+}
 
-# send -i $monitor_id "print_trace_info\r"
-# debug_print "\n---expecting trace info---\n"
-# expect -i $monitor_id -indices -re \
-#         "-----begin trace info-----(.*)-----end trace info-----" {
-#     set trace_info [string trim $expect_out(1,string)]
-# }
-# send_user "trace info:\n"
-# send_user -- $trace_info
-# send_user "\n"
 
-debug_print "tracing_duration_in_seconds: $tracing_duration_in_seconds\n"
-
-debug_print "---deleting $fifo_name---\n"
-exec rm $fifo_name
+debug_print "---deleting $trace_fifo_path---\n"
+exec rm $trace_fifo_path
 
 debug_print "---end run_qemu_and_test.sh---\n"
 

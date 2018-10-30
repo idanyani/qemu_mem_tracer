@@ -102,18 +102,8 @@ int main(int argc, char **argv) {
         our_buf_addr = strtoull(argv[2], NULL, 0);
         our_buf_end_addr = our_buf_addr + OUR_BUF_SIZE;
     }
-    PRINT_STR("opening fifo.\n");
     
-    FILE *qemu_trace_fifo = fopen(argv[1], "rb");
-    if (qemu_trace_fifo == NULL) {
-        printf("failed to open fifo. errno: %d\n", errno);
-        return 1;
-    }
-    PRINT_STR("fifo opened.\n");
-
     signal(SIGUSR1, handle_end_analysis_signal);
-    size_t num_of_trace_records_read = 0;
-    GMBEOO_TraceRecord trace_record;
 
     // FILE *trace_file = fopen("/home/orenmn/my_trace_file", "wb");
     // if (trace_file == NULL) {
@@ -122,9 +112,17 @@ int main(int argc, char **argv) {
     // }
 
     PRINT_STR("Ready to analyze");
+    
+    FILE *qemu_trace_fifo = fopen(argv[1], "rb");
+    if (qemu_trace_fifo == NULL) {
+        printf("failed to open fifo. errno: %d\n", errno);
+        return 1;
+    }
     while (!end_analysis) {
-        num_of_trace_records_read = fread(&trace_record, sizeof(trace_record),
-                                          1, qemu_trace_fifo);
+        GMBEOO_TraceRecord trace_record;
+        size_t num_of_trace_records_read = fread(&trace_record,
+                                                 sizeof(trace_record),
+                                                 1, qemu_trace_fifo);
         if (num_of_trace_records_read == 1) {
             // size_t num_of_trace_records_written_to_file = 
             //     fwrite(&trace_record, sizeof(trace_record), 1, trace_file);

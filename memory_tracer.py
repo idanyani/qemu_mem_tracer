@@ -17,6 +17,13 @@ WORKLOAD_RUNNER_DOWNLOAD_PATH = os.path.join(
 WORKLOAD_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload')
 
+MAKE_BIG_FIFO_REL_PATH = os.path.join('tracer_bin', 'make_big_fifo')
+
+def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.DEVNULL):
+    print(f'executing cmd (in {dir_path}): {cmd}')
+    subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
+                   stdout=stdout_dest)
+
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Run a workload on the QEMU guest while writing optimized GMBE '
@@ -28,9 +35,10 @@ parser = argparse.ArgumentParser(
                 'guest to access a virtual memory address.\n\n'
                 'We optimized QEMU\'s tracing code for the case in which only '
                 'trace records of GMBE are gathered (we call it GMBE only '
-                'optimization - GMBEOO).\n'
-                'When GMBEOO is enabled, a trace record is structured as '
-                'follows:\n\n'
+                'optimization - GMBEOO, and so we gave our fork of QEMU the '
+                'name qemu_with_GMBEOO).\n'
+                'When GMBEOO is enabled (in qemu_with_GMBEOO), a trace record '
+                'is structured as follows:\n\n'
                 'struct GMBEOO_TraceRecord {\n'
                 '    uint8_t size_shift : 3; /* interpreted as "1 << size_shift" bytes */\n'
                 '    bool    sign_extend: 1; /* whether it is a sign-extended operation */\n'
@@ -41,7 +49,8 @@ parser = argparse.ArgumentParser(
                 '    uint64_t virt_addr : 64;\n'
                 '};\n\n'
                 'memory_tracer.py also prints the workload info (in case it '
-                'isn\'t the empty string).\n'
+                'isn\'t the empty string), and the tracing duration in '
+                'seconds.\n'
                 'In case --analysis_tool_path is specified, memory_tracer.py '
                 'also prints the output of the analysis tool.\n\n'
                 'Either workload_runner or the workload itself must '
@@ -66,14 +75,21 @@ parser = argparse.ArgumentParser(
                 'includes the workload and the aforementioned prints.\n\n'
                 'If --analysis_tool_path is specified, the provided analysis '
                 'tool must do the following:\n'
-                '1. Print "Ready to analyze" when you wish the '
-                'tracing to start.\n'
+                '1. Receive in argv[1] the path of the trace FIFO, but not '
+                'open it for reading yet.'
                 '2. Register a handler for the signal SIGUSR1 (e.g. '
                 'by calling the `signal` syscall). The handler must:\n'
                 '  a. Print "-----begin analysis output-----".\n'
                 '  b. Print the output of the analysis tool.\n'
                 '  c. Print "-----end analysis output-----".\n'
-                'analysis tool '
+                '3. Print "Ready to analyze" when you wish the '
+                'tracing to start.\n'
+                '4. Open the trace FIFO for read, and start reading trace '
+                'records from it. Note that the reading from the FIFO should be '
+                'as fast as possible. Otherwise, the FIFO\'s buffer would get '
+                'full, and qemu_with_GMBEOO would start blocking when it '
+                'tries to write to the FIFO. Soon, trace_buf would get full, '
+                'and trace records of new GMBE events would be dropped.\n'
                 '(If any of the messages isn\'t printed, it will '
                 'probably seem like memory_tracer.py is stuck.)\n\n'
                 )
@@ -107,6 +123,12 @@ parser.add_argument('--workload_path', type=str,
 parser.add_argument('--analysis_tool_path', type=str, default='/dev/null',
                     help='Path of an analysis tool that would start executing '
                          'before the tracing starts.\n')
+parser.add_argument('--trace_fifo_path', type=str,
+                    help='Path of the FIFO into which trace records will be '
+                         'written. Note that as mentioned above, a scenario '
+                         'in which the FIFO\'s buffer getting full is bad, and '
+                         'so it is recommended to use a FIFO whose buffer is '
+                         'of size `cat /proc/sys/fs/pipe-max-size`.')
 parser.add_argument('--trace_only_CPL3_code_GMBE',
                     action='store_const',
                     const='on', default='off',
@@ -162,6 +184,11 @@ parser.add_argument('--verbose', '-v', action='store_true',
                     help='If specified, debug messages are printed.')
 args = parser.parse_args()
 
+if (1 != (1 if (args.trace_fifo_path is None) else 0) +
+         (1 if (args.analysis_tool_path is '/dev/null') else 0)):
+    raise RuntimeError('Exactly one of --analysis_tool_path and '
+                       '--trace_fifo_path must be specified.')
+
 if args.verbose:
     def debug_print(*args, **kwargs):
         print(*args, file=sys.stderr, **kwargs)
@@ -184,8 +211,6 @@ else:
     workload_path = os.path.realpath(args.workload_path)
     os.symlink(workload_path, WORKLOAD_DOWNLOAD_PATH)
 
-# debug_print(f'calling function: '
-#             f'os.symlink(\'{workload_runner_path}\', \'{WORKLOAD_RUNNER_DOWNLOAD_PATH}\')')
 os.symlink(workload_runner_path, WORKLOAD_RUNNER_DOWNLOAD_PATH)
 
 this_script_path = os.path.realpath(__file__)
@@ -203,27 +228,35 @@ if this_script_location_dir_name != 'qemu_mem_tracer':
         if user_input == 'y':
             break
 
-run_qemu_and_workload_expect_script_path = os.path.join(this_script_location,
-                                                        'run_qemu_and_workload.sh')
-
-run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
-                             f'"{guest_image_path}" '
-                             f'"{args.snapshot_name}" '
-                             f'"{args.host_password}" '
-                             f'{args.trace_only_CPL3_code_GMBE} '
-                             f'{args.log_of_GMBE_block_len} '
-                             f'{args.log_of_GMBE_tracing_ratio} '
-                             f'{args.analysis_tool_path} '
-                             f'{this_script_location} '
-                             f'{qemu_with_GMBEOO_path} '
-                             f'{args.verbose} '
-                             f'{args.dont_exit_qemu_when_done} '
-                             )
 
 with tempfile.TemporaryDirectory() as temp_dir_path:
-    debug_print(f'executing cmd (in {temp_dir_path}): {run_qemu_and_workload_cmd}')
-    subprocess.run(run_qemu_and_workload_cmd,
-                   shell=True, check=True, cwd=temp_dir_path,
-                   stdout=sys.stdout)
+    if args.trace_fifo_path is None:
+        make_big_fifo_path = os.path.join(this_script_location,
+                                          MAKE_BIG_FIFO_REL_PATH)
+        trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
+        print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
+        make_max_size_fifo_cmd = (f'{make_big_fifo_path} {trace_fifo_path} '
+                             f'`{print_fifo_max_size_cmd}`')
+        execute_cmd_in_dir(make_max_size_fifo_cmd)
+    else:
+        trace_fifo_path = args.trace_fifo_path
 
+    run_qemu_and_workload_expect_script_path = os.path.join(this_script_location,
+                                                            'run_qemu_and_workload.sh')
+    run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
+                                 f'"{guest_image_path}" '
+                                 f'"{args.snapshot_name}" '
+                                 f'"{args.host_password}" '
+                                 f'{args.trace_only_CPL3_code_GMBE} '
+                                 f'{args.log_of_GMBE_block_len} '
+                                 f'{args.log_of_GMBE_tracing_ratio} '
+                                 f'{args.analysis_tool_path} '
+                                 f'{trace_fifo_path} '
+                                 f'{qemu_with_GMBEOO_path} '
+                                 f'{args.verbose} '
+                                 f'{args.dont_exit_qemu_when_done} '
+                                 f'{args.print_trace_info} '
+                                 )
+
+    execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)
 
