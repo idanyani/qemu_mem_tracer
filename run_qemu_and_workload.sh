@@ -7,7 +7,7 @@ match_max -d 1000000
 set guest_image_path [lindex $argv 0]
 set snapshot_name [lindex $argv 1]
 set host_password [lindex $argv 2]
-set trace_only_user_code_GMBE [lindex $argv 3]
+set trace_only_CPL3_code_GMBE [lindex $argv 3]
 set log_of_GMBE_block_len [lindex $argv 4]
 set log_of_GMBE_tracing_ratio [lindex $argv 5]
 set analysis_tool_path [lindex $argv 6]
@@ -15,6 +15,7 @@ set qemu_mem_tracer_dir_path [lindex $argv 7]
 set qemu_with_GMBEOO_dir_path [lindex $argv 8]
 set verbose [lindex $argv 9]
 set dont_exit_qemu_when_done [lindex $argv 10]
+set print_trace_info [lindex $argv 11]
 
 proc debug_print {msg} {
     if {$::verbose == "True"} {
@@ -162,7 +163,7 @@ if {$analysis_tool_path != "/dev/null"} {
 debug_print "---configure qemu_with_GMBEOO for tracing---\n"
 send -i $monitor_id "enable_GMBEOO\r"
 send -i $monitor_id "trace-event guest_mem_before_exec on\r"
-send -i $monitor_id "update_trace_only_user_code_GMBE $trace_only_user_code_GMBE\r"
+send -i $monitor_id "update_trace_only_CPL3_code_GMBE $trace_only_CPL3_code_GMBE\r"
 send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
 send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
 
@@ -223,14 +224,14 @@ if {$analysis_tool_path != "/dev/null"} {
 
 set tracing_duration_in_seconds [expr $tracing_end_time - $tracing_start_time]
 
-# send -i $monitor_id "print_trace_results\r"
-# debug_print "\n---expecting trace results---\n"
+# send -i $monitor_id "print_trace_info\r"
+# debug_print "\n---expecting trace info---\n"
 # expect -i $monitor_id -indices -re \
-#         "-----begin trace results-----(.*)-----end trace results-----" {
-#     set trace_results [string trim $expect_out(1,string)]
+#         "-----begin trace info-----(.*)-----end trace info-----" {
+#     set trace_info [string trim $expect_out(1,string)]
 # }
-# send_user "trace results:\n"
-# send_user -- $trace_results
+# send_user "trace info:\n"
+# send_user -- $trace_info
 # send_user "\n"
 
 debug_print "tracing_duration_in_seconds: $tracing_duration_in_seconds\n"

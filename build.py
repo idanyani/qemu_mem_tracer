@@ -17,11 +17,6 @@ def execute_cmd_in_dir(cmd, dir_path='.'):
     print(f'executing cmd (in {dir_path}): {cmd}')
     subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
 
-# def get_current_branch_name(repo_path):
-#     return subprocess.run('git rev-parse --abbrev-ref HEAD', shell=True,
-#                           check=True, cwd=repo_path,
-#                           capture_output=True).stdout.strip().decode()
-
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Build qemu_mem_tracer.\n\n'

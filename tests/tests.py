@@ -41,7 +41,7 @@ def get_mem_tracer_output(this_script_location, qemu_mem_tracer_script_path,
                                # f'--verbose ')
     return get_output_of_executed_cmd_in_dir(run_mem_tracer_cmd)
     
-def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
+def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -59,7 +59,7 @@ def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_pat
         '^analysis output:(.*)analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL) is not None)
 
-def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
+def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -99,7 +99,7 @@ def check_mem_accesses(mem_tracer_output):
     # would exhaust it).
     counter_arr = list(map(int, filter(None, counter_arr_as_str.strip().split(","))))
     assert(len(counter_arr) == OUR_ARR_LEN)
-    
+
     counter_arr_sum = sum(counter_arr)
     assert(APPROX_NUM_OF_EXPECTED_ACCESSES <= counter_arr_sum <=
            APPROX_NUM_OF_EXPECTED_ACCESSES + 100)
@@ -108,7 +108,7 @@ def check_mem_accesses(mem_tracer_output):
         assert(APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
                APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
 
-def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -145,7 +145,7 @@ def _test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
 
     check_mem_accesses(mem_tracer_output)
 
-def test_trace_only_user_code_GMBE(this_script_location,
+def test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name, host_password):
@@ -159,9 +159,8 @@ def test_trace_only_user_code_GMBE(this_script_location,
         get_tests_bin_file_path(this_script_location, 
                                 'simple_user_memory_intensive_workload'),
         get_tests_bin_file_path(this_script_location, 'simple_analysis'),
-        '--trace_only_user_code_GMBE')
+        '--trace_only_CPL3_code_GMBE')
     
-    print(mem_tracer_output)
     check_mem_accesses(mem_tracer_output)
 
     num_of_mem_accesses_by_non_CPL3_code_as_str = re.match(
