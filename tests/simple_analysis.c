@@ -43,9 +43,9 @@ typedef struct {
 
 
 bool end_analysis = false;
-uint64_t num_of_mem_accesses_by_user_code = 0; 
-uint64_t num_of_mem_accesses_by_kernel_code = 0; 
-uint64_t num_of_mem_accesses_by_CPL3_to_cpu_entry_area = 0; 
+uint64_t num_of_mem_accesses_by_CPL3_code = 0; 
+uint64_t num_of_mem_accesses_by_non_CPL3_code = 0; 
+uint64_t num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area = 0; 
 uint64_t num_of_mem_accesses_to_our_buf = 0; 
 uint64_t curr_offset = 0; 
 uint64_t num_of_read_failures = 0; 
@@ -64,18 +64,18 @@ void handle_end_analysis_signal(int unused_signum) {
                "num_of_read_failures_with_feof_1: %lu\n",
                num_of_read_failures, num_of_read_failures_with_feof_1);
     }
-    printf("our_buf_addr:                                  %lu\n"
-           "num_of_mem_accesses_by_user_code:              %lu\n"
-           "num_of_mem_accesses_by_kernel_code:            %lu\n"
-           "num_of_mem_accesses_by_CPL3_to_cpu_entry_area: %lu\n"
-           "num_of_mem_accesses:                           %lu\n"
-           "num_of_mem_accesses_to_our_buf:                %lu\n",
+    printf("our_buf_addr:                                       %lu\n"
+           "num_of_mem_accesses_by_CPL3_code:                   %lu\n"
+           "num_of_mem_accesses_by_non_CPL3_code:               %lu\n"
+           "num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area: %lu\n"
+           "num_of_mem_accesses:                                %lu\n"
+           "num_of_mem_accesses_to_our_buf:                     %lu\n",
            our_buf_addr,
-           num_of_mem_accesses_by_user_code,
-           num_of_mem_accesses_by_kernel_code,
-           num_of_mem_accesses_by_CPL3_to_cpu_entry_area,
-           num_of_mem_accesses_by_user_code + num_of_mem_accesses_by_kernel_code +
-                num_of_mem_accesses_by_CPL3_to_cpu_entry_area,
+           num_of_mem_accesses_by_CPL3_code,
+           num_of_mem_accesses_by_non_CPL3_code,
+           num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area,
+           num_of_mem_accesses_by_CPL3_code + num_of_mem_accesses_by_non_CPL3_code +
+                num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area,
            num_of_mem_accesses_to_our_buf);
     printf("counter_arr:\n");
     for (int i = 0; i < OUR_ARR_LEN; ++i) {
@@ -145,14 +145,14 @@ int main(int argc, char **argv) {
                 if (virt_addr >= CPU_ENTRY_AREA_START_ADDR &&
                     virt_addr <= CPU_ENTRY_AREA_END_ADDR)
                 {
-                    ++num_of_mem_accesses_by_CPL3_to_cpu_entry_area;
+                    ++num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area;
                 }
                 else {
-                    ++num_of_mem_accesses_by_user_code;
+                    ++num_of_mem_accesses_by_CPL3_code;
                 }
             }
             else {
-                ++num_of_mem_accesses_by_kernel_code;
+                ++num_of_mem_accesses_by_non_CPL3_code;
             }
         }
         else {

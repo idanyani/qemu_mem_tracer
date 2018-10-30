@@ -16,18 +16,18 @@ set qemu_with_GMBEOO_dir_path [lindex $argv 8]
 set verbose [lindex $argv 9]
 set dont_exit_qemu_when_done [lindex $argv 10]
 
-if {$verbose == "False"} {
-    log_user 0
-    stty -echo
-} else {
-    send_error -- "---start run_qemu_and_workload.sh---\n"
-}
-
 proc debug_print {msg} {
     if {$::verbose == "True"} {
         send_error -- $msg
     }
 }
+
+# if {$verbose == "False"} {
+    log_user 0
+    stty -echo
+# }
+
+debug_print "---start run_qemu_and_workload.sh---\n"
 
 proc kill_spawned_process {pid id} {
     exec kill -SIGKILL $pid
@@ -119,11 +119,11 @@ exec echo $host_password > $guest_ttyS0_pty_pid
 debug_print "\n---expecting workload info---\n"
 expect -i $guest_ttyS0_reader_id -indices -re \
         "-----begin workload info-----(.*)-----end workload info-----" {
-    set test_info [string trim $expect_out(1,string)]
+    set workload_info [string trim $expect_out(1,string)]
 }
-if {$test_info != ""} {
+if {$workload_info != ""} {
     send_user "workload info:\n"
-    send_user -- $test_info
+    send_user -- $workload_info
     send_user "\n"
 }
 
@@ -145,7 +145,7 @@ kill_spawned_process $temp_fifo_reader_pid $temp_fifo_reader_id
 if {$analysis_tool_path != "/dev/null"} {
     debug_print "\n---spawning analysis tool---\n"
     # https://stackoverflow.com/questions/5728656/tcl-split-string-by-arbitrary-number-of-whitespaces-to-a-list/5731098#5731098
-    set test_info_with_spaces [join $test_info " "]
+    set test_info_with_spaces [join $workload_info " "]
     set analysis_tool_pid [eval spawn $analysis_tool_path $fifo_name $test_info_with_spaces]
     set analysis_tool_id $spawn_id
     debug_print "\n---expecting ready to analyze message---\n"
@@ -175,6 +175,7 @@ send -i $monitor_id "sendkey ret\r"
 
 # interact -i $monitor_id
 
+debug_print "\n---expecting Stop tracing message---\n"
 expect {
     -i $guest_ttyS0_reader_id
     "Stop tracing" {}
@@ -183,13 +184,21 @@ expect {
         exit 1
     }
 }
+
 send -i $monitor_id "stop\r"
+# flush the trace file twice, to make GMBEOO's code in `writeout_thread` run
+# twice, which might be needed due to the way GMBEOO's code works (and the fact
+# that `trace_buf` is a cyclic buffer).
+send -i $monitor_id "trace-file flush\r"
+send -i $monitor_id "trace-file flush\r"
 set tracing_end_time [timestamp]
 
-# sleep 1
 
 debug_print "\n---$analysis_tool_path---\n"
 if {$analysis_tool_path != "/dev/null"} {
+    # Give the analysis tool a second to finish reading from the FIFO.
+    sleep 1
+    
     debug_print "\n---sending SIGUSR1 to $analysis_tool_path---\n"
     exec kill -SIGUSR1 $analysis_tool_pid
     sleep 3
@@ -213,9 +222,16 @@ if {$analysis_tool_path != "/dev/null"} {
 
 
 set tracing_duration_in_seconds [expr $tracing_end_time - $tracing_start_time]
-exec echo "tracing_duration_in_seconds: $tracing_duration_in_seconds" >> test_info.txt
 
-send -i $monitor_id "print_trace_results\r"
+# send -i $monitor_id "print_trace_results\r"
+# debug_print "\n---expecting trace results---\n"
+# expect -i $monitor_id -indices -re \
+#         "-----begin trace results-----(.*)-----end trace results-----" {
+#     set trace_results [string trim $expect_out(1,string)]
+# }
+# send_user "trace results:\n"
+# send_user -- $trace_results
+# send_user "\n"
 
 debug_print "tracing_duration_in_seconds: $tracing_duration_in_seconds\n"
 

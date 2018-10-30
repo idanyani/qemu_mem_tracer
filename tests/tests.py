@@ -28,11 +28,7 @@ def get_tests_bin_file_path(this_script_location, file_name):
 def get_mem_tracer_output(this_script_location, qemu_mem_tracer_script_path,
                           qemu_with_GMBEOO_path, guest_image_path,
                           snapshot_name, host_password, workload_runner_path,
-                          analysis_tool_path, workload_path=None):
-    if workload_path:
-        workload_runner_path_cmd = f'--workload_path {workload_path}'
-    else:
-        workload_runner_path_cmd = ''
+                          analysis_tool_path, extra_cmd_args=''):
     run_mem_tracer_cmd = (f'python3.7 {qemu_mem_tracer_script_path} '
                                f'"{guest_image_path}" '
                                f'"{snapshot_name}" '
@@ -40,7 +36,7 @@ def get_mem_tracer_output(this_script_location, qemu_mem_tracer_script_path,
                                f'"{host_password}" '
                                f'"{qemu_with_GMBEOO_path}" '
                                f'--analysis_tool_path "{analysis_tool_path}" '
-                               f'{workload_runner_path_cmd} '
+                               f'{extra_cmd_args} '
                                )
                                # f'--verbose ')
     return get_output_of_executed_cmd_in_dir(run_mem_tracer_cmd)
@@ -88,6 +84,30 @@ def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pa
     assert(analysis_cmd_args[5] == 'arg5')
     assert(analysis_cmd_args[6] == 'arg6')
 
+def check_mem_accesses(mem_tracer_output):
+    workload_info_as_str, our_buf_addr_as_str, counter_arr_as_str = re.match(
+        '^workload info:(.*)analysis output:(.*)our_buf_addr:(.*)'
+        'num_of_mem_accesses_by_CPL3_code:(.*)counter_arr:(.*)'
+        'analysis cmd args:(.*)',
+        mem_tracer_output, re.DOTALL).group(1, 3, 5)
+    
+    our_buf_addr_in_workload_info = int(workload_info_as_str.strip(), 16)
+    our_buf_addr_in_analysis_output = int(our_buf_addr_as_str.strip())
+    assert(our_buf_addr_in_workload_info == our_buf_addr_in_analysis_output)
+    
+    # Use `list` so that counter_arr isn't an iterator (because then `sum`
+    # would exhaust it).
+    counter_arr = list(map(int, filter(None, counter_arr_as_str.strip().split(","))))
+    assert(len(counter_arr) == OUR_ARR_LEN)
+    
+    counter_arr_sum = sum(counter_arr)
+    assert(APPROX_NUM_OF_EXPECTED_ACCESSES <= counter_arr_sum <=
+           APPROX_NUM_OF_EXPECTED_ACCESSES + 100)
+
+    for counter in counter_arr:
+        assert(APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
+               APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
+
 def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
@@ -101,48 +121,15 @@ def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
         get_tests_bin_file_path(this_script_location, 
                                 'simple_user_memory_intensive_workload'),
         get_tests_bin_file_path(this_script_location, 'simple_analysis'))
+    
+    check_mem_accesses(mem_tracer_output)
+    
 
-    workload_info_as_str, our_buf_addr_as_str, counter_arr_as_str = re.match(
-        '^workload info:(.*)analysis output:(.*)our_buf_addr:(.*)'
-        'num_of_mem_accesses_by_user_code:(.*)counter_arr:(.*)'
-        'analysis cmd args:(.*)',
-        mem_tracer_output, re.DOTALL).group(1, 3, 5)
-    # Use `list` so that counter_arr isn't an iterator (because then `sum`
-    # would exhaust it).
-    our_buf_addr_in_workload_info = int(workload_info_as_str.strip(), 16)
-    our_buf_addr_in_analysis_output = int(our_buf_addr_as_str.strip())
-    assert(our_buf_addr_in_workload_info == our_buf_addr_in_analysis_output)
-    counter_arr = list(map(int, filter(None, counter_arr_as_str.strip().split(","))))
-    counter_arr_sum = sum(counter_arr)
-    assert(APPROX_NUM_OF_EXPECTED_ACCESSES <= counter_arr_sum <=
-           APPROX_NUM_OF_EXPECTED_ACCESSES + 100)
-
-    # make sure count_arr isn't empty.
-    assert(len(counter_arr) == OUR_ARR_LEN)
-    for counter in counter_arr:
-        assert(APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
-               APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
-
-def test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
-                             qemu_with_GMBEOO_path, guest_image_path,
-                             snapshot_name, host_password):
-    kernel_workload_name = 'simple_kernel_memory_intensive_workload_lkm'
-    lkm_dir_path = os.path.join(this_script_location, 
-                                kernel_workload_name)
-    with tempfile.TemporaryDirectory() as temp_dir_path:
-        lkm_dir_temp_copy_path = os.path.join(temp_dir_path, kernel_workload_name)
-        shutil.copytree(lkm_dir_path, lkm_dir_temp_copy_path)
-        get_output_of_executed_cmd_in_dir('sudo make', lkm_dir_temp_copy_path)
-        print(os.listdir(lkm_dir_temp_copy_path))
-
-
-
-
-        # debug_print(f'executing cmd (in {temp_dir_path}): {run_qemu_and_workload_cmd}')
-        # subprocess.run(run_qemu_and_workload_cmd,
-        #                shell=True, check=True, cwd=temp_dir_path,
-        #                stdout=sys.stdout)
-    exit()
+def _test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+                              qemu_with_GMBEOO_path, guest_image_path,
+                              snapshot_name, host_password):
+    workload_path = os.path.join(this_script_location,
+                                 'simple_kernel_memory_intensive_workload_lkm')
 
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
@@ -154,35 +141,40 @@ def test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
         os.path.join(this_script_location,
                      'simple_kernel_memory_intensive_workload_runner.bash'),
         get_tests_bin_file_path(this_script_location, 'simple_analysis'),
-        os.path.join(this_script_location,
-                     'simple_kernel_memory_intensive_workload_lkm'))
+        f'--workload_path {workload_path}')
 
+    check_mem_accesses(mem_tracer_output)
+
+def test_trace_only_user_code_GMBE(this_script_location,
+                                   qemu_mem_tracer_script_path,
+                                   qemu_with_GMBEOO_path, guest_image_path,
+                                   snapshot_name, host_password):
+    mem_tracer_output = get_mem_tracer_output(
+        this_script_location,
+        qemu_mem_tracer_script_path,
+        qemu_with_GMBEOO_path,
+        guest_image_path,
+        snapshot_name,
+        host_password,
+        get_tests_bin_file_path(this_script_location, 
+                                'simple_user_memory_intensive_workload'),
+        get_tests_bin_file_path(this_script_location, 'simple_analysis'),
+        '--trace_only_user_code_GMBE')
+    
     print(mem_tracer_output)
+    check_mem_accesses(mem_tracer_output)
 
-    workload_info_as_str, our_buf_addr_as_str, counter_arr_as_str = re.match(
-        '^workload info:(.*)analysis output:(.*)our_buf_addr:(.*)'
-        'num_of_mem_accesses_by_user_code:(.*)counter_arr:(.*)'
-        'analysis cmd args:(.*)',
-        mem_tracer_output, re.DOTALL).group(1, 3, 5)
-    # Use `list` so that counter_arr isn't an iterator (because then `sum`
-    # would exhaust it).
-    our_buf_addr_in_workload_info = int(workload_info_as_str.strip(), 16)
-    our_buf_addr_in_analysis_output = int(our_buf_addr_as_str.strip())
-    assert(our_buf_addr_in_workload_info == our_buf_addr_in_analysis_output)
-    counter_arr = list(map(int, filter(None, counter_arr_as_str.strip().split(","))))
-    counter_arr_sum = sum(counter_arr)
-    assert(APPROX_NUM_OF_EXPECTED_ACCESSES <= counter_arr_sum <=
-           APPROX_NUM_OF_EXPECTED_ACCESSES + 100)
-
-    # make sure count_arr isn't empty.
-    assert(len(counter_arr) == OUR_ARR_LEN)
-    for counter in counter_arr:
-        assert(APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
-               APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
+    num_of_mem_accesses_by_non_CPL3_code_as_str = re.match(
+        '^workload info:(.*)analysis output:(.*)'
+        'num_of_mem_accesses_by_non_CPL3_code:(.*)'
+        'num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area:(.*)',
+        mem_tracer_output, re.DOTALL).group(3)
+    
+    num_of_mem_accesses_by_non_CPL3_code = int(
+        num_of_mem_accesses_by_non_CPL3_code_as_str.strip())
+    assert(num_of_mem_accesses_by_non_CPL3_code == 0)
 
 def _test_sampling():
-    pass
-def _test_trace_only_user_code_GMBE():
     pass
 
 
