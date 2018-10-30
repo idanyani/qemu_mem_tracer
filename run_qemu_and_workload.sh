@@ -4,8 +4,8 @@
 set timeout 360000
 
 # Silent various messages.
-# log_user 0
-# stty -echo
+log_user 0
+stty -echo
 
 # necessary if workload_info or analysis_output are very large.
 match_max -d 1000000
@@ -180,8 +180,7 @@ send -i $monitor_id "trace-file flush\r"
 set tracing_end_time [timestamp]
 
 set tracing_duration_in_seconds [expr $tracing_end_time - $tracing_start_time]
-send_user "tracing_duration_in_seconds:\n"
-send_user -- "$tracing_duration_in_seconds\n"
+send_user "tracing_duration_in_seconds: $tracing_duration_in_seconds\n"
 
 debug_print "\n---$analysis_tool_path---\n"
 if {$analysis_tool_path != "/dev/null"} {

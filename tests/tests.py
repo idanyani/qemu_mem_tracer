@@ -52,7 +52,7 @@ def get_mem_tracer_error_and_output(*args, **kwargs):
 def get_mem_tracer_output(*args, **kwargs):
     return get_output_of_executed_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs))
     
-def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
+def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -67,10 +67,10 @@ def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_pat
     
     # match succeeding means that the workload info isn't printed.
     assert(re.match(
-        '^analysis output:(.*)analysis cmd args:(.*)',
+        '^tracing_duration_in_seconds:.*analysis output:.*analysis cmd args:.*',
         mem_tracer_output, re.DOTALL) is not None)
 
-def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
+def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -83,6 +83,7 @@ def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pa
         get_tests_bin_file_path(this_script_location, 
                                 'dummy_workload_with_funny_test_info'),
         get_tests_bin_file_path(this_script_location, 'simple_analysis'))
+    
     analysis_cmd_args_as_str = re.match(
         r'^workload info:.*analysis output:.*analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL).group(1)
@@ -96,7 +97,7 @@ def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pa
 
 def check_mem_accesses(mem_tracer_output):
     workload_info_as_str, our_buf_addr_as_str, counter_arr_as_str = re.match(
-        r'^workload info:(.*)analysis output:.*our_buf_addr:(.*)'
+        r'^workload info:(.*)tracing_duration_in_seconds:.*our_buf_addr:(.*)'
         r'num_of_mem_accesses_by_CPL3_code:.*counter_arr:(.*)'
         r'analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL).group(1, 2, 3)
@@ -118,7 +119,7 @@ def check_mem_accesses(mem_tracer_output):
         assert(APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
                APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
 
-def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -155,7 +156,7 @@ def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_pa
 
     check_mem_accesses(mem_tracer_output)
 
-def _test_trace_only_CPL3_code_GMBE(this_script_location,
+def test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name, host_password):
@@ -228,7 +229,7 @@ def test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def _test_trace_fifo_path_cmd_arg():
+def ____test_trace_fifo_path_cmd_arg():
     pass
 
 
