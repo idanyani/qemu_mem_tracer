@@ -11,14 +11,13 @@
     fflush(stdout);      \
 }
 
-#define OUR_ARR_LEN 10000
+#define OUR_ARR_LEN                 (10000)
+#define NUM_OF_ITERS_OVER_OUR_ARR   (5)
 
 void memory_intensive_loop(int *arr) {
-    for (int j = 0; j < 5; ++j) {
+    for (int j = 0; j < NUM_OF_ITERS_OVER_OUR_ARR; ++j) {
         for (int i = 0; i < OUR_ARR_LEN; ++i) {
-            ++arr[0];
-            // ++arr[i];
-            // printf("%p\n", (void *)&arr[i]);
+            ++arr[i];
         }
     }
 }

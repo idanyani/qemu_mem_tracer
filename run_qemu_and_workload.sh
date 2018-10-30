@@ -2,7 +2,7 @@
 # exp_internal 1
 
 set timeout 360000
-
+match_max -d 1000000
 
 set guest_image_path [lindex $argv 0]
 set snapshot_name [lindex $argv 1]

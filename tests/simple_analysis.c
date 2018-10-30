@@ -24,6 +24,8 @@
 #define OUR_ARR_LEN                     (10000)
 #define OUR_BUF_SIZE                    (OUR_ARR_LEN * sizeof(int))
 
+
+
 // see https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
 #define LINUX_USER_SPACE_END_ADDR       ((uint64_t)1 << 47)
 #define CPU_ENTRY_AREA_START_ADDR       (0xfffffe0000000000)
@@ -52,6 +54,7 @@ uint64_t our_buf_addr = 0;
 uint64_t our_buf_end_addr = 0;
 int argc_global;
 char **argv_global;
+int counter_arr[OUR_BUF_SIZE];
 
 void handle_end_analysis_signal(int unused_signum) {
     PRINT_STR("-----begin analysis output-----");
@@ -74,6 +77,11 @@ void handle_end_analysis_signal(int unused_signum) {
            num_of_mem_accesses_by_user_code + num_of_mem_accesses_by_kernel_code +
                 num_of_mem_accesses_by_CPL3_to_cpu_entry_area,
            num_of_mem_accesses_to_our_buf);
+    printf("counter_arr:\n");
+    for (int i = 0; i < OUR_ARR_LEN; ++i) {
+        printf("%d,", counter_arr[i]);
+    }
+    printf("\n");
     printf("analysis cmd args:");
     for (int i = 0; i < argc_global; ++i) {
         printf("%s,", argv_global[i]);
@@ -85,6 +93,7 @@ void handle_end_analysis_signal(int unused_signum) {
 int main(int argc, char **argv) {
     int ret_val = 0;
 
+    memset(counter_arr, 0, sizeof(counter_arr[0]) * OUR_ARR_LEN);
     argc_global = argc;
     argv_global = argv;
 
@@ -106,22 +115,22 @@ int main(int argc, char **argv) {
     size_t num_of_trace_records_read = 0;
     GMBEOO_TraceRecord trace_record;
 
-    FILE *trace_file = fopen("/home/orenmn/my_trace_file", "wb");
-    if (trace_file == NULL) {
-        printf("failed to open my_trace_file. errno: %d\n", errno);
-        return 1;
-    }
+    // FILE *trace_file = fopen("/home/orenmn/my_trace_file", "wb");
+    // if (trace_file == NULL) {
+    //     printf("failed to open my_trace_file. errno: %d\n", errno);
+    //     return 1;
+    // }
 
     PRINT_STR("Ready to analyze");
     while (!end_analysis) {
         num_of_trace_records_read = fread(&trace_record, sizeof(trace_record),
                                           1, qemu_trace_fifo);
         if (num_of_trace_records_read == 1) {
-            size_t num_of_trace_records_written_to_file = 
-                fwrite(&trace_record, sizeof(trace_record), 1, trace_file);
-            if (num_of_trace_records_written_to_file != 1) {
-                printf("fwrite failed.\n");
-            }
+            // size_t num_of_trace_records_written_to_file = 
+            //     fwrite(&trace_record, sizeof(trace_record), 1, trace_file);
+            // if (num_of_trace_records_written_to_file != 1) {
+            //     printf("fwrite failed.\n");
+            // }
 
             uint8_t cpl = trace_record.cpl;
             uint64_t virt_addr = trace_record.virt_addr;
@@ -136,6 +145,8 @@ int main(int argc, char **argv) {
                     ++num_of_mem_accesses_by_user_code;
                     if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
                         ++num_of_mem_accesses_to_our_buf;
+                        assert((virt_addr - our_buf_addr) % sizeof(int) == 0);
+                        ++(counter_arr[(virt_addr - our_buf_addr) / sizeof(int)]);
                     }
                 }
             }
