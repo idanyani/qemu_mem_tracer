@@ -33,15 +33,16 @@ proc debug_print {msg} {
 
 debug_print "---start run_qemu_and_workload.sh---\n"
 
+
 # Start qemu while:
 #   The monitor is redirected to our process' stdin and stdout.
-#   /dev/ttyS0 of the guest is redirected to a pty that qemu creates.
+#   Both /dev/ttyS0 and /dev/ttyS1 of the guest are redirected to pseudo
+#   terminals that qemu creates.
 #   The guest doesn't start running (-S), as we load a snapshot anyway.
 debug_print "---starting qemu---\n"
 spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
     -serial pty -serial pty
-    # -serial pty -serial pty -trace file=my_trace_file
 set monitor_id $spawn_id
 
 debug_print "---parsing qemu's message about pseudo-terminals that it opened---\n"
@@ -68,8 +69,8 @@ send -i $monitor_id "loadvm $snapshot_name\r"
 send -i $monitor_id "cont\r"
 # interact -i $monitor_id
 
-# run scp to download test_elf
-debug_print "---copying test_elf from host---\n"
+# run scp to download the workload
+debug_print "---copying the workload from host---\n"
 # IIUC, `exec echo > $serial_pty` doesn't simulate "hitting Enter" in the
 # guest, because the guest's /dev/tty is already open when we overwrite
 # /dev/tty with a hard link to the file that /dev/ttyS0 points to.
@@ -94,7 +95,7 @@ debug_print "\n---authenticating (scp)---\n"
 # guest_password_prompt_pty.
 exec echo $host_password > $guest_ttyS0_pty_pid
 
-# the guest would now download elf_test and run it.
+# the guest would now download workload_runner and workload, and run workload_runner.
 
 debug_print "\n---expecting workload info---\n"
 expect -i $guest_ttyS0_reader_id -indices -re \
@@ -122,8 +123,8 @@ send -i $monitor_id "stop\r"
 if {$analysis_tool_path != "/dev/null"} {
     debug_print "\n---spawning analysis tool---\n"
     # https://stackoverflow.com/questions/5728656/tcl-split-string-by-arbitrary-number-of-whitespaces-to-a-list/5731098#5731098
-    set test_info_with_spaces [join $workload_info " "]
-    set analysis_tool_pid [eval spawn $analysis_tool_path $trace_fifo_path $test_info_with_spaces]
+    set workload_info_with_spaces [join $workload_info " "]
+    set analysis_tool_pid [eval spawn $analysis_tool_path $trace_fifo_path $workload_info_with_spaces]
     set analysis_tool_id $spawn_id
     debug_print "\n---expecting ready to analyze message---\n"
     expect {
@@ -156,9 +157,9 @@ if {$::dont_trace == "False"} {
 }
 
 debug_print "---storing start timestamp and starting to trace---\n"
-set tracing_start_time [timestamp]
+set tracing_start_time [clock milliseconds]
 
-# Resume the test.
+# Resume the workload.
 send -i $monitor_id "cont\r"
 send -i $monitor_id "sendkey ret\r"
 
@@ -180,10 +181,10 @@ send -i $monitor_id "stop\r"
 # that `trace_buf` is a cyclic buffer).
 send -i $monitor_id "trace-file flush\r"
 send -i $monitor_id "trace-file flush\r"
-set tracing_end_time [timestamp]
+set tracing_end_time [clock milliseconds]
 
-set tracing_duration_in_seconds [expr $tracing_end_time - $tracing_start_time]
-send_user "tracing_duration_in_seconds: $tracing_duration_in_seconds\n"
+set tracing_duration_in_milliseconds [expr $tracing_end_time - $tracing_start_time]
+send_user "tracing_duration_in_milliseconds: $tracing_duration_in_milliseconds\n"
 
 debug_print "\n---$analysis_tool_path---\n"
 if {$analysis_tool_path != "/dev/null"} {
@@ -205,7 +206,7 @@ if {$analysis_tool_path != "/dev/null"} {
 }
 
 
-if {$print_trace_info == "True"} {
+if {$print_trace_info == "True" && $dont_trace == "False"} {
     send -i $monitor_id "print_trace_info\r"
     debug_print "\n---expecting trace info---\n"
     expect -i $monitor_id -indices -re \
@@ -217,10 +218,7 @@ if {$print_trace_info == "True"} {
 }
 
 
-debug_print "---deleting $trace_fifo_path---\n"
-exec rm $trace_fifo_path
-
-debug_print "---end run_qemu_and_test.sh---\n"
+debug_print "---end run_qemu_and_workload.sh---\n"
 
 if {$dont_exit_qemu_when_done == "True"} {
     interact -i $monitor_id

@@ -17,10 +17,15 @@ TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_NAME = (
     'qemu_mem_tracer_temp_dir_for_guest_to_download_from')
 TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH = os.path.join(
     pathlib.Path.home(), TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_NAME)
+WORKLOAD_RUNNER_NAME = 'workload_runner.bash'
+WORKLOAD_NAME = 'workload'
 WORKLOAD_RUNNER_DOWNLOAD_PATH = os.path.join(
-    f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload_runner.bash')
+    f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', WORKLOAD_RUNNER_NAME)
 WORKLOAD_DOWNLOAD_PATH = os.path.join(
-    f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload')
+    f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', WORKLOAD_NAME)
+
+RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME = 'run_qemu_and_workload.sh'
+RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_NAME = 'run_workload_natively.sh'
 
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.DEVNULL):
     debug_print(f'executing cmd (in {dir_path}): {cmd}')
@@ -74,7 +79,7 @@ parser = argparse.ArgumentParser(
                 '};\n\n'
                 'memory_tracer.py also prints the workload info (in case it '
                 'isn\'t the empty string), and the tracing duration in '
-                'seconds.\n'
+                'miliseconds.\n'
                 'In case --analysis_tool_path is specified, memory_tracer.py '
                 'also prints the output of the analysis tool.\n\n'
                 'Either workload_runner or the workload itself must '
@@ -207,40 +212,61 @@ parser.add_argument('--print_trace_info', action='store_true',
 parser.add_argument('--dont_trace', action='store_true',
                     help='If specified, memory_tracer.py will run without '
                          'enabling the tracing feature of qemu_with_GMBEOO. '
-                         'Therefore, it will also neither run the analysis '
-                         'tool (in case --analysis_tool_path was specified), '
-                         'nor will it print any trace info. '
+                         'Therefore, it will not print the trace info (even '
+                         'if --print_trace_info is specified). '
                          'This is useful for comparing the speed of '
                          'qemu_with_GMBEOO with and without tracing.')
+parser.add_argument('--dont_use_qemu', action='store_true',
+                    help='If specified, memory_tracer.py will run the '
+                         'workload on the host (i.e. native). Specifically, '
+                         'both workload_runner and workload will be copied to '
+                         'a temporary directory, and there workload_runner '
+                         'will be executed. Please pass dummy non-empty '
+                         'strings as the arguments guest_image_path, '
+                         'snapshot_name, host_password and '
+                         'qemu_with_GMBEOO_path. '
+                         'As expected, no trace info will be printed (even if '
+                         '--print_trace_info is specified). Also, the '
+                         'analysis tool will not be executed (even if '
+                         '--analysis_tool_path is specified). '
+                         'This is useful for comparing the speed of '
+                         'qemu_with_GMBEOO to running the code natively. '
+                         'Note that This feature is somewhat limited, '
+                         'as it only captures the prints by workload_runner. '
+                         '(i.e. it would get stuck in case workload_runner '
+                         'doesn\'t send all the expected messages itself '
+                         '(e.g. "Ready to trace. Press enter to continue").)')
 parser.add_argument('--verbose', '-v', action='store_true',
                     help='If specified, debug messages are printed.')
 args = parser.parse_args()
 
-if (1 != (1 if (args.trace_fifo_path is None) else 0) +
-         (1 if (args.analysis_tool_path is '/dev/null') else 0)):
-    raise RuntimeError('Exactly one of --analysis_tool_path and '
-                       '--trace_fifo_path must be specified.')
-verify_arg_is_file(args.guest_image_path, 'guest_image_path')
 verify_arg_is_file(args.workload_runner_path, 'workload_runner_path')
-verify_arg_is_dir(args.qemu_with_GMBEOO_path, 'qemu_with_GMBEOO_path')
 if args.workload_path:
     verify_arg_is_file_or_dir(args.workload_path, 'workload_path')
-if args.analysis_tool_path != '/dev/null':
-    verify_arg_is_file(args.analysis_tool_path, 'analysis_tool_path')
-if args.trace_fifo_path:
-    verify_arg_is_fifo(args.trace_fifo_path, 'trace_fifo_path')
 
-verify_arg_is_in_range(args.log_of_GMBE_block_len,
-                       'log_of_GMBE_block_len', 0, 64)
-verify_arg_is_in_range(args.log_of_GMBE_tracing_ratio,
-                       'log_of_GMBE_tracing_ratio', 0, 64)
-if args.log_of_GMBE_block_len + args.log_of_GMBE_tracing_ratio > 64:
-    raise RuntimeError(f'log_of_GMBE_block_len + log_of_GMBE_tracing_ratio '
-                       f'must be in range [0, 64], but '
-                       f'{args.log_of_GMBE_block_len} + '
-                       f'{args.log_of_GMBE_tracing_ratio} = '
-                       f'{args.log_of_GMBE_block_len + args.log_of_GMBE_tracing_ratio}'
-                       f' isn\'t.')
+if not args.dont_use_qemu:
+    if (1 != (1 if (args.trace_fifo_path is None) else 0) +
+             (1 if (args.analysis_tool_path is '/dev/null') else 0)):
+        raise RuntimeError('Exactly one of --analysis_tool_path and '
+                           '--trace_fifo_path must be specified.')
+    verify_arg_is_file(args.guest_image_path, 'guest_image_path')
+    verify_arg_is_dir(args.qemu_with_GMBEOO_path, 'qemu_with_GMBEOO_path')
+    if args.analysis_tool_path != '/dev/null':
+        verify_arg_is_file(args.analysis_tool_path, 'analysis_tool_path')
+    if args.trace_fifo_path:
+        verify_arg_is_fifo(args.trace_fifo_path, 'trace_fifo_path')
+
+    verify_arg_is_in_range(args.log_of_GMBE_block_len,
+                           'log_of_GMBE_block_len', 0, 64)
+    verify_arg_is_in_range(args.log_of_GMBE_tracing_ratio,
+                           'log_of_GMBE_tracing_ratio', 0, 64)
+    if args.log_of_GMBE_block_len + args.log_of_GMBE_tracing_ratio > 64:
+        raise RuntimeError(f'log_of_GMBE_block_len + log_of_GMBE_tracing_ratio '
+                           f'must be in range [0, 64], but '
+                           f'{args.log_of_GMBE_block_len} + '
+                           f'{args.log_of_GMBE_tracing_ratio} = '
+                           f'{args.log_of_GMBE_block_len + args.log_of_GMBE_tracing_ratio}'
+                           f' isn\'t.')
 
 if args.verbose:
     def debug_print(*args, **kwargs):
@@ -256,16 +282,17 @@ os.mkdir(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH)
 
 guest_image_path = os.path.realpath(args.guest_image_path)
 workload_runner_path = os.path.realpath(args.workload_runner_path)
-qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
 
+if not args.dont_use_qemu:
+    qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
+    
+    if args.workload_path is None:
+        pathlib.Path(WORKLOAD_DOWNLOAD_PATH).touch()
+    else:
+        workload_path = os.path.realpath(args.workload_path)
+        os.symlink(workload_path, WORKLOAD_DOWNLOAD_PATH)
 
-if args.workload_path is None:
-    pathlib.Path(WORKLOAD_DOWNLOAD_PATH).touch()
-else:
-    workload_path = os.path.realpath(args.workload_path)
-    os.symlink(workload_path, WORKLOAD_DOWNLOAD_PATH)
-
-os.symlink(workload_runner_path, WORKLOAD_RUNNER_DOWNLOAD_PATH)
+    os.symlink(workload_runner_path, WORKLOAD_RUNNER_DOWNLOAD_PATH)
 
 this_script_path = os.path.realpath(__file__)
 this_script_location = os.path.split(this_script_path)[0]
@@ -284,41 +311,60 @@ if this_script_location_dir_name != 'qemu_mem_tracer':
 
 
 with tempfile.TemporaryDirectory() as temp_dir_path:
-    if args.trace_fifo_path is None:
-        trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
-        os.mkfifo(trace_fifo_path)
-        print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
-        fifo_max_size_as_str = execute_cmd_in_dir(
-            print_fifo_max_size_cmd,
-            stdout_dest=subprocess.PIPE).stdout.strip().decode()
-        fifo_max_size = int(fifo_max_size_as_str)
-        
-        debug_print(f'change {trace_fifo_path} to size {fifo_max_size} '
-                    f'(/proc/sys/fs/pipe-max-size)')
-        fifo_fd = os.open(trace_fifo_path, os.O_NONBLOCK)
-        fcntl.fcntl(fifo_fd, F_SETPIPE_SZ, fifo_max_size)
-        assert(fcntl.fcntl(fifo_fd, F_GETPIPE_SZ) == fifo_max_size)
-        os.close(fifo_fd)
+    if not args.dont_use_qemu:
+        if args.trace_fifo_path is None:
+            trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
+            os.mkfifo(trace_fifo_path)
+            print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
+            fifo_max_size_as_str = execute_cmd_in_dir(
+                print_fifo_max_size_cmd,
+                stdout_dest=subprocess.PIPE).stdout.strip().decode()
+            fifo_max_size = int(fifo_max_size_as_str)
+            
+            debug_print(f'change {trace_fifo_path} to size {fifo_max_size} '
+                        f'(/proc/sys/fs/pipe-max-size)')
+            fifo_fd = os.open(trace_fifo_path, os.O_NONBLOCK)
+            fcntl.fcntl(fifo_fd, F_SETPIPE_SZ, fifo_max_size)
+            assert(fcntl.fcntl(fifo_fd, F_GETPIPE_SZ) == fifo_max_size)
+            os.close(fifo_fd)
+        else:
+            trace_fifo_path = args.trace_fifo_path
+
+        run_qemu_and_workload_expect_script_path = os.path.join(
+            this_script_location, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME)
+        run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
+                                     f'"{guest_image_path}" '
+                                     f'"{args.snapshot_name}" '
+                                     f'"{args.host_password}" '
+                                     f'{args.trace_only_CPL3_code_GMBE} '
+                                     f'{args.log_of_GMBE_block_len} '
+                                     f'{args.log_of_GMBE_tracing_ratio} '
+                                     f'{args.analysis_tool_path} '
+                                     f'{trace_fifo_path} '
+                                     f'{qemu_with_GMBEOO_path} '
+                                     f'{args.verbose} '
+                                     f'{args.dont_exit_qemu_when_done} '
+                                     f'{args.print_trace_info} '
+                                     f'{args.dont_trace} '
+                                     )
+
+        execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)
+
     else:
-        trace_fifo_path = args.trace_fifo_path
+        assert(args.dont_use_qemu)
+        if args.workload_path is not None:
+            workload_path = os.path.realpath(args.workload_path)
+            workload_copy_path = os.path.join(temp_dir_path, WORKLOAD_NAME)
+            shutil.copytree(workload_path, workload_copy_path)
 
-    run_qemu_and_workload_expect_script_path = os.path.join(this_script_location,
-                                                            'run_qemu_and_workload.sh')
-    run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
-                                 f'"{guest_image_path}" '
-                                 f'"{args.snapshot_name}" '
-                                 f'"{args.host_password}" '
-                                 f'{args.trace_only_CPL3_code_GMBE} '
-                                 f'{args.log_of_GMBE_block_len} '
-                                 f'{args.log_of_GMBE_tracing_ratio} '
-                                 f'{args.analysis_tool_path} '
-                                 f'{trace_fifo_path} '
-                                 f'{qemu_with_GMBEOO_path} '
-                                 f'{args.verbose} '
-                                 f'{args.dont_exit_qemu_when_done} '
-                                 f'{args.print_trace_info} '
-                                 f'{args.dont_trace} '
-                                 )
+        workload_runner_copy_path = os.path.join(temp_dir_path, WORKLOAD_RUNNER_NAME)
+        shutil.copy(workload_runner_path, workload_runner_copy_path)
 
-    execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)
+        run_workload_natively_expect_script_path = os.path.join(
+            this_script_location, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_NAME)
+        run_workload_cmd = (f'{run_workload_natively_expect_script_path} '
+                            f'"{workload_runner_path}" '
+                            f'{args.verbose} '
+                            )
 
+        execute_cmd_in_dir(run_workload_cmd, temp_dir_path, sys.stdout)

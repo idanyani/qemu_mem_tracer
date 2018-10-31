@@ -14,6 +14,8 @@ F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
 SIGKILL = 9
 
+NUM_OF_MILLISECONDS_IN_SECOND = 1000
+
 # constants from common_memory_intensive.h and long_memory_intensive.h
 OUR_ARR_LEN = 10000
 SMALL_NUM_OF_ITERS_OVER_OUR_ARR = 5
@@ -68,7 +70,7 @@ def get_mem_tracer_error_and_output(*args, **kwargs):
 def get_mem_tracer_output(*args, **kwargs):
     return get_output_of_executed_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs))
     
-def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
+def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -85,10 +87,10 @@ def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path
     
     # match succeeding means that the workload info isn't printed.
     assert(re.match(
-        '^tracing_duration_in_seconds:.*analysis output:.*analysis cmd args:.*',
+        '^tracing_duration_in_milliseconds:.*analysis output:.*analysis cmd args:.*',
         mem_tracer_output, re.DOTALL) is not None)
 
-def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
+def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -121,7 +123,7 @@ def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr
         our_arr_len * min_num_of_expected_accesses_for_elem)
 
     workload_info_as_str, our_buf_addr_as_str, counter_arr_as_str = re.match(
-        r'^workload info:(.*)tracing_duration_in_seconds:.*our_buf_addr:(.*)'
+        r'^workload info:(.*)tracing_duration_in_milliseconds:.*our_buf_addr:(.*)'
         r'num_of_mem_accesses_by_CPL3_code:.*counter_arr:(.*)'
         r'analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL).group(1, 2, 3)
@@ -155,7 +157,7 @@ def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr
     #     if counter > min_num_of_expected_accesses_for_elem:
     #         print(hex(i), hex(our_buf_addr_in_workload_info + i * 4), counter)
 
-def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -202,7 +204,7 @@ def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_pa
     check_mem_accesses(mem_tracer_output,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
-def test_trace_only_CPL3_code_GMBE(this_script_location,
+def _test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name, host_password):
@@ -233,7 +235,7 @@ def test_trace_only_CPL3_code_GMBE(this_script_location,
         num_of_mem_accesses_by_non_CPL3_code_as_str.strip())
     assert(num_of_mem_accesses_by_non_CPL3_code == 0)
 
-def test_invalid_log_of_cmd_args(this_script_location,
+def _test_invalid_log_of_cmd_args(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name, host_password):
@@ -330,7 +332,7 @@ def test_invalid_log_of_cmd_args(this_script_location,
     else:
         assert(False)
 
-def test_sampling(this_script_location,
+def _test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name, host_password):
@@ -377,7 +379,7 @@ def test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def test_trace_fifo_path_cmd_arg(this_script_location,
+def _test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name, host_password):
@@ -437,7 +439,7 @@ def test_trace_fifo_path_cmd_arg(this_script_location,
             except ProcessLookupError:
                 pass
 
-def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
+def _test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
         this_script_location, qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name, host_password):
     expected_err_message = ('Exactly one of --analysis_tool_path and '
@@ -474,7 +476,7 @@ def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
     else:
         assert(False)
 
-def test_invalid_file_or_dir_cmd_arg(
+def _test_invalid_file_or_dir_cmd_arg(
         this_script_location, qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -582,11 +584,11 @@ def test_invalid_file_or_dir_cmd_arg(
 
     
 
-def _test_toy_workload_durations(this_script_location,
+def test_toy_workload_durations(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name, host_password):
-    num_of_iterations = 1
+    num_of_iterations = 5
     
     def get_avg(durations):
         return sum(durations) / num_of_iterations
@@ -598,10 +600,31 @@ def _test_toy_workload_durations(this_script_location,
 
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
+    native_durations = []
     no_trace_durations = []
     with_trace_durations = []
     for _ in range(num_of_iterations):
-        mem_tracer_output = get_mem_tracer_output(
+        native_mem_tracer_output = get_mem_tracer_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            'dummy_qemu_with_GMBEOO_path',
+            'dummy_guest_image_path',
+            'dummy_snapshot_name',
+            'dummy_host_password',
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_long_user_memory_intensive_workload'),
+            f'--dont_use_qemu')
+        native_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
+                               native_mem_tracer_output).group(1)) / 
+                           NUM_OF_MILLISECONDS_IN_SECOND)
+        print(native_duration)
+        native_durations.append(native_duration)                
+        # if native_duration < 1:
+        #     raise RuntimeError('The machine running this test is too fast. '
+        #                        'The test should be edited to run longer.')
+
+
+        no_trace_mem_tracer_output = get_mem_tracer_output(
             this_script_location,
             qemu_mem_tracer_script_path,
             qemu_with_GMBEOO_path,
@@ -611,15 +634,13 @@ def _test_toy_workload_durations(this_script_location,
             get_tests_bin_file_path(this_script_location, 
                                     'simple_long_user_memory_intensive_workload'),
             f'--analysis_tool_path "{simple_analysis_path}" --dont_trace')
-        no_trace_duration = int(re.search(r'tracing_duration_in_seconds: (\d+)',
-                                 mem_tracer_output).group(1))
-        if no_trace_duration == 0:
-            raise RuntimeError('The machine running this test is too fast. '
-                               'The test should be edited to run longer.')
+        no_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
+                                 no_trace_mem_tracer_output).group(1)) /
+                             NUM_OF_MILLISECONDS_IN_SECOND)
         no_trace_durations.append(no_trace_duration)
 
 
-        mem_tracer_output = get_mem_tracer_output(
+        with_tracer_mem_tracer_output = get_mem_tracer_output(
             this_script_location,
             qemu_mem_tracer_script_path,
             qemu_with_GMBEOO_path,
@@ -632,18 +653,20 @@ def _test_toy_workload_durations(this_script_location,
             f'--log_of_GMBE_block_len 16 --log_of_GMBE_tracing_ratio 10 '
             f'--print_trace_info')
         
-        with_trace_duration = int(re.search(r'tracing_duration_in_seconds: (\d+)',
-                                 mem_tracer_output).group(1))
+        with_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
+                                   with_tracer_mem_tracer_output).group(1)) /
+                               NUM_OF_MILLISECONDS_IN_SECOND)
         with_trace_durations.append(with_trace_duration)
 
-        print(mem_tracer_output)
+        print(with_tracer_mem_tracer_output)
         actual_tracing_ratio_as_str = re.search(
             r'actual_tracing_ratio \(i\.e\. '
             r'num_of_GMBE_events_since_enabling_GMBEOO / '
             r'num_of_events_written_to_trace_buf\): (\d+\.\d+)',
-            mem_tracer_output, re.DOTALL).group(1)
-        assert(2 ** 10 - 50 <= float(actual_tracing_ratio_as_str.strip()) <=
-               2 ** 10 + 50)
+            with_tracer_mem_tracer_output, re.DOTALL).group(1)
+        # assert(2 ** 10 - 50 <= float(actual_tracing_ratio_as_str.strip()) <=
+        #        2 ** 10 + 50)
+
 
     avg_native_duration = get_avg(native_durations)
     avg_no_trace_duration = get_avg(no_trace_durations)
@@ -655,9 +678,15 @@ def _test_toy_workload_durations(this_script_location,
     with_trace_duration_SD = get_standard_deviation(with_trace_durations,
                                                     avg_with_trace_duration)
 
-    print(f'native_durations: {native_durations}, SD: {native_duration_SD}')
-    print(f'no_trace_durations: {no_trace_durations}, SD: {no_trace_duration_SD}')
-    print(f'with_trace_durations: {with_trace_durations}, SD: {with_trace_duration_SD}')
-    print(with_trace_durations, get_avg(with_trace_durations))
+    print(f'avg_native_duration: {avg_native_duration}, SD: {native_duration_SD}'
+          f'({native_durations})')
+    print(f'avg_no_trace_duration: {avg_no_trace_duration}, SD: {no_trace_duration_SD}'
+          f'({no_trace_durations})')
+    print(f'avg_with_trace_duration: {avg_with_trace_duration}, SD: {with_trace_duration_SD}'
+          f'({with_trace_durations})')
 
+    print(f'avg_with_trace_duration / avg_native_duration: '
+          f'{avg_with_trace_duration / avg_native_duration}')
+    print(f'avg_with_trace_duration / avg_no_trace_duration: '
+          f'{avg_with_trace_duration / avg_no_trace_duration}')
 
