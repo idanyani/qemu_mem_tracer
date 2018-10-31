@@ -8,6 +8,7 @@ import shutil
 import pathlib
 import tempfile
 import fcntl
+import stat
 
 F_SETPIPE_SZ = 1031  # Linux 2.6.35+
 F_GETPIPE_SZ = 1032  # Linux 2.6.35+
@@ -29,6 +30,10 @@ def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.DEVNULL):
 def verify_arg_is_file(arg, arg_name):
     if not os.path.isfile(arg):
         raise RuntimeError(f'{arg_name} must be a file path, but {arg} isn\'t.')
+
+def verify_arg_is_fifo(arg, arg_name):
+    if stat.S_ISFIFO(os.stat(arg).st_mode) == 0:
+        raise RuntimeError(f'{arg_name} must be a fifo path, but {arg} isn\'t.')
 
 def verify_arg_is_dir(arg, arg_name):
     if not os.path.isdir(arg):
@@ -215,9 +220,10 @@ verify_arg_is_file(args.workload_runner_path, 'workload_runner_path')
 verify_arg_is_dir(args.qemu_with_GMBEOO_path, 'qemu_with_GMBEOO_path')
 if args.workload_path:
     verify_arg_is_file_or_dir(args.workload_path, 'workload_path')
-verify_arg_is_file(args.analysis_tool_path, 'analysis_tool_path')
+if args.analysis_tool_path != '/dev/null':
+    verify_arg_is_file(args.analysis_tool_path, 'analysis_tool_path')
 if args.trace_fifo_path:
-    verify_arg_is_file(args.trace_fifo_path, 'trace_fifo_path')
+    verify_arg_is_fifo(args.trace_fifo_path, 'trace_fifo_path')
 
 
 if args.verbose:
