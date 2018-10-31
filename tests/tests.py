@@ -232,6 +232,103 @@ def _test_trace_only_CPL3_code_GMBE(this_script_location,
         num_of_mem_accesses_by_non_CPL3_code_as_str.strip())
     assert(num_of_mem_accesses_by_non_CPL3_code == 0)
 
+def test_invalid_log_of_cmd_args(this_script_location,
+                                 qemu_mem_tracer_script_path,
+                                 qemu_with_GMBEOO_path, guest_image_path,
+                                 snapshot_name, host_password):
+    simple_analysis_path = get_tests_bin_file_path(this_script_location,
+                                                   'simple_analysis')
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--log_of_GMBE_block_len "-1" --log_of_GMBE_tracing_ratio 4')
+    except subprocess.CalledProcessError as e:
+        assert('log_of_GMBE_block_len must be in range [0, 64], but -1 '
+               'isn\'t.' in e.stderr.decode())
+    else:
+        assert(False)
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--log_of_GMBE_block_len "65" --log_of_GMBE_tracing_ratio 4')
+    except subprocess.CalledProcessError as e:
+        assert('log_of_GMBE_block_len must be in range [0, 64], but 65 '
+               'isn\'t.' in e.stderr.decode())
+    else:
+        assert(False)
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--log_of_GMBE_block_len 4 --log_of_GMBE_tracing_ratio "-1"')
+    except subprocess.CalledProcessError as e:
+        assert('log_of_GMBE_tracing_ratio must be in range [0, 64], but -1 '
+               'isn\'t.' in e.stderr.decode())
+    else:
+        assert(False)
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--log_of_GMBE_block_len 4 --log_of_GMBE_tracing_ratio 65')
+    except subprocess.CalledProcessError as e:
+        assert('log_of_GMBE_tracing_ratio must be in range [0, 64], but 65 '
+               'isn\'t.' in e.stderr.decode())
+    else:
+        assert(False)
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--log_of_GMBE_block_len 32 --log_of_GMBE_tracing_ratio 33')
+    except subprocess.CalledProcessError as e:
+        assert('log_of_GMBE_block_len + log_of_GMBE_tracing_ratio '
+               'must be in range [0, 64], but 32 + 33 = 65 '
+               'isn\'t' in e.stderr.decode())
+    else:
+        assert(False)
+
 def _test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
@@ -485,10 +582,10 @@ def _test_invalid_file_or_dir_cmd_arg(
 def ___test_durations(this_script_location, qemu_mem_tracer_script_path,
                    qemu_with_GMBEOO_path, guest_image_path, snapshot_name,
                    host_password):
+    simple_analysis_path = get_tests_bin_file_path(this_script_location,
+                                                   'simple_analysis')
     no_trace_durations = []
     for _ in range(1):
-        simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
         mem_tracer_output = get_mem_tracer_output(
             this_script_location,
             qemu_mem_tracer_script_path,
@@ -497,7 +594,7 @@ def ___test_durations(this_script_location, qemu_mem_tracer_script_path,
             snapshot_name,
             host_password,
             get_tests_bin_file_path(this_script_location, 
-                                    'simple_long_ouser_memory_intensive_workload'),
+                                    'simple_long_user_memory_intensive_workload'),
             f'--analysis_tool_path "{simple_analysis_path}" --dont_trace')
         duration = int(re.search(r'tracing_duration_in_seconds: (\d+)',
                                  mem_tracer_output).group(1))
@@ -506,8 +603,31 @@ def ___test_durations(this_script_location, qemu_mem_tracer_script_path,
                                'The test should be edited to run longer.')
         no_trace_durations.append(duration)
 
-
     print(no_trace_durations)
+
+    with_trace_durations = []
+    for _ in range(1):
+        mem_tracer_output = get_mem_tracer_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_long_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--log_of_GMBE_block_len 3 --log_of_GMBE_tracing_ratio 44')
+        duration = int(re.search(r'tracing_duration_in_seconds: (\d+)',
+                                 mem_tracer_output).group(1))
+        if duration == 0:
+            raise RuntimeError('The machine running this test is too fast. '
+                               'The test should be edited to run longer.')
+        with_trace_durations.append(duration)
+
+    print(with_trace_durations)
+
+
 
     # check_mem_accesses(mem_tracer_output,
     #                    OUR_ARR_LEN, BIG_NUM_OF_ITERS_OVER_OUR_ARR)

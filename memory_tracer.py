@@ -43,6 +43,11 @@ def verify_arg_is_file_or_dir(arg, arg_name):
     if not os.path.isfile(arg) and not os.path.isdir(arg):
         raise RuntimeError(f'{arg_name} must be a file/dir path, but {arg} isn\'t.')
 
+def verify_arg_is_in_range(arg, arg_name, low, high):
+    if not (low <= arg <= high):
+        raise RuntimeError(f'{arg_name} must be in range [{low}, {high}], but '
+                           f'{arg} isn\'t.')
+
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Run a workload on the QEMU guest while writing optimized GMBE '
@@ -225,6 +230,17 @@ if args.analysis_tool_path != '/dev/null':
 if args.trace_fifo_path:
     verify_arg_is_fifo(args.trace_fifo_path, 'trace_fifo_path')
 
+verify_arg_is_in_range(args.log_of_GMBE_block_len,
+                       'log_of_GMBE_block_len', 0, 64)
+verify_arg_is_in_range(args.log_of_GMBE_tracing_ratio,
+                       'log_of_GMBE_tracing_ratio', 0, 64)
+if args.log_of_GMBE_block_len + args.log_of_GMBE_tracing_ratio > 64:
+    raise RuntimeError(f'log_of_GMBE_block_len + log_of_GMBE_tracing_ratio '
+                       f'must be in range [0, 64], but '
+                       f'{args.log_of_GMBE_block_len} + '
+                       f'{args.log_of_GMBE_tracing_ratio} = '
+                       f'{args.log_of_GMBE_block_len + args.log_of_GMBE_tracing_ratio}'
+                       f' isn\'t.')
 
 if args.verbose:
     def debug_print(*args, **kwargs):
