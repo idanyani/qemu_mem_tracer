@@ -14,14 +14,13 @@ F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
 SIGKILL = 9
 
-# simple_user_memory_intensive_workload constants
+# constants from common_memory_intensive.h and long_memory_intensive.h
 OUR_ARR_LEN = 10000
-NUM_OF_ITERS_OVER_OUR_ARR = 5
+SMALL_NUM_OF_ITERS_OVER_OUR_ARR = 5
+BIG_NUM_OF_ITERS_OVER_OUR_ARR = 500
+
 NUM_OF_ACCESSES_FOR_INC = 2
-MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM = (
-    NUM_OF_ITERS_OVER_OUR_ARR * NUM_OF_ACCESSES_FOR_INC)
-MIN_NUM_OF_EXPECTED_ACCESSES = (
-    OUR_ARR_LEN * MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM)
+
 
 def read_file_until_it_contains_str(file_path, expected_str):
     print(f'expecting to find "{expected_str}" in {file_path}')
@@ -69,7 +68,7 @@ def get_mem_tracer_error_and_output(*args, **kwargs):
 def get_mem_tracer_output(*args, **kwargs):
     return get_output_of_executed_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs))
     
-def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
+def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -89,7 +88,7 @@ def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_pat
         '^tracing_duration_in_seconds:.*analysis output:.*analysis cmd args:.*',
         mem_tracer_output, re.DOTALL) is not None)
 
-def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
+def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -115,7 +114,12 @@ def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pa
     assert(analysis_cmd_args[5] == 'arg5')
     assert(analysis_cmd_args[6] == 'arg6')
 
-def check_mem_accesses(mem_tracer_output):
+def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr):
+    min_num_of_expected_accesses_for_elem = (
+        num_of_iters_over_our_arr * NUM_OF_ACCESSES_FOR_INC)
+    min_num_of_expected_accesses = (
+        our_arr_len * min_num_of_expected_accesses_for_elem)
+
     workload_info_as_str, our_buf_addr_as_str, counter_arr_as_str = re.match(
         r'^workload info:(.*)tracing_duration_in_seconds:.*our_buf_addr:(.*)'
         r'num_of_mem_accesses_by_CPL3_code:.*counter_arr:(.*)'
@@ -132,12 +136,12 @@ def check_mem_accesses(mem_tracer_output):
     assert(len(counter_arr) == OUR_ARR_LEN)
 
     counter_arr_sum = sum(counter_arr)
-    assert(MIN_NUM_OF_EXPECTED_ACCESSES <= counter_arr_sum <=
-           MIN_NUM_OF_EXPECTED_ACCESSES + 100)
+    assert(min_num_of_expected_accesses <= counter_arr_sum <=
+           min_num_of_expected_accesses + 100)
 
     for counter in counter_arr:
-        assert(MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
-               MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
+        assert(min_num_of_expected_accesses_for_elem <= counter <=
+               min_num_of_expected_accesses_for_elem + 10)
 
 
     # This seems to me like proof that the extra memory accesses happen because
@@ -148,10 +152,10 @@ def check_mem_accesses(mem_tracer_output):
     # so don't worry about messing the loop), I saw only 1 extra memory access.
     # print(hex(our_buf_addr_in_workload_info))
     # for i, counter in enumerate(counter_arr):
-    #     if counter > MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM:
+    #     if counter > min_num_of_expected_accesses_for_elem:
     #         print(hex(i), hex(our_buf_addr_in_workload_info + i * 4), counter)
 
-def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -167,7 +171,8 @@ def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                                 'simple_user_memory_intensive_workload'),
         f'--analysis_tool_path "{simple_analysis_path}"')
     
-    check_mem_accesses(mem_tracer_output)
+    check_mem_accesses(mem_tracer_output,
+                       OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
     
 
 # TODO: actually run this test. orenmn: I didn't manage to run it, because it
@@ -193,9 +198,10 @@ def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_pa
         f'--analysis_tool_path "{simple_analysis_path}" '
         f'--workload_path {workload_path}')
 
-    check_mem_accesses(mem_tracer_output)
+    check_mem_accesses(mem_tracer_output,
+                       OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
-def _test_trace_only_CPL3_code_GMBE(this_script_location,
+def test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name, host_password):
@@ -213,7 +219,8 @@ def _test_trace_only_CPL3_code_GMBE(this_script_location,
         f'--analysis_tool_path "{simple_analysis_path}" '
         f'--trace_only_CPL3_code_GMBE')
     
-    check_mem_accesses(mem_tracer_output)
+    check_mem_accesses(mem_tracer_output,
+                       OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
     num_of_mem_accesses_by_non_CPL3_code_as_str = re.match(
         r'^workload info:.*analysis output:.*'
@@ -225,7 +232,7 @@ def _test_trace_only_CPL3_code_GMBE(this_script_location,
         num_of_mem_accesses_by_non_CPL3_code_as_str.strip())
     assert(num_of_mem_accesses_by_non_CPL3_code == 0)
 
-def _test_sampling(this_script_location,
+def test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name, host_password):
@@ -272,7 +279,7 @@ def _test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def _test_trace_fifo_path_cmd_arg(this_script_location,
+def test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name, host_password):
@@ -366,7 +373,125 @@ def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
     except subprocess.CalledProcessError as e:
         assert(expected_err_message in e.stderr.decode())
 
+def test_invalid_file_or_dir_cmd_arg(
+        this_script_location, qemu_mem_tracer_script_path,
+        qemu_with_GMBEOO_path, guest_image_path, snapshot_name, host_password):
+    simple_analysis_path = get_tests_bin_file_path(this_script_location,
+                                                   'simple_analysis')
+    must_be_a_file_expected_err_message = ('must be a file path, but')
+    must_be_a_dir_expected_err_message = ('must be a dir path, but')
+    must_be_a_file_or_dir_expected_err_message = ('must be a file/dir path, but')
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            'definitely/not/a/file/path',
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" ')
 
-def _______test_durations():
-    pass
+    except subprocess.CalledProcessError as e:
+        assert(must_be_a_file_expected_err_message in e.stderr.decode())
 
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            'definitely/not/a/file/path',
+            f'--analysis_tool_path "{simple_analysis_path}" ')
+    except subprocess.CalledProcessError as e:
+        assert(must_be_a_file_expected_err_message in e.stderr.decode())
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            '--analysis_tool_path definitely/not/a/file/path')
+    except subprocess.CalledProcessError as e:
+        assert(must_be_a_file_expected_err_message in e.stderr.decode())
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            '--trace_fifo_path definitely/not/a/file/path')
+    except subprocess.CalledProcessError as e:
+        assert(must_be_a_file_expected_err_message in e.stderr.decode())
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            'definitely/not/a/dir/path',
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" ')
+    except subprocess.CalledProcessError as e:
+        assert(must_be_a_dir_expected_err_message in e.stderr.decode())
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--workload_path definitely/not/a/file/or/dir/path')
+    except subprocess.CalledProcessError as e:
+        assert(must_be_a_file_or_dir_expected_err_message in e.stderr.decode())
+
+def ___test_durations(this_script_location, qemu_mem_tracer_script_path,
+                   qemu_with_GMBEOO_path, guest_image_path, snapshot_name,
+                   host_password):
+    no_trace_durations = []
+    for _ in range(1):
+        simple_analysis_path = get_tests_bin_file_path(this_script_location,
+                                                   'simple_analysis')
+        mem_tracer_output = get_mem_tracer_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_long_ouser_memory_intensive_workload'),
+            f'--analysis_tool_path "{simple_analysis_path}" --dont_trace')
+        duration = int(re.search(r'tracing_duration_in_seconds: (\d+)',
+                                 mem_tracer_output).group(1))
+        if duration == 0:
+            raise RuntimeError('The machine running this test is too fast. '
+                               'The test should be edited to run longer.')
+        no_trace_durations.append(duration)
+
+
+    print(no_trace_durations)
+
+    # check_mem_accesses(mem_tracer_output,
+    #                    OUR_ARR_LEN, BIG_NUM_OF_ITERS_OVER_OUR_ARR)

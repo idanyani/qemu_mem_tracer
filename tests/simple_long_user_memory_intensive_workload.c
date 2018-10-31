@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "common_memory_intensive.h"
+#include "long_memory_intensive.h"
 
 int main() {
     int *arr = (int *)malloc(OUR_ARR_LEN * sizeof(int));

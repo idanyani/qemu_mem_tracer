@@ -26,6 +26,18 @@ def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.DEVNULL):
     return subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
                           stdout=stdout_dest)
 
+def verify_arg_is_file(arg, arg_name):
+    if not os.path.isfile(arg):
+        raise RuntimeError(f'{arg_name} must be a file path, but {arg} isn\'t.')
+
+def verify_arg_is_dir(arg, arg_name):
+    if not os.path.isdir(arg):
+        raise RuntimeError(f'{arg_name} must be a dir path, but {arg} isn\'t.')
+
+def verify_arg_is_file_or_dir(arg, arg_name):
+    if not os.path.isfile(arg) and not os.path.isdir(arg):
+        raise RuntimeError(f'{arg_name} must be a file/dir path, but {arg} isn\'t.')
+
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Run a workload on the QEMU guest while writing optimized GMBE '
@@ -182,6 +194,14 @@ parser.add_argument('--print_trace_info', action='store_true',
                          'qemu_with_GMBEOO tried to write them to the '
                          'trace_buf, it was full, so they were discarded. '
                          'This shouldn\'t happen normally.')
+parser.add_argument('--dont_trace', action='store_true',
+                    help='If specified, memory_tracer.py will run without '
+                         'enabling the tracing feature of qemu_with_GMBEOO. '
+                         'Therefore, it will also neither run the analysis '
+                         'tool (in case --analysis_tool_path was specified), '
+                         'nor will it print any trace info. '
+                         'This is useful for comparing the speed of '
+                         'qemu_with_GMBEOO with and without tracing.')
 parser.add_argument('--verbose', '-v', action='store_true',
                     help='If specified, debug messages are printed.')
 args = parser.parse_args()
@@ -190,6 +210,15 @@ if (1 != (1 if (args.trace_fifo_path is None) else 0) +
          (1 if (args.analysis_tool_path is '/dev/null') else 0)):
     raise RuntimeError('Exactly one of --analysis_tool_path and '
                        '--trace_fifo_path must be specified.')
+verify_arg_is_file(args.guest_image_path, 'guest_image_path')
+verify_arg_is_file(args.workload_runner_path, 'workload_runner_path')
+verify_arg_is_dir(args.qemu_with_GMBEOO_path, 'qemu_with_GMBEOO_path')
+if args.workload_path:
+    verify_arg_is_file_or_dir(args.workload_path, 'workload_path')
+verify_arg_is_file(args.analysis_tool_path, 'analysis_tool_path')
+if args.trace_fifo_path:
+    verify_arg_is_file(args.trace_fifo_path, 'trace_fifo_path')
+
 
 if args.verbose:
     def debug_print(*args, **kwargs):
@@ -266,6 +295,7 @@ with tempfile.TemporaryDirectory() as temp_dir_path:
                                  f'{args.verbose} '
                                  f'{args.dont_exit_qemu_when_done} '
                                  f'{args.print_trace_info} '
+                                 f'{args.dont_trace} '
                                  )
 
     execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)

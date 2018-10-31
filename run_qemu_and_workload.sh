@@ -22,6 +22,7 @@ set qemu_with_GMBEOO_dir_path [lindex $argv 8]
 set verbose [lindex $argv 9]
 set dont_exit_qemu_when_done [lindex $argv 10]
 set print_trace_info [lindex $argv 11]
+set dont_trace [lindex $argv 12]
 
 proc debug_print {msg} {
     if {$::verbose == "True"} {
@@ -135,22 +136,24 @@ if {$analysis_tool_path != "/dev/null"} {
     }
 }
 
-debug_print "---configure qemu_with_GMBEOO for tracing---\n"
-send -i $monitor_id "enable_GMBEOO\r"
-# Enabling GMBEOO before setting the trace file causes the mapping of events to
-# never be written to our FIFO.
-send -i $monitor_id "trace-file set $trace_fifo_path\r"
-send -i $monitor_id "trace-event guest_mem_before_exec on\r"
-send -i $monitor_id "update_trace_only_CPL3_code_GMBE $trace_only_CPL3_code_GMBE\r"
-send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
-send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
+if {$::dont_trace == "False"} {
+    debug_print "---configure qemu_with_GMBEOO for tracing---\n"
+    send -i $monitor_id "enable_GMBEOO\r"
+    # Enabling GMBEOO before setting the trace file causes the mapping of events to
+    # never be written to our FIFO.
+    send -i $monitor_id "trace-file set $trace_fifo_path\r"
+    send -i $monitor_id "trace-event guest_mem_before_exec on\r"
+    send -i $monitor_id "update_trace_only_CPL3_code_GMBE $trace_only_CPL3_code_GMBE\r"
+    send -i $monitor_id "set_log_of_GMBE_block_len $log_of_GMBE_block_len\r"
+    send -i $monitor_id "set_log_of_GMBE_tracing_ratio $log_of_GMBE_tracing_ratio\r"
 
-# The second GMBEOO_mask_of_GMBE_block_idx is the up to date one.
-expect -i $monitor_id -indices -re \
-        {GMBEOO_mask_of_GMBE_block_idx: __.*GMBEOO_mask_of_GMBE_block_idx: __(.*)__} {
-    set mask_of_GMBE_block_idx [string trim $expect_out(1,string)]
+    # The second GMBEOO_mask_of_GMBE_block_idx is the up to date one.
+    expect -i $monitor_id -indices -re \
+            {GMBEOO_mask_of_GMBE_block_idx: __.*GMBEOO_mask_of_GMBE_block_idx: __(.*)__} {
+        set mask_of_GMBE_block_idx [string trim $expect_out(1,string)]
+    }
+    debug_print "GMBEOO_mask_of_GMBE_block_idx: $mask_of_GMBE_block_idx\n"
 }
-debug_print "GMBEOO_mask_of_GMBE_block_idx: $mask_of_GMBE_block_idx\n"
 
 debug_print "---storing start timestamp and starting to trace---\n"
 set tracing_start_time [timestamp]
