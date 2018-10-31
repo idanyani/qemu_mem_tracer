@@ -22,8 +22,7 @@ WORKLOAD_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload')
 
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.DEVNULL):
-    print(f'executing cmd (in {dir_path}): {cmd}', file=sys.stdout)
-    sys.stdout.flush()
+    debug_print(f'executing cmd (in {dir_path}): {cmd}')
     return subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
                           stdout=stdout_dest)
 
@@ -243,6 +242,8 @@ with tempfile.TemporaryDirectory() as temp_dir_path:
             stdout_dest=subprocess.PIPE).stdout.strip().decode()
         fifo_max_size = int(fifo_max_size_as_str)
         
+        debug_print(f'change {trace_fifo_path} to size {fifo_max_size} '
+                    f'(/proc/sys/fs/pipe-max-size)')
         fifo_fd = os.open(trace_fifo_path, os.O_NONBLOCK)
         fcntl.fcntl(fifo_fd, F_SETPIPE_SZ, fifo_max_size)
         assert(fcntl.fcntl(fifo_fd, F_GETPIPE_SZ) == fifo_max_size)

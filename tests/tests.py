@@ -6,15 +6,19 @@ import time
 import tempfile
 import re
 import sys
+import fcntl
+
+F_SETPIPE_SZ = 1031  # Linux 2.6.35+
+F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
 # simple_user_memory_intensive_workload constants
 OUR_ARR_LEN = 10000
 NUM_OF_ITERS_OVER_OUR_ARR = 5
-NUM_OF_ACCESSES_FOR_INC = 2
-APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM = (
+NUM_OF_ACCESSES_FOR_INC = 1
+MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM = (
     NUM_OF_ITERS_OVER_OUR_ARR * NUM_OF_ACCESSES_FOR_INC)
-APPROX_NUM_OF_EXPECTED_ACCESSES = (
-    OUR_ARR_LEN * APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM)
+MIN_NUM_OF_EXPECTED_ACCESSES = (
+    OUR_ARR_LEN * MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM)
 
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.PIPE,
                        stderr_dest=sys.stderr):
@@ -40,8 +44,8 @@ def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
             f'"{qemu_with_GMBEOO_path}" '
             f'--analysis_tool_path "{analysis_tool_path}" '
             f'{extra_cmd_args} '
-            # )
-            f'--verbose ')
+            )
+            # f'--verbose ')
 
 def get_mem_tracer_error_and_output(*args, **kwargs):
     cmd_result = execute_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs),
@@ -69,7 +73,7 @@ def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_pat
         '^tracing_duration_in_seconds:.*analysis output:.*analysis cmd args:.*',
         mem_tracer_output, re.DOTALL) is not None)
 
-def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
+def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -82,9 +86,6 @@ def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pat
         get_tests_bin_file_path(this_script_location, 
                                 'dummy_workload_with_funny_test_info'),
         get_tests_bin_file_path(this_script_location, 'simple_analysis'))
-    sys.stderr.flush()
-    sys.stdout.flush()
-    print(f'\n-----------------cyber-------------\n{mem_tracer_output}')
     analysis_cmd_args_as_str = re.match(
         r'^workload info:.*analysis output:.*analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL).group(1)
@@ -113,14 +114,26 @@ def check_mem_accesses(mem_tracer_output):
     assert(len(counter_arr) == OUR_ARR_LEN)
 
     counter_arr_sum = sum(counter_arr)
-    assert(APPROX_NUM_OF_EXPECTED_ACCESSES <= counter_arr_sum <=
-           APPROX_NUM_OF_EXPECTED_ACCESSES + 100)
+    assert(MIN_NUM_OF_EXPECTED_ACCESSES <= counter_arr_sum <=
+           MIN_NUM_OF_EXPECTED_ACCESSES + 100)
 
     for counter in counter_arr:
-        assert(APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
-               APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
+        assert(MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
+               MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
 
-def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+
+    # This seems to me like proof that the extra memory accesses happen because
+    # of page faults. I don't know why we get 2 extra memory accesses, but I
+    # guess that for some reason both the load and the store operations (that
+    # TCG emitted to simulate `++arr[i];`) cause a page fault. I guess that
+    # because when I replaced the `++arr[i];` with `i += arr[i];` (arr[i] is 0,
+    # so don't worry about messing the loop), I saw only 1 extra memory access.
+    print(hex(our_buf_addr_in_workload_info))
+    for i, counter in enumerate(counter_arr):
+        if counter > MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM:
+            print(hex(i), hex(our_buf_addr_in_workload_info + i * 4), counter)
+
+def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -237,15 +250,38 @@ def ____test_trace_fifo_path_cmd_arg(this_script_location,
                                      qemu_mem_tracer_script_path,
                                      qemu_with_GMBEOO_path, guest_image_path,
                                      snapshot_name, host_password):
-    make_big_fifo_path = os.path.join(this_script_location,
-                                          MAKE_BIG_FIFO_REL_PATH)
+    with tempfile.TemporaryDirectory() as temp_dir_path:
+        trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
+        os.mkfifo(trace_fifo_path)
+        print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
+        fifo_max_size_as_str = get_output_of_executed_cmd_in_dir(
+            print_fifo_max_size_cmd)
+        fifo_max_size = int(fifo_max_size_as_str)
+        
+        fifo_fd = os.open(trace_fifo_path, os.O_NONBLOCK)
+        fcntl.fcntl(fifo_fd, F_SETPIPE_SZ, fifo_max_size)
+        assert(fcntl.fcntl(fifo_fd, F_GETPIPE_SZ) == fifo_max_size)
+        os.close(fifo_fd)
+
+        simple_analysis_path = get_tests_bin_file_path(this_script_location,
+                                                       'simple_analysis')
+        simple_analysis_output_path = get_tests_bin_file_path(temp_dir_path,
+                                                              'analysis_output')
+        start_simple_analylsis_cmd = (
+            f'{simple_analysis_path} {trace_fifo_path} > '
+            f'{simple_analysis_output_path} & echo $!')
+        simple_analysis_pid = int(
+            get_output_of_executed_cmd_in_dir(start_simple_analylsis_cmd))
+        while True:
+            pass
+
+
     trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
     print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
     make_max_size_fifo_cmd = (f'{make_big_fifo_path} {trace_fifo_path} '
-                         f'`{print_fifo_max_size_cmd}`')
+                              f'`{print_fifo_max_size_cmd}`')
     execute_cmd_in_dir(make_max_size_fifo_cmd)
 
     # repeatedly test the output file of the analysis...
-    pass
 
 
