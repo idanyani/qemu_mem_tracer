@@ -69,7 +69,7 @@ def get_mem_tracer_error_and_output(*args, **kwargs):
 def get_mem_tracer_output(*args, **kwargs):
     return get_output_of_executed_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs))
     
-def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
+def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -89,7 +89,7 @@ def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path
         '^tracing_duration_in_seconds:.*analysis output:.*analysis cmd args:.*',
         mem_tracer_output, re.DOTALL) is not None)
 
-def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
+def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -151,7 +151,7 @@ def check_mem_accesses(mem_tracer_output):
     #     if counter > MIN_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM:
     #         print(hex(i), hex(our_buf_addr_in_workload_info + i * 4), counter)
 
-def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -195,7 +195,7 @@ def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_pa
 
     check_mem_accesses(mem_tracer_output)
 
-def test_trace_only_CPL3_code_GMBE(this_script_location,
+def _test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name, host_password):
@@ -225,7 +225,7 @@ def test_trace_only_CPL3_code_GMBE(this_script_location,
         num_of_mem_accesses_by_non_CPL3_code_as_str.strip())
     assert(num_of_mem_accesses_by_non_CPL3_code == 0)
 
-def test_sampling(this_script_location,
+def _test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name, host_password):
@@ -272,10 +272,10 @@ def test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def test_trace_fifo_path_cmd_arg(this_script_location,
-                                     qemu_mem_tracer_script_path,
-                                     qemu_with_GMBEOO_path, guest_image_path,
-                                     snapshot_name, host_password):
+def _test_trace_fifo_path_cmd_arg(this_script_location,
+                                 qemu_mem_tracer_script_path,
+                                 qemu_with_GMBEOO_path, guest_image_path,
+                                 snapshot_name, host_password):
     with tempfile.TemporaryDirectory() as temp_dir_path:
         trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
         os.mkfifo(trace_fifo_path)
@@ -334,15 +334,39 @@ def test_trace_fifo_path_cmd_arg(this_script_location,
             except ProcessLookupError:
                 pass
 
+def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
+        this_script_location, qemu_mem_tracer_script_path,
+        qemu_with_GMBEOO_path, guest_image_path, snapshot_name, host_password):
+    expected_err_message = ('Exactly one of --analysis_tool_path and '
+                            '--trace_fifo_path must be specified.')
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'))
+    except subprocess.CalledProcessError as e:
+        assert(expected_err_message in e.stderr.decode())
+
+    try:
+        get_mem_tracer_error_and_output(
+            this_script_location,
+            qemu_mem_tracer_script_path,
+            qemu_with_GMBEOO_path,
+            guest_image_path,
+            snapshot_name,
+            host_password,
+            get_tests_bin_file_path(this_script_location, 
+                                    'simple_user_memory_intensive_workload'),
+            '--analysis_tool_path a --trace_fifo_path b')
+    except subprocess.CalledProcessError as e:
+        assert(expected_err_message in e.stderr.decode())
 
 
-    # trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
-    # print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
-    # make_max_size_fifo_cmd = (f'{make_big_fifo_path} {trace_fifo_path} '
-    #                           f'`{print_fifo_max_size_cmd}`')
-    # execute_cmd_in_dir(make_max_size_fifo_cmd)
-
-    # repeatedly test the output file of the analysis...
 def _______test_durations():
     pass
 
