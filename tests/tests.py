@@ -23,7 +23,6 @@ def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.PIPE,
                           stdout=stdout_dest, stderr=stderr_dest)
 
 def get_output_of_executed_cmd_in_dir(cmd, dir_path='.'):
-    # return subprocess.run(cmd, shell=True, check=True, cwd=dir_path).stdout.strip().decode()
     return execute_cmd_in_dir(cmd, dir_path).stdout.strip().decode()
 
 def get_tests_bin_file_path(this_script_location, file_name):
@@ -41,8 +40,8 @@ def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
             f'"{qemu_with_GMBEOO_path}" '
             f'--analysis_tool_path "{analysis_tool_path}" '
             f'{extra_cmd_args} '
-            )
-            # f'--verbose ')
+            # )
+            f'--verbose ')
 
 def get_mem_tracer_error_and_output(*args, **kwargs):
     cmd_result = execute_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs),
@@ -52,7 +51,7 @@ def get_mem_tracer_error_and_output(*args, **kwargs):
 def get_mem_tracer_output(*args, **kwargs):
     return get_output_of_executed_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs))
     
-def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
+def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -83,7 +82,9 @@ def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pat
         get_tests_bin_file_path(this_script_location, 
                                 'dummy_workload_with_funny_test_info'),
         get_tests_bin_file_path(this_script_location, 'simple_analysis'))
-    
+    sys.stderr.flush()
+    sys.stdout.flush()
+    print(f'\n-----------------cyber-------------\n{mem_tracer_output}')
     analysis_cmd_args_as_str = re.match(
         r'^workload info:.*analysis output:.*analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL).group(1)
@@ -119,7 +120,7 @@ def check_mem_accesses(mem_tracer_output):
         assert(APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM <= counter <=
                APPROX_NUM_OF_EXPECTED_ACCESSES_FOR_ELEM + 10)
 
-def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name, host_password):
     mem_tracer_output = get_mem_tracer_output(
@@ -136,6 +137,9 @@ def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
     check_mem_accesses(mem_tracer_output)
     
 
+# TODO: actually run this test. orenmn: I didn't manage to run it, because it
+# requires installing `make` and `gcc` on the guest (in order to compile the
+# LKM on it), and I had trouble connecting the guest machine to the internet.
 def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                               qemu_with_GMBEOO_path, guest_image_path,
                               snapshot_name, host_password):
@@ -156,7 +160,7 @@ def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_pa
 
     check_mem_accesses(mem_tracer_output)
 
-def test_trace_only_CPL3_code_GMBE(this_script_location,
+def _test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name, host_password):
@@ -184,7 +188,7 @@ def test_trace_only_CPL3_code_GMBE(this_script_location,
         num_of_mem_accesses_by_non_CPL3_code_as_str.strip())
     assert(num_of_mem_accesses_by_non_CPL3_code == 0)
 
-def test_sampling(this_script_location,
+def _test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name, host_password):
@@ -229,7 +233,19 @@ def test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def ____test_trace_fifo_path_cmd_arg():
+def ____test_trace_fifo_path_cmd_arg(this_script_location,
+                                     qemu_mem_tracer_script_path,
+                                     qemu_with_GMBEOO_path, guest_image_path,
+                                     snapshot_name, host_password):
+    make_big_fifo_path = os.path.join(this_script_location,
+                                          MAKE_BIG_FIFO_REL_PATH)
+    trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
+    print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
+    make_max_size_fifo_cmd = (f'{make_big_fifo_path} {trace_fifo_path} '
+                         f'`{print_fifo_max_size_cmd}`')
+    execute_cmd_in_dir(make_max_size_fifo_cmd)
+
+    # repeatedly test the output file of the analysis...
     pass
 
 

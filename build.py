@@ -5,13 +5,9 @@ import os.path
 import argparse
 
 BUILD_QEMU_SCRIPT_NAME = 'config_and_make_qemu_with_GMBEOO.py'
-MAKE_BIG_FIFO_SOURCE_NAME = 'make_big_fifo.c'
 QEMU_MEM_TRACER_SCRIPT_NAME = 'memory_tracer.py'
-MAKE_BIG_FIFO_NAME = os.path.splitext(MAKE_BIG_FIFO_SOURCE_NAME)[0]
 TESTS_DIR_NAME = 'tests'
 BUILD_AND_RUN_TESTS_SCRIPT_NAME = 'build_and_run_tests.py'
-# Note that this script removes this directory upon starting.
-OUTPUT_DIR_NAME = 'tracer_bin'
 
 def execute_cmd_in_dir(cmd, dir_path='.'):
     print(f'executing cmd (in {dir_path}): {cmd}')
@@ -55,16 +51,6 @@ if this_script_location_dir_name != 'qemu_mem_tracer':
         user_input = input()
         if user_input == 'y':
             break
-
-output_dir_path = os.path.join(this_script_location, OUTPUT_DIR_NAME)
-shutil.rmtree(output_dir_path, ignore_errors=True)
-os.mkdir(output_dir_path)
-
-make_big_fifo_bin_path = os.path.join(output_dir_path, MAKE_BIG_FIFO_NAME)
-compile_make_big_fifo_cmd = (f'gcc -Werror -Wall -pedantic '
-                             f'{MAKE_BIG_FIFO_SOURCE_NAME} '
-                             f'-o {make_big_fifo_bin_path}')
-execute_cmd_in_dir(compile_make_big_fifo_cmd, this_script_location)
 
 if not args.dont_compile_qemu:
     build_qemu_script_path = os.path.join(this_script_location,

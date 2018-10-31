@@ -7,6 +7,10 @@ import argparse
 import shutil
 import pathlib
 import tempfile
+import fcntl
+
+F_SETPIPE_SZ = 1031  # Linux 2.6.35+
+F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
 TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_NAME = (
     'qemu_mem_tracer_temp_dir_for_guest_to_download_from')
@@ -17,12 +21,11 @@ WORKLOAD_RUNNER_DOWNLOAD_PATH = os.path.join(
 WORKLOAD_DOWNLOAD_PATH = os.path.join(
     f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', 'workload')
 
-MAKE_BIG_FIFO_REL_PATH = os.path.join('tracer_bin', 'make_big_fifo')
-
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.DEVNULL):
-    print(f'executing cmd (in {dir_path}): {cmd}')
-    subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
-                   stdout=stdout_dest)
+    print(f'executing cmd (in {dir_path}): {cmd}', file=sys.stdout)
+    sys.stdout.flush()
+    return subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
+                          stdout=stdout_dest)
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -192,6 +195,7 @@ if (1 != (1 if (args.trace_fifo_path is None) else 0) +
 if args.verbose:
     def debug_print(*args, **kwargs):
         print(*args, file=sys.stderr, **kwargs)
+        sys.stderr.flush()
     # debug_print = print
 else:
     def debug_print(*args, **kwargs):
@@ -231,13 +235,18 @@ if this_script_location_dir_name != 'qemu_mem_tracer':
 
 with tempfile.TemporaryDirectory() as temp_dir_path:
     if args.trace_fifo_path is None:
-        make_big_fifo_path = os.path.join(this_script_location,
-                                          MAKE_BIG_FIFO_REL_PATH)
         trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
+        os.mkfifo(trace_fifo_path)
         print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
-        make_max_size_fifo_cmd = (f'{make_big_fifo_path} {trace_fifo_path} '
-                             f'`{print_fifo_max_size_cmd}`')
-        execute_cmd_in_dir(make_max_size_fifo_cmd)
+        fifo_max_size_as_str = execute_cmd_in_dir(
+            print_fifo_max_size_cmd,
+            stdout_dest=subprocess.PIPE).stdout.strip().decode()
+        fifo_max_size = int(fifo_max_size_as_str)
+        
+        fifo_fd = os.open(trace_fifo_path, os.O_NONBLOCK)
+        fcntl.fcntl(fifo_fd, F_SETPIPE_SZ, fifo_max_size)
+        assert(fcntl.fcntl(fifo_fd, F_GETPIPE_SZ) == fifo_max_size)
+        os.close(fifo_fd)
     else:
         trace_fifo_path = args.trace_fifo_path
 
