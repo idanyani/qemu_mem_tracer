@@ -43,6 +43,9 @@ typedef struct {
 
 
 bool end_analysis = false;
+uint64_t num_of_mem_accesses_by_CPL3_after_another_by_CPL3 = 0; 
+uint64_t num_of_mem_accesses_by_non_CPL3_after_another_by_CPL3 = 0; 
+uint64_t num_of_CPL3_accesses_code_to_cpu_entry_area_after_by_CPL3 = 0; 
 uint64_t num_of_mem_accesses_by_CPL3_code = 0; 
 uint64_t num_of_mem_accesses_by_non_CPL3_code = 0; 
 uint64_t num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area = 0; 
@@ -64,19 +67,25 @@ void handle_end_analysis_signal(int unused_signum) {
                "num_of_read_failures_with_feof_1: %lu\n",
                num_of_read_failures, num_of_read_failures_with_feof_1);
     }
-    printf("our_buf_addr:                                       %lu\n"
-           "num_of_mem_accesses_by_CPL3_code:                   %lu\n"
-           "num_of_mem_accesses_by_non_CPL3_code:               %lu\n"
-           "num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area: %lu\n"
-           "num_of_mem_accesses:                                %lu\n"
-           "num_of_mem_accesses_to_our_buf:                     %lu\n",
+    printf("our_buf_addr:                                               %lu\n"
+           "num_of_mem_accesses_by_CPL3_code:                           %lu\n"
+           "num_of_mem_accesses_by_non_CPL3_code:                       %lu\n"
+           "num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area:         %lu\n"
+           "num_of_mem_accesses:                                        %lu\n"
+           "num_of_mem_accesses_to_our_buf:                             %lu\n"
+           "num_of_mem_accesses_by_CPL3_after_another_by_CPL3:          %lu\n"
+           "num_of_mem_accesses_by_non_CPL3_after_another_by_CPL3:      %lu\n"
+           "num_of_CPL3_accesses_code_to_cpu_entry_area_after_by_CPL3:  %lu\n",
            our_buf_addr,
            num_of_mem_accesses_by_CPL3_code,
            num_of_mem_accesses_by_non_CPL3_code,
            num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area,
            num_of_mem_accesses_by_CPL3_code + num_of_mem_accesses_by_non_CPL3_code +
                 num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area,
-           num_of_mem_accesses_to_our_buf);
+           num_of_mem_accesses_to_our_buf,
+           num_of_mem_accesses_by_CPL3_after_another_by_CPL3,
+           num_of_mem_accesses_by_non_CPL3_after_another_by_CPL3,
+           num_of_CPL3_accesses_code_to_cpu_entry_area_after_by_CPL3);
     printf("counter_arr:\n");
     for (int i = 0; i < OUR_ARR_LEN; ++i) {
         printf("%d,", counter_arr[i]);
@@ -92,6 +101,7 @@ void handle_end_analysis_signal(int unused_signum) {
 
 int main(int argc, char **argv) {
     int ret_val = 0;
+    bool was_last_access_by_CPL3_code = false;
 
     memset(counter_arr, 0, sizeof(counter_arr[0]) * OUR_ARR_LEN);
     argc_global = argc;
@@ -105,11 +115,11 @@ int main(int argc, char **argv) {
     
     signal(SIGUSR1, handle_end_analysis_signal);
 
-    // FILE *trace_file = fopen("/home/orenmn/my_trace_file", "wb");
-    // if (trace_file == NULL) {
-    //     printf("failed to open my_trace_file. errno: %d\n", errno);
-    //     return 1;
-    // }
+    FILE *trace_file = fopen("/home/orenmn/my_trace_file", "wb");
+    if (trace_file == NULL) {
+        printf("failed to open my_trace_file. errno: %d\n", errno);
+        return 1;
+    }
 
     PRINT_STR("Ready to analyze");
     
@@ -123,16 +133,19 @@ int main(int argc, char **argv) {
         size_t num_of_trace_records_read = fread(&trace_record,
                                                  sizeof(trace_record),
                                                  1, qemu_trace_fifo);
+        // size_t num_of_trace_records_written_to_file = 
+        //     fwrite(&trace_record, sizeof(trace_record), 1, trace_file);
+        // if (num_of_trace_records_written_to_file != 1) {
+        //     printf("fwrite failed.\n");
+        // }
         if (num_of_trace_records_read == 1) {
-            // size_t num_of_trace_records_written_to_file = 
-            //     fwrite(&trace_record, sizeof(trace_record), 1, trace_file);
-            // if (num_of_trace_records_written_to_file != 1) {
-            //     printf("fwrite failed.\n");
-            // }
-
             uint8_t cpl = trace_record.cpl;
             uint64_t virt_addr = trace_record.virt_addr;
             
+            if (was_last_access_by_CPL3_code) {
+                fprintf(trace_file, "%lx\n", virt_addr);
+            }
+
             if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
                 ++num_of_mem_accesses_to_our_buf;
                 assert((virt_addr - our_buf_addr) % sizeof(int) == 0);
@@ -144,13 +157,25 @@ int main(int argc, char **argv) {
                     virt_addr <= CPU_ENTRY_AREA_END_ADDR)
                 {
                     ++num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area;
+                    if (was_last_access_by_CPL3_code) {
+                        ++num_of_CPL3_accesses_code_to_cpu_entry_area_after_by_CPL3;
+                    }
+                    was_last_access_by_CPL3_code = false;
                 }
                 else {
                     ++num_of_mem_accesses_by_CPL3_code;
+                    if (was_last_access_by_CPL3_code) {
+                        ++num_of_mem_accesses_by_CPL3_after_another_by_CPL3;
+                    }
+                    was_last_access_by_CPL3_code = true;
                 }
             }
             else {
                 ++num_of_mem_accesses_by_non_CPL3_code;
+                if (was_last_access_by_CPL3_code) {
+                    ++num_of_mem_accesses_by_non_CPL3_after_another_by_CPL3;
+                }
+                was_last_access_by_CPL3_code = false;
             }
         }
         else {
