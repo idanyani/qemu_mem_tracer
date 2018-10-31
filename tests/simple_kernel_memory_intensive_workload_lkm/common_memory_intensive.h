@@ -12,7 +12,7 @@
 void memory_intensive_loop(int *arr) {
     for (int j = 0; j < NUM_OF_ITERS_OVER_OUR_ARR; ++j) {
         for (int i = 0; i < OUR_ARR_LEN; ++i) {
-            i += arr[i];
+            ++arr[i];
         }
     }
 }

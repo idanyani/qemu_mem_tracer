@@ -58,7 +58,7 @@ int counter_arr[OUR_BUF_SIZE];
 
 void handle_end_analysis_signal(int unused_signum) {
     PRINT_STR("-----begin analysis output-----");
-    if (num_of_read_failures != 0) {
+    if (num_of_read_failures != num_of_read_failures_with_feof_1) {
         printf("- - - - - ATTENTION - - - - -:\n"
                "num_of_read_failures: %lu\n"
                "num_of_read_failures_with_feof_1: %lu\n",
