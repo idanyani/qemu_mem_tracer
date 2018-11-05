@@ -115,11 +115,11 @@ int main(int argc, char **argv) {
     
     signal(SIGUSR1, handle_end_analysis_signal);
 
-    FILE *trace_file = fopen("/home/orenmn/my_trace_file", "wb");
-    if (trace_file == NULL) {
-        printf("failed to open my_trace_file. errno: %d\n", errno);
-        return 1;
-    }
+    // FILE *trace_file = fopen("/home/orenmn/my_trace_file", "wb");
+    // if (trace_file == NULL) {
+    //     printf("failed to open my_trace_file. errno: %d\n", errno);
+    //     return 1;
+    // }
 
     PRINT_STR("Ready to analyze");
     
@@ -142,9 +142,9 @@ int main(int argc, char **argv) {
             uint8_t cpl = trace_record.cpl;
             uint64_t virt_addr = trace_record.virt_addr;
             
-            if (was_last_access_by_CPL3_code) {
-                fprintf(trace_file, "%lx\n", virt_addr);
-            }
+            // if (was_last_access_by_CPL3_code) {
+            //     fprintf(trace_file, "%lx\n", virt_addr);
+            // }
 
             if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
                 ++num_of_mem_accesses_to_our_buf;

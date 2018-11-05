@@ -23,9 +23,12 @@ BIG_NUM_OF_ITERS_OVER_OUR_ARR = 500
 
 NUM_OF_ACCESSES_FOR_INC = 2
 
+VERBOSE = False
+
 
 def read_file_until_it_contains_str(file_path, expected_str):
-    print(f'expecting to find "{expected_str}" in {file_path}')
+    if VERBOSE:
+        print(f'expecting to find "{expected_str}" in {file_path}')
     while True:
         file_contents = read_file(file_path)
         if expected_str in file_contents:
@@ -38,7 +41,8 @@ def read_file(file_path):
 
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.PIPE,
                        stderr_dest=sys.stderr):
-    print(f'executing cmd (in {dir_path}): {cmd}')
+    if VERBOSE:
+        print(f'executing cmd (in {dir_path}): {cmd}')
     return subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
                           stdout=stdout_dest, stderr=stderr_dest)
 
@@ -584,12 +588,15 @@ def _test_invalid_file_or_dir_cmd_arg(
 
     
 
-def test_toy_workload_durations(this_script_location,
-                                qemu_mem_tracer_script_path,
-                                qemu_with_GMBEOO_path, guest_image_path,
-                                snapshot_name, host_password):
-    num_of_iterations = 5
-    
+def print_workload_durations(this_script_location,
+                             qemu_mem_tracer_script_path,
+                             qemu_with_GMBEOO_path, guest_image_path,
+                             snapshot_name, host_password,
+                             workload_runner_path, num_of_iterations,
+                             workload_path=None, log_of_GMBE_block_len=16,
+                             log_of_GMBE_tracing_ratio=10,
+                             run_native_only=False):
+    assert(num_of_iterations > 0)
     def get_avg(durations):
         return sum(durations) / num_of_iterations
 
@@ -597,13 +604,18 @@ def test_toy_workload_durations(this_script_location,
         squares = [(num - avg) ** 2 for num in nums]
         return get_avg(squares) ** 0.5
 
-
+    if workload_path:
+        workload_path_cmd_arg_str = f'--workload_path {workload_path}'
+    else:
+        workload_path_cmd_arg_str = ''
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     native_durations = []
     no_trace_durations = []
     with_trace_durations = []
-    for _ in range(num_of_iterations):
+    mem_accesses_by_non_CPL3_code_ratios = []
+    for i in range(num_of_iterations):
+        print(f'iteration number {i + 1}...')
         native_mem_tracer_output = get_mem_tracer_output(
             this_script_location,
             qemu_mem_tracer_script_path,
@@ -611,82 +623,129 @@ def test_toy_workload_durations(this_script_location,
             'dummy_guest_image_path',
             'dummy_snapshot_name',
             'dummy_host_password',
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_long_user_memory_intensive_workload'),
-            f'--dont_use_qemu')
+            workload_runner_path,
+            f'--dont_use_qemu '
+            f'{workload_path_cmd_arg_str}')
         native_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
                                native_mem_tracer_output).group(1)) / 
                            NUM_OF_MILLISECONDS_IN_SECOND)
-        print(native_duration)
+        # print(native_duration)
         native_durations.append(native_duration)                
         # if native_duration < 1:
         #     raise RuntimeError('The machine running this test is too fast. '
         #                        'The test should be edited to run longer.')
 
+        if not run_native_only:
+            no_trace_mem_tracer_output = get_mem_tracer_output(
+                this_script_location,
+                qemu_mem_tracer_script_path,
+                qemu_with_GMBEOO_path,
+                guest_image_path,
+                snapshot_name,
+                host_password,
+                workload_runner_path,
+                f'--analysis_tool_path "{simple_analysis_path}" --dont_trace '
+                f'{workload_path_cmd_arg_str}')
+            no_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
+                                     no_trace_mem_tracer_output).group(1)) /
+                                 NUM_OF_MILLISECONDS_IN_SECOND)
+            no_trace_durations.append(no_trace_duration)
 
-        no_trace_mem_tracer_output = get_mem_tracer_output(
-            this_script_location,
-            qemu_mem_tracer_script_path,
-            qemu_with_GMBEOO_path,
-            guest_image_path,
-            snapshot_name,
-            host_password,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_long_user_memory_intensive_workload'),
-            f'--analysis_tool_path "{simple_analysis_path}" --dont_trace')
-        no_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
-                                 no_trace_mem_tracer_output).group(1)) /
-                             NUM_OF_MILLISECONDS_IN_SECOND)
-        no_trace_durations.append(no_trace_duration)
+
+            with_trace_mem_tracer_output = get_mem_tracer_output(
+                this_script_location,
+                qemu_mem_tracer_script_path,
+                qemu_with_GMBEOO_path,
+                guest_image_path,
+                snapshot_name,
+                host_password,
+                workload_runner_path,
+                f'--analysis_tool_path "{simple_analysis_path}" '
+                f'--log_of_GMBE_block_len {log_of_GMBE_block_len} '
+                f'--log_of_GMBE_tracing_ratio {log_of_GMBE_tracing_ratio} '
+                f'--print_trace_info '
+                f'{workload_path_cmd_arg_str}')
+            
+            with_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
+                                       with_trace_mem_tracer_output).group(1)) /
+                                   NUM_OF_MILLISECONDS_IN_SECOND)
+            with_trace_durations.append(with_trace_duration)
+
+            # print(with_trace_mem_tracer_output)
+            num_of_mem_accesses_by_non_CPL3_code_as_str, num_of_mem_accesses_as_str = (
+                re.search(r'num_of_mem_accesses_by_non_CPL3_code:\s+(\d+).*'
+                          r'num_of_mem_accesses:\s+(\d+)',
+                          with_trace_mem_tracer_output, re.DOTALL).group(1, 2))
+            num_of_mem_accesses_by_non_CPL3_code = int(
+                num_of_mem_accesses_by_non_CPL3_code_as_str)
+            num_of_mem_accesses = int(num_of_mem_accesses_as_str)
+            assert(num_of_mem_accesses > 0)
+            mem_accesses_by_non_CPL3_code_ratios.append(
+                num_of_mem_accesses_by_non_CPL3_code / num_of_mem_accesses)
 
 
-        with_tracer_mem_tracer_output = get_mem_tracer_output(
-            this_script_location,
-            qemu_mem_tracer_script_path,
-            qemu_with_GMBEOO_path,
-            guest_image_path,
-            snapshot_name,
-            host_password,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_long_user_memory_intensive_workload'),
-            f'--analysis_tool_path "{simple_analysis_path}" '
-            f'--log_of_GMBE_block_len 16 --log_of_GMBE_tracing_ratio 10 '
-            f'--print_trace_info')
-        
-        with_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
-                                   with_tracer_mem_tracer_output).group(1)) /
-                               NUM_OF_MILLISECONDS_IN_SECOND)
-        with_trace_durations.append(with_trace_duration)
-
-        print(with_tracer_mem_tracer_output)
-        actual_tracing_ratio_as_str = re.search(
-            r'actual_tracing_ratio \(i\.e\. '
-            r'num_of_GMBE_events_since_enabling_GMBEOO / '
-            r'num_of_events_written_to_trace_buf\): (\d+\.\d+)',
-            with_tracer_mem_tracer_output, re.DOTALL).group(1)
-        # assert(2 ** 10 - 50 <= float(actual_tracing_ratio_as_str.strip()) <=
-        #        2 ** 10 + 50)
+            # print(with_trace_mem_tracer_output)
 
 
     avg_native_duration = get_avg(native_durations)
     avg_no_trace_duration = get_avg(no_trace_durations)
     avg_with_trace_duration = get_avg(with_trace_durations)
+    avg_mem_accesses_by_non_CPL3_code_ratio = get_avg(
+        mem_accesses_by_non_CPL3_code_ratios)
     native_duration_SD = get_standard_deviation(native_durations,
                                                 avg_native_duration)
     no_trace_duration_SD = get_standard_deviation(no_trace_durations,
                                                   avg_no_trace_duration)
     with_trace_duration_SD = get_standard_deviation(with_trace_durations,
                                                     avg_with_trace_duration)
+    mem_accesses_by_non_CPL3_code_ratio_SD = get_standard_deviation(
+        mem_accesses_by_non_CPL3_code_ratios,
+        avg_mem_accesses_by_non_CPL3_code_ratio)
 
     print(f'avg_native_duration: {avg_native_duration}, SD: {native_duration_SD}'
           f'({native_durations})')
-    print(f'avg_no_trace_duration: {avg_no_trace_duration}, SD: {no_trace_duration_SD}'
-          f'({no_trace_durations})')
-    print(f'avg_with_trace_duration: {avg_with_trace_duration}, SD: {with_trace_duration_SD}'
-          f'({with_trace_durations})')
+    if not run_native_only:
+        print(f'avg_no_trace_duration: {avg_no_trace_duration}, '
+              f'SD: {no_trace_duration_SD} ({no_trace_durations})')
+        print(f'avg_with_trace_duration: {avg_with_trace_duration}, '
+              f'SD: {with_trace_duration_SD} ({with_trace_durations})')
+        print(f'avg_mem_accesses_by_non_CPL3_code_ratio: '
+              f'{avg_mem_accesses_by_non_CPL3_code_ratio}, '
+              f'SD: {mem_accesses_by_non_CPL3_code_ratio_SD} '
+              f'({mem_accesses_by_non_CPL3_code_ratios})')
 
-    print(f'avg_with_trace_duration / avg_native_duration: '
-          f'{avg_with_trace_duration / avg_native_duration}')
-    print(f'avg_with_trace_duration / avg_no_trace_duration: '
-          f'{avg_with_trace_duration / avg_no_trace_duration}')
+        print(f'avg_with_trace_duration / avg_native_duration: '
+              f'{avg_with_trace_duration / avg_native_duration}')
+        print(f'avg_with_trace_duration / avg_no_trace_duration: '
+              f'{avg_with_trace_duration / avg_no_trace_duration}')
+
+def _test_toy_workload_durations(this_script_location,
+                                qemu_mem_tracer_script_path,
+                                qemu_with_GMBEOO_path, guest_image_path,
+                                snapshot_name, host_password):
+    print_workload_durations(
+        this_script_location,
+        qemu_mem_tracer_script_path,
+        qemu_with_GMBEOO_path, guest_image_path,
+        snapshot_name, host_password,
+        get_tests_bin_file_path(this_script_location, 
+                                'simple_user_memory_intensive_workload'),
+                                # 'simple_long_user_memory_intensive_workload'),
+        5)
+
+def test_999_specrand_workload(this_script_location,
+                       qemu_mem_tracer_script_path,
+                       qemu_with_GMBEOO_path, guest_image_path,
+                       snapshot_name, host_password):
+    print_workload_durations(
+        this_script_location,
+        qemu_mem_tracer_script_path,
+        qemu_with_GMBEOO_path, guest_image_path,
+        snapshot_name, host_password,
+        '999.specrand/run.sh',
+        10, workload_path='999.specrand/workload',
+        )
+        # run_native_only=True)
+
+
 

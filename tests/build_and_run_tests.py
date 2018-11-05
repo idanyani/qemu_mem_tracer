@@ -15,13 +15,15 @@ TEST_SCRIPT_EXT = '.py'
 LOADABLE_KERNEL_MODULE_SUFFIX = '_lkm'
 
 def execute_cmd_in_dir(cmd, dir_path):
-    print(f'executing cmd (in {dir_path}): {cmd}')
+    if args.verbose:
+        print(f'executing cmd (in {dir_path}): {cmd}')
     subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
 
 def compile_c_files(dir_path):
     for root_dir_path, dir_names, file_fullnames in os.walk(dir_path):
         if (not root_dir_path.endswith(OUTPUT_DIR_NAME)) and (
-                not root_dir_path.endswith(LOADABLE_KERNEL_MODULE_SUFFIX)):
+                not root_dir_path.endswith(LOADABLE_KERNEL_MODULE_SUFFIX)) and (
+                not '999.specrand' in root_dir_path):
             output_dir_path = os.path.join(root_dir_path, OUTPUT_DIR_NAME)
             shutil.rmtree(output_dir_path, ignore_errors=True)
             os.mkdir(output_dir_path)
@@ -45,8 +47,8 @@ parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('guest_image_path', type=str)
 parser.add_argument('snapshot_name', type=str)
 parser.add_argument('host_password', type=str)
+parser.add_argument('--verbose', '-v', action='store_true')
 args = parser.parse_args()
-
 
 this_script_path = os.path.realpath(__file__)
 this_script_location = os.path.split(this_script_path)[0]
@@ -54,6 +56,8 @@ this_script_location = os.path.split(this_script_path)[0]
 compile_c_files(this_script_location)
 
 print(f'\n\n--------start running tests--------')
+if args.verbose:
+    tests.VERBOSE = True
 for attr in dir(tests):
     if attr.startswith('test_'):
         test_func = getattr(tests, attr)
