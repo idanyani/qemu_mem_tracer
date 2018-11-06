@@ -1,10 +1,11 @@
 usage: memory_tracer.py [-h] [--workload_path WORKLOAD_PATH]
                         [--analysis_tool_path ANALYSIS_TOOL_PATH]
+                        [--trace_fifo_path TRACE_FIFO_PATH]
                         [--trace_only_CPL3_code_GMBE]
                         [--log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN]
                         [--log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO]
                         [--dont_exit_qemu_when_done] [--print_trace_info]
-                        [--verbose]
+                        [--dont_trace] [--dont_use_qemu] [--verbose]
                         guest_image_path snapshot_name workload_runner_path
                         host_password qemu_with_GMBEOO_path
 
@@ -14,8 +15,8 @@ Run a workload on the QEMU guest while writing optimized GMBE trace records to a
 
 GMBE is short for guest_mem_before_exec. This is an event in upstream QEMU 3.0.0 that occurs on every attempt of the QEMU guest to access a virtual memory address.
 
-We optimized QEMU's tracing code for the case in which only trace records of GMBE are gathered (we call it GMBE only optimization - GMBEOO).
-When GMBEOO is enabled, a trace record is structured as follows:
+We optimized QEMU's tracing code for the case in which only trace records of GMBE are gathered (we call it GMBE only optimization - GMBEOO, and so we gave our fork of QEMU the name qemu_with_GMBEOO).
+When GMBEOO is enabled (in qemu_with_GMBEOO), a trace record is structured as follows:
 
 struct GMBEOO_TraceRecord {
     uint8_t size_shift : 3; /* interpreted as "1 << size_shift" bytes */
@@ -27,7 +28,7 @@ struct GMBEOO_TraceRecord {
     uint64_t virt_addr : 64;
 };
 
-memory_tracer.py also prints the workload info (in case it isn't the empty string).
+memory_tracer.py also prints the workload info (in case it isn't the empty string), and the tracing duration in miliseconds.
 In case --analysis_tool_path is specified, memory_tracer.py also prints the output of the analysis tool.
 
 Either workload_runner or the workload itself must do the following:
@@ -42,12 +43,13 @@ Either workload_runner or the workload itself must do the following:
 Note that workload_runner can also be an ELF that includes the workload and the aforementioned prints.
 
 If --analysis_tool_path is specified, the provided analysis tool must do the following:
-1. Print "Ready to analyze" when you wish the tracing to start.
-2. Register a handler for the signal SIGUSR1 (e.g. by calling the `signal` syscall). The handler must:
+1. Receive in argv[1] the path of the trace FIFO, but not open it for reading yet.2. Register a handler for the signal SIGUSR1 (e.g. by calling the `signal` syscall). The handler must:
   a. Print "-----begin analysis output-----".
   b. Print the output of the analysis tool.
   c. Print "-----end analysis output-----".
-analysis tool (If any of the messages isn't printed, it will probably seem like memory_tracer.py is stuck.)
+3. Print "Ready to analyze" when you wish the tracing to start.
+4. Open the trace FIFO for read, and start reading trace records from it. Note that the reading from the FIFO should be as fast as possible. Otherwise, the FIFO's buffer would get full, and qemu_with_GMBEOO would start blocking when it tries to write to the FIFO. Soon, trace_buf would get full, and trace records of new GMBE events would be dropped.
+(If any of the messages isn't printed, it will probably seem like memory_tracer.py is stuck.)
 
 positional arguments:
   guest_image_path      The path of the qcow2 file which is the image of the
@@ -78,6 +80,12 @@ optional arguments:
   --analysis_tool_path ANALYSIS_TOOL_PATH
                         Path of an analysis tool that would start executing
                         before the tracing starts.
+  --trace_fifo_path TRACE_FIFO_PATH
+                        Path of the FIFO into which trace records will be
+                        written. Note that as mentioned above, a scenario in
+                        which the FIFO's buffer getting full is bad, and so it
+                        is recommended to use a FIFO whose buffer is of size
+                        `cat /proc/sys/fs/pipe-max-size`.
   --trace_only_CPL3_code_GMBE
                         If specified, qemu would only trace memory accesses by
                         CPL3 code. Otherwise, qemu would trace all accesses.
@@ -122,4 +130,28 @@ optional arguments:
                         qemu_with_GMBEOO tried to write them to the trace_buf,
                         it was full, so they were discarded. This shouldn't
                         happen normally.
+  --dont_trace          If specified, memory_tracer.py will run without
+                        enabling the tracing feature of qemu_with_GMBEOO.
+                        Therefore, it will not print the trace info (even if
+                        --print_trace_info is specified). This is useful for
+                        comparing the speed of qemu_with_GMBEOO with and
+                        without tracing.
+  --dont_use_qemu       If specified, memory_tracer.py will run the workload
+                        on the host (i.e. native). Specifically, both
+                        workload_runner and workload will be copied to a
+                        temporary directory, and there workload_runner will be
+                        executed. Please pass dummy non-empty strings as the
+                        arguments guest_image_path, snapshot_name,
+                        host_password and qemu_with_GMBEOO_path. As expected,
+                        no trace info will be printed (even if
+                        --print_trace_info is specified). Also, the analysis
+                        tool will not be executed (even if
+                        --analysis_tool_path is specified). This is useful for
+                        comparing the speed of qemu_with_GMBEOO to running the
+                        code natively. Note that This feature is somewhat
+                        limited, as it only captures the prints by
+                        workload_runner. (i.e. it would get stuck in case
+                        workload_runner doesn't send all the expected messages
+                        itself (e.g. "Ready to trace. Press enter to
+                        continue").)
   --verbose, -v         If specified, debug messages are printed.

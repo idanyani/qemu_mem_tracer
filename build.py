@@ -75,6 +75,8 @@ if args.run_tests:
                        f'{args.qemu_with_GMBEOO_path} '
                        f'{args.guest_image_path} '
                        f'{args.snapshot_name} '
-                       f'{args.host_password}',
+                       f'{args.host_password} '
+                       f'--verbose '
+                       ,
                        tests_dir_path)
 

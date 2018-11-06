@@ -23,11 +23,11 @@ BIG_NUM_OF_ITERS_OVER_OUR_ARR = 500
 
 NUM_OF_ACCESSES_FOR_INC = 2
 
-VERBOSE = False
+VERBOSE_LEVEL = 0
 
 
 def read_file_until_it_contains_str(file_path, expected_str):
-    if VERBOSE:
+    if VERBOSE_LEVEL:
         print(f'expecting to find "{expected_str}" in {file_path}')
     while True:
         file_contents = read_file(file_path)
@@ -41,7 +41,7 @@ def read_file(file_path):
 
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.PIPE,
                        stderr_dest=sys.stderr):
-    if VERBOSE:
+    if VERBOSE_LEVEL:
         print(f'executing cmd (in {dir_path}): {cmd}')
     return subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
                           stdout=stdout_dest, stderr=stderr_dest)
@@ -56,6 +56,10 @@ def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
                        qemu_with_GMBEOO_path, guest_image_path,
                        snapshot_name, host_password, workload_runner_path,
                        extra_cmd_args=''):
+    if VERBOSE_LEVEL > 1:
+        verbose_cmd_arg = '--verbose'
+    else:
+        verbose_cmd_arg = ''
     return (f'python3.7 {qemu_mem_tracer_script_path} '
             f'"{guest_image_path}" '
             f'"{snapshot_name}" '
@@ -63,6 +67,7 @@ def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
             f'"{host_password}" '
             f'"{qemu_with_GMBEOO_path}" '
             f'{extra_cmd_args} '
+            f'{verbose_cmd_arg} '
             )
             # f'--verbose ')
 
@@ -74,6 +79,12 @@ def get_mem_tracer_error_and_output(*args, **kwargs):
 def get_mem_tracer_output(*args, **kwargs):
     return get_output_of_executed_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs))
     
+def check_mem_tracer_output_attention(mem_tracer_output):
+    if 'ATTENTION' in mem_tracer_output:
+        print(mem_tracer_output)
+        print('\n\n---mem_tracer_output contains an ATTENTION message.'
+              'You should probably take a look.---\n\n')
+
 def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name, host_password):
@@ -354,7 +365,8 @@ def _test_sampling(this_script_location,
         f'--analysis_tool_path "{simple_analysis_path}" '
         f'--log_of_GMBE_block_len 3 --log_of_GMBE_tracing_ratio 4 --verbose '
         f'--print_trace_info')
-    
+    check_mem_tracer_output_attention(mem_tracer_output)
+
     regex = (
         r'GMBEOO_mask_of_GMBE_block_idx: (\w+)\s*'
         r'---storing start timestamp and starting to trace---.*'
@@ -377,6 +389,7 @@ def _test_sampling(this_script_location,
         f'--analysis_tool_path "{simple_analysis_path}" '
         f'--log_of_GMBE_block_len 4 --log_of_GMBE_tracing_ratio 3 --verbose '
         f'--print_trace_info')
+    check_mem_tracer_output_attention(mem_tracer_output)
     
     mask_of_GMBE_block_idx, actual_tracing_ratio = re.search(
         regex, mem_tracer_output, re.DOTALL).group(1, 2)
@@ -422,6 +435,7 @@ def _test_trace_fifo_path_cmd_arg(this_script_location,
                 get_tests_bin_file_path(this_script_location, 
                                         'simple_user_memory_intensive_workload'),
                 f'--trace_fifo_path {trace_fifo_path} --print_trace_info')
+            check_mem_tracer_output_attention(mem_tracer_output)
 
             os.kill(simple_analysis_pid, signal.SIGUSR1)
             analysis_output = read_file_until_it_contains_str(
@@ -665,11 +679,14 @@ def print_workload_durations(this_script_location,
                 f'--log_of_GMBE_tracing_ratio {log_of_GMBE_tracing_ratio} '
                 f'--print_trace_info '
                 f'{workload_path_cmd_arg_str}')
-            
+            check_mem_tracer_output_attention(with_trace_mem_tracer_output)
+
             with_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
                                        with_trace_mem_tracer_output).group(1)) /
                                    NUM_OF_MILLISECONDS_IN_SECOND)
             with_trace_durations.append(with_trace_duration)
+
+
 
             # print(with_trace_mem_tracer_output)
             num_of_mem_accesses_by_non_CPL3_code_as_str, num_of_mem_accesses_as_str = (
@@ -679,6 +696,7 @@ def print_workload_durations(this_script_location,
             num_of_mem_accesses_by_non_CPL3_code = int(
                 num_of_mem_accesses_by_non_CPL3_code_as_str)
             num_of_mem_accesses = int(num_of_mem_accesses_as_str)
+            print(f'num_of_mem_accesses: {num_of_mem_accesses}')
             assert(num_of_mem_accesses > 0)
             mem_accesses_by_non_CPL3_code_ratios.append(
                 num_of_mem_accesses_by_non_CPL3_code / num_of_mem_accesses)
@@ -744,6 +762,7 @@ def test_999_specrand_workload(this_script_location,
         snapshot_name, host_password,
         '999.specrand/run.sh',
         10, workload_path='999.specrand/workload',
+        # log_of_GMBE_tracing_ratio=0,
         )
         # run_native_only=True)
 
