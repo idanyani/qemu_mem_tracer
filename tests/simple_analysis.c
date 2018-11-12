@@ -139,6 +139,11 @@ int main(int argc, char **argv) {
         //     printf("fwrite failed.\n");
         // }
         if (num_of_trace_records_read == 1) {
+            
+            // continue;
+
+
+
             uint8_t cpl = trace_record.cpl;
             uint64_t virt_addr = trace_record.virt_addr;
             

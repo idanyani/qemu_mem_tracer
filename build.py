@@ -8,6 +8,9 @@ BUILD_QEMU_SCRIPT_NAME = 'config_and_make_qemu_with_GMBEOO.py'
 QEMU_MEM_TRACER_SCRIPT_NAME = 'memory_tracer.py'
 TESTS_DIR_NAME = 'tests'
 BUILD_AND_RUN_TESTS_SCRIPT_NAME = 'build_and_run_tests.py'
+RUN_SCRIPT_FROM_SERIAL_NAME = 'run_script_from_serial'
+RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME = f'{RUN_SCRIPT_FROM_SERIAL_NAME}.c'
+TO_RUN_ON_GUEST_DIR_NAME = 'to_run_on_guest'
 
 def execute_cmd_in_dir(cmd, dir_path='.'):
     print(f'executing cmd (in {dir_path}): {cmd}')
@@ -52,12 +55,22 @@ if this_script_location_dir_name != 'qemu_mem_tracer':
         if user_input == 'y':
             break
 
+run_script_from_serial_source_path = os.path.join(
+  this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME)
+run_script_from_serial_elf_path = os.path.join(
+  this_script_location, TO_RUN_ON_GUEST_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_NAME)
+compile_cmd = (f'gcc -Werror -Wall -pedantic '
+               f'{run_script_from_serial_source_path} '
+               f'-o {run_script_from_serial_elf_path}')
+execute_cmd_in_dir(compile_cmd, this_script_location)
+
 if not args.dont_compile_qemu:
     build_qemu_script_path = os.path.join(this_script_location,
                                           BUILD_QEMU_SCRIPT_NAME)
     build_qemu_cmd = (f'python3.7 {BUILD_QEMU_SCRIPT_NAME} '
                       f'{args.qemu_with_GMBEOO_path} {args.debug_flag}')
     execute_cmd_in_dir(build_qemu_cmd, this_script_location)
+
 
 if args.run_tests:
     for arg_name in ('guest_image_path', 'snapshot_name', 'host_password'):
