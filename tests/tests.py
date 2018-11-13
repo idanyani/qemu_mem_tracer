@@ -66,7 +66,6 @@ def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
             f'{extra_cmd_args} '
             f'{verbose_cmd_arg} '
             )
-            # f'--verbose ')
 
 def get_mem_tracer_error_and_output(*args, **kwargs):
     cmd_result = execute_cmd_in_dir(get_mem_tracer_cmd(*args, **kwargs),

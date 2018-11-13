@@ -32,6 +32,17 @@ proc debug_print {msg} {
     }
 }
 
+proc expect_and_check_eof {spawn_to_expect_from_id spawn_to_expect_from_name expected_str} {
+    expect {
+        -i $spawn_to_expect_from_id
+        $expected_str {}
+        eof {
+            debug_print "it seems that $spawn_to_expect_from_name terminated unexpectedly."
+            exit 1
+        }
+    }
+}
+
 
 debug_print "---start run_qemu_and_workload.sh---\n"
 
@@ -45,6 +56,7 @@ debug_print "---starting qemu---\n"
 spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
     -serial pty -serial pty
+    # -serial pty
 set monitor_id $spawn_id
 
 debug_print "---parsing qemu's message about pseudo-terminals that it opened---\n"
@@ -68,11 +80,17 @@ set guest_ttyS0_reader_id $spawn_id
 
 debug_print "\n---loading snapshot---\n"
 send -i $monitor_id "loadvm $snapshot_name\r"
+expect_and_check_eof $monitor_id qemu_monitor "(qemu)"
 send -i $monitor_id "cont\r"
-# interact -i $monitor_id
+expect_and_check_eof $monitor_id qemu_monitor "(qemu)"
+sleep 1
 
 debug_print "\n---writing $file_to_write_to_serial_path to $guest_ttyS0_pty_path---\n"
-exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $guest_ttyS0_pty_path $dont_add_communications
+exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $guest_ttyS0_pty_path $dont_add_communications > /home/orenmn/aoeu.txt
+
+interact -i $monitor_id
+
+# exec cat $file_to_write_to_serial_path > $guest_ttyS0_pty_path
 
 # The guest would now receive the workload_runner script and run it.
 
@@ -87,14 +105,8 @@ if {$workload_info != ""} {
 }
 
 debug_print "\n---expecting ready to trace message---\n"
-expect {
-    -i $guest_ttyS0_reader_id
-    "Ready to trace. Press enter to continue" {}
-    eof {
-        debug_print "it seems that guest_ttyS0_reader terminated unexpectedly."
-        exit 1
-    }
-}
+expect_and_check_eof $guest_ttyS0_reader_id guest_ttyS0_reader \
+    "Ready to trace. Press enter to continue"
 send -i $monitor_id "stop\r"
 
 
@@ -106,14 +118,8 @@ if {$analysis_tool_path != "/dev/null"} {
     set analysis_tool_pid [eval spawn $analysis_tool_path $trace_fifo_path $workload_info_with_spaces]
     set analysis_tool_id $spawn_id
     debug_print "\n---expecting ready to analyze message---\n"
-    expect {
-        -i $analysis_tool_id
-        "Ready to analyze" {}
-        eof {
-            debug_print "it seems that $analysis_tool_path terminated unexpectedly."
-            exit 1
-        }
-    }
+    
+    expect_and_check_eof $analysis_tool_id $analysis_tool_path "Ready to analyze"
 }
 
 if {$::dont_trace == "False"} {
@@ -145,14 +151,7 @@ send -i $monitor_id "sendkey ret\r"
 # interact -i $monitor_id
 
 debug_print "\n---expecting Stop tracing message---\n"
-expect {
-    -i $guest_ttyS0_reader_id
-    "Stop tracing" {}
-    eof {
-        debug_print "it seems that guest_ttyS0_reader terminated unexpectedly."
-        exit 1
-    }
-}
+expect_and_check_eof $guest_ttyS0_reader_id guest_ttyS0_reader "Stop tracing"
 
 send -i $monitor_id "stop\r"
 # flush the trace file twice, to make GMBEOO's code in `writeout_thread` run
