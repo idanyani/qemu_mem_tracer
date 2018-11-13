@@ -13,19 +13,27 @@ import stat
 F_SETPIPE_SZ = 1031  # Linux 2.6.35+
 F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
-TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_NAME = (
-    'qemu_mem_tracer_temp_dir_for_guest_to_download_from')
-TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH = os.path.join(
-    pathlib.Path.home(), TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_NAME)
-WORKLOAD_RUNNER_NAME = 'workload_runner.bash'
-WORKLOAD_NAME = 'workload'
-WORKLOAD_RUNNER_DOWNLOAD_PATH = os.path.join(
-    f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', WORKLOAD_RUNNER_NAME)
-WORKLOAD_DOWNLOAD_PATH = os.path.join(
-    f'{TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH}', WORKLOAD_NAME)
-
+WORKLOAD_RUNNER_SCRIPT_NAME = 'workload_runner.bash'
+COMMUNICATIONS_DIR_NAME = 'host_guest_workload_communications'
 RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME = 'run_qemu_and_workload.sh'
+RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH = os.path.join(
+    COMMUNICATIONS_DIR_NAME, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME)
 RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_NAME = 'run_workload_natively.sh'
+RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_REL_PATH = os.path.join(
+    COMMUNICATIONS_DIR_NAME, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_NAME)
+WRITE_SCRIPT_TO_SERIAL_NAME = 'write_script_to_serial.py'
+WRITE_SCRIPT_TO_SERIAL_REL_PATH = os.path.join(
+    COMMUNICATIONS_DIR_NAME, WRITE_SCRIPT_TO_SERIAL_NAME)
+
+
+
+def read_file(file_path):
+    with open(file_path, 'b') as f:
+        return f.read()
+
+def write_file(file_path, contents):
+    with open(file_path, 'w') as f:
+        return f.write(contents)
 
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.DEVNULL):
     debug_print(f'executing cmd (in {dir_path}): {cmd}')
@@ -130,35 +138,37 @@ def parse_cmd_args():
                         help='The name of the snapshot saved by the monitor '
                              'command `savevm`, which was specially constructed '
                              'for running a workload with GMBE tracing.')
-    parser.add_argument('workload_runner_path', type=str,
-                        help='The path of the workload_runner script.\n'
-                             'workload_runner would be downloaded and executed by '
-                             'the qemu guest.\n\n'
-                             )
+    workload_path = parser.add_mutually_exclusive_group(required=True)
+    workload_path.add_argument('--workload_path_on_guest', type=str,
+                               help='The path of the workload on the guest.')
+    workload_path.add_argument('--workload_path_on_host', type=str,
+                               help='The path of the workload on the host. The '
+                                    'file in that path would be sent to the '
+                                    'guest to run as the workload.')
+    parser.add_argument(
+        '--dont_add_communications_with_host_to_workload', action='store_true',
+        help='If specified, the workload script would not be wrapped with code '
+             'that handles the required communications between the guest and '
+             'the host, e.g. printing "Ready to trace. Press enter to continue" '
+             'and then waiting for a key press.')
     parser.add_argument('host_password', type=str,
                         help='If you don’t like the idea of your password in plain '
                              'text, feel free to patch our code so that scp would '
                              'use keys instead.')
     parser.add_argument('qemu_with_GMBEOO_path', type=str,
                         help='The path of qemu_with_GMBEOO.')
-    parser.add_argument('--workload_path', type=str,
-                        help='The path of a file/directory that would be downloaded '
-                             'by the qemu guest into its home directory, and named '
-                             'workload. (This is meant for convenience, e.g. in '
-                             'case your workload includes more than a single file.\n'
-                             'If your workload is heavy and unchanging, it would '
-                             'probably be faster to download it to the QEMU guest, '
-                             'use `savevm`, and later pass that snapshot\'s name '
-                             'as the snapshot_name argument.\n')
-    parser.add_argument('--analysis_tool_path', type=str, default='/dev/null',
-                        help='Path of an analysis tool that would start executing '
-                             'before the tracing starts.\n')
-    parser.add_argument('--trace_fifo_path', type=str,
-                        help='Path of the FIFO into which trace records will be '
-                             'written. Note that as mentioned above, a scenario '
-                             'in which the FIFO\'s buffer getting full is bad, and '
-                             'so it is recommended to use a FIFO whose buffer is '
-                             'of size `cat /proc/sys/fs/pipe-max-size`.')
+    analysis_or_fifo = parser.add_mutually_exclusive_group(required=True)
+    analysis_or_fifo.add_argument(
+        '--analysis_tool_path', type=str, default='/dev/null',
+        help='Path of an analysis tool that would start executing '
+             'before the tracing starts.\n')
+    analysis_or_fifo.add_argument(
+        '--trace_fifo_path', type=str,
+        help='Path of the FIFO into which trace records will be '
+             'written. Note that as mentioned above, a scenario '
+             'in which the FIFO\'s buffer getting full is bad, and '
+             'so it is recommended to use a FIFO whose buffer is '
+             'of size `cat /proc/sys/fs/pipe-max-size`.')
     parser.add_argument('--trace_only_CPL3_code_GMBE',
                         action='store_const',
                         const='on', default='off',
@@ -246,10 +256,6 @@ def parse_cmd_args():
         verify_arg_is_file_or_dir(args.workload_path, 'workload_path')
 
     if not args.dont_use_qemu:
-        if (1 != (1 if (args.trace_fifo_path is None) else 0) +
-                 (1 if (args.analysis_tool_path is '/dev/null') else 0)):
-            raise RuntimeError('Exactly one of --analysis_tool_path and '
-                               '--trace_fifo_path must be specified.')
         verify_arg_is_file(args.guest_image_path, 'guest_image_path')
         verify_arg_is_dir(args.qemu_with_GMBEOO_path, 'qemu_with_GMBEOO_path')
         if args.analysis_tool_path != '/dev/null':
@@ -297,22 +303,8 @@ if __name__ == '__main__':
         def debug_print(*args, **kwargs):
             return
 
-    shutil.rmtree(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH, ignore_errors=True)
-    os.mkdir(TEMP_DIR_FOR_THE_GUEST_TO_DOWNLOAD_FROM_PATH)
-
     guest_image_path = os.path.realpath(args.guest_image_path)
     workload_runner_path = os.path.realpath(args.workload_runner_path)
-
-    if not args.dont_use_qemu:
-        qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
-        
-        if args.workload_path is None:
-            pathlib.Path(WORKLOAD_DOWNLOAD_PATH).touch()
-        else:
-            workload_path = os.path.realpath(args.workload_path)
-            os.symlink(workload_path, WORKLOAD_DOWNLOAD_PATH)
-
-        os.symlink(workload_runner_path, WORKLOAD_RUNNER_DOWNLOAD_PATH)
 
     this_script_path = os.path.realpath(__file__)
     this_script_location = os.path.split(this_script_path)[0]
@@ -320,25 +312,34 @@ if __name__ == '__main__':
     verify_this_script_location(this_script_location)
 
     with tempfile.TemporaryDirectory() as temp_dir_path:
+        if args.workload_path.workload_path_on_host:
+            workload_runner_source = read_file(
+                args.workload_path.workload_path_on_host)
+        else:
+            workload_runner_source = (
+                f'#!/bin/bash\n'
+                f'{args.workload_path.workload_path_on_guest}\n')
+        if not args.dont_add_communications_with_host_to_workload:
+            workload_runner_source = (
+                f'#!/bin/bash\n'
+                f'echo "-----begin workload info-----"\n'
+                f'echo "-----end workload info-----"\n'
+                f'\n'
+                f'echo "Ready to trace. Press enter to continue"\n'
+                f'# This is equivalent to getchar(). The host would use \n'
+                f'# `sendkey` when it is ready.\n'
+                f'read -n1;\n'
+                f'\n'
+                f'{workload_runner_source}'
+                f'\n'
+                f'echo "Stop tracing"\n'
+                )
+        final_workload_runner_path = os.path.join(temp_dir_path,
+                                                  WORKLOAD_RUNNER_SCRIPT_NAME)
+        write_file(final_workload_runner_path, workload_runner_source)
+        
+
         if not args.dont_use_qemu:
-            aoeu = (
-                'PRINT_STR("-----begin workload info-----");'
-                'printf("%p", (void *)arr);'
-                'PRINT_STR("-----end workload info-----");'
-                ''
-                'PRINT_STR("Ready to trace. Press enter to continue");'
-                'getchar(); /* The host would use `sendkey` when it is ready. */'
-                ''
-                'for (int j = 0; j < NUM_OF_ITERS_OVER_OUR_ARR; ++j) {'
-                '    for (int i = 0; i < OUR_ARR_LEN; ++i) {'
-                '        ++arr[i];'
-                '    }'
-                '}'
-                ''
-                'PRINT_STR("Stop tracing");'
-                'return 0;')
-
-
             if args.trace_fifo_path is None:
                 trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
                 os.mkfifo(trace_fifo_path)
@@ -357,12 +358,16 @@ if __name__ == '__main__':
             else:
                 trace_fifo_path = args.trace_fifo_path
 
+            write_script_to_serial_path = os.path.join(
+                this_script_location, WRITE_SCRIPT_TO_SERIAL_REL_PATH)
+            qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
             run_qemu_and_workload_expect_script_path = os.path.join(
-                this_script_location, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME)
+                this_script_location, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH)
             run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                                          f'"{guest_image_path}" '
                                          f'"{args.snapshot_name}" '
-                                         f'"{args.host_password}" '
+                                         f'"{final_workload_runner_path}" '
+                                         f'"{write_script_to_serial_path}" '
                                          f'{args.trace_only_CPL3_code_GMBE} '
                                          f'{args.log_of_GMBE_block_len} '
                                          f'{args.log_of_GMBE_tracing_ratio} '
@@ -379,18 +384,10 @@ if __name__ == '__main__':
 
         else:
             assert(args.dont_use_qemu)
-            if args.workload_path is not None:
-                workload_path = os.path.realpath(args.workload_path)
-                workload_copy_path = os.path.join(temp_dir_path, WORKLOAD_NAME)
-                shutil.copytree(workload_path, workload_copy_path)
-
-            workload_runner_copy_path = os.path.join(temp_dir_path, WORKLOAD_RUNNER_NAME)
-            shutil.copy(workload_runner_path, workload_runner_copy_path)
-
             run_workload_natively_expect_script_path = os.path.join(
-                this_script_location, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_NAME)
+                this_script_location, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_REL_PATH)
             run_workload_cmd = (f'{run_workload_natively_expect_script_path} '
-                                f'"{workload_runner_path}" '
+                                f'"{final_workload_runner_path}" '
                                 f'{args.verbose} '
                                 )
 

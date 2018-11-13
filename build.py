@@ -8,9 +8,14 @@ BUILD_QEMU_SCRIPT_NAME = 'config_and_make_qemu_with_GMBEOO.py'
 QEMU_MEM_TRACER_SCRIPT_NAME = 'memory_tracer.py'
 TESTS_DIR_NAME = 'tests'
 BUILD_AND_RUN_TESTS_SCRIPT_NAME = 'build_and_run_tests.py'
-RUN_SCRIPT_FROM_SERIAL_NAME = 'run_script_from_serial'
-RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME = f'{RUN_SCRIPT_FROM_SERIAL_NAME}.c'
 TO_RUN_ON_GUEST_DIR_NAME = 'to_run_on_guest'
+RUN_SCRIPT_FROM_SERIAL_ELF_NAME = 'run_script_from_serial'
+RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH = os.path.join(
+    TO_RUN_ON_GUEST_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_ELF_NAME)
+COMMUNICATIONS_DIR_NAME = 'host_guest_workload_communications'
+RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME = f'{RUN_SCRIPT_FROM_SERIAL_ELF_NAME}.c'
+RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH = os.path.join(
+    COMMUNICATIONS_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME)
 
 def execute_cmd_in_dir(cmd, dir_path='.'):
     print(f'executing cmd (in {dir_path}): {cmd}')
@@ -56,9 +61,9 @@ if this_script_location_dir_name != 'qemu_mem_tracer':
             break
 
 run_script_from_serial_source_path = os.path.join(
-  this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME)
+  this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH)
 run_script_from_serial_elf_path = os.path.join(
-  this_script_location, TO_RUN_ON_GUEST_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_NAME)
+  this_script_location, RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH)
 compile_cmd = (f'gcc -Werror -Wall -pedantic '
                f'{run_script_from_serial_source_path} '
                f'-o {run_script_from_serial_elf_path}')
