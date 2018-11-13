@@ -12,7 +12,7 @@ match_max -d 1000000
 
 set guest_image_path [lindex $argv 0]
 set snapshot_name [lindex $argv 1]
-set workload_runner_path [lindex $argv 2]
+set file_to_write_to_serial_path [lindex $argv 2]
 set write_script_to_serial_path [lindex $argv 3]
 set trace_only_CPL3_code_GMBE [lindex $argv 4]
 set log_of_GMBE_block_len [lindex $argv 5]
@@ -24,6 +24,7 @@ set verbose [lindex $argv 10]
 set dont_exit_qemu_when_done [lindex $argv 11]
 set print_trace_info [lindex $argv 12]
 set dont_trace [lindex $argv 13]
+set dont_add_communications [lindex $argv 14]
 
 proc debug_print {msg} {
     if {$::verbose == "True"} {
@@ -70,8 +71,8 @@ send -i $monitor_id "loadvm $snapshot_name\r"
 send -i $monitor_id "cont\r"
 # interact -i $monitor_id
 
-debug_print "\n---writing $workload_runner_path to $guest_ttyS0_pty_path---\n"
-exec python3.7 $write_script_to_serial_path $workload_runner_path $guest_ttyS0_pty_path
+debug_print "\n---writing $file_to_write_to_serial_path to $guest_ttyS0_pty_path---\n"
+exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $guest_ttyS0_pty_path $dont_add_communications
 
 # The guest would now receive the workload_runner script and run it.
 

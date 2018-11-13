@@ -13,7 +13,7 @@ import stat
 F_SETPIPE_SZ = 1031  # Linux 2.6.35+
 F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
-WORKLOAD_RUNNER_SCRIPT_NAME = 'workload_runner.bash'
+FILE_TO_WRITE_TO_SERIAL_NAME = 'workload_runner.bash'
 COMMUNICATIONS_DIR_NAME = 'host_guest_workload_communications'
 RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME = 'run_qemu_and_workload.sh'
 RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH = os.path.join(
@@ -27,7 +27,7 @@ WRITE_SCRIPT_TO_SERIAL_REL_PATH = os.path.join(
 
 
 
-def read_file(file_path):
+def read_file_bytes(file_path):
     with open(file_path, 'r') as f:
         return f.read()
 
@@ -308,29 +308,14 @@ if __name__ == '__main__':
 
     with tempfile.TemporaryDirectory() as temp_dir_path:
         if args.workload_path_on_host:
-            workload_runner_source = read_file(args.workload_path_on_host)
+            file_to_write_to_serial_path = args.workload_path_on_host
         else:
+            file_to_write_to_serial_path = os.path.join(temp_dir_path,
+                                                        FILE_TO_WRITE_TO_SERIAL_NAME)
             workload_runner_source = (
                 f'#!/bin/bash\n'
                 f'{args.workload_path_on_guest}\n')
-        if not args.dont_add_communications_with_host_to_workload:
-            workload_runner_source = (
-                f'#!/bin/bash\n'
-                f'echo "-----begin workload info-----"\n'
-                f'echo "-----end workload info-----"\n'
-                f'\n'
-                f'echo "Ready to trace. Press enter to continue"\n'
-                f'# This is equivalent to getchar(). The host would use \n'
-                f'# `sendkey` when it is ready.\n'
-                f'read -n1;\n'
-                f'\n'
-                f'{workload_runner_source}'
-                f'\n'
-                f'echo "Stop tracing"\n'
-                )
-        final_workload_runner_path = os.path.join(temp_dir_path,
-                                                  WORKLOAD_RUNNER_SCRIPT_NAME)
-        write_file(final_workload_runner_path, workload_runner_source)
+            write_file(file_to_write_to_serial_path, workload_runner_source)
         
 
         if not args.dont_use_qemu:
@@ -360,7 +345,7 @@ if __name__ == '__main__':
             run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                                          f'"{guest_image_path}" '
                                          f'"{args.snapshot_name}" '
-                                         f'"{final_workload_runner_path}" '
+                                         f'"{file_to_write_to_serial_path}" '
                                          f'"{write_script_to_serial_path}" '
                                          f'{args.trace_only_CPL3_code_GMBE} '
                                          f'{args.log_of_GMBE_block_len} '
@@ -372,6 +357,7 @@ if __name__ == '__main__':
                                          f'{args.dont_exit_qemu_when_done} '
                                          f'{args.print_trace_info} '
                                          f'{args.dont_trace} '
+                                         f'{args.dont_add_communications_with_host_to_workload} '
                                          )
 
             execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)
@@ -381,7 +367,7 @@ if __name__ == '__main__':
             run_workload_natively_expect_script_path = os.path.join(
                 this_script_location, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_REL_PATH)
             run_workload_cmd = (f'{run_workload_natively_expect_script_path} '
-                                f'"{final_workload_runner_path}" '
+                                f'"{file_to_write_to_serial_path}" '
                                 f'{args.verbose} '
                                 )
 
