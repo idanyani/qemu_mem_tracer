@@ -54,8 +54,7 @@ def get_tests_bin_file_path(this_script_location, file_name):
 
 def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
                        qemu_with_GMBEOO_path, guest_image_path,
-                       snapshot_name, workload_runner_path,
-                       extra_cmd_args=''):
+                       snapshot_name, extra_cmd_args=''):
     if VERBOSE_LEVEL > 1:
         verbose_cmd_arg = '--verbose'
     else:
@@ -63,8 +62,6 @@ def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
     return (f'python3.7 {qemu_mem_tracer_script_path} '
             f'"{guest_image_path}" '
             f'"{snapshot_name}" '
-            f'"{workload_runner_path}" '
-            f'"{}" '
             f'"{qemu_with_GMBEOO_path}" '
             f'{extra_cmd_args} '
             f'{verbose_cmd_arg} '
@@ -87,7 +84,7 @@ def check_mem_tracer_output_attention(mem_tracer_output):
 
 def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
-                               snapshot_name, ):
+                               snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     mem_tracer_output = get_mem_tracer_output(
@@ -106,7 +103,7 @@ def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_pat
 
 def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
-                                snapshot_name, ):
+                                snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     mem_tracer_output = get_mem_tracer_output(
@@ -172,19 +169,21 @@ def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr
 
 def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
-                            snapshot_name, ):
+                            snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
+    workload_path = get_tests_bin_file_path(
+        this_script_location, 'simple_user_memory_intensive_workload')
+
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path,
         guest_image_path,
         snapshot_name,
-        get_tests_bin_file_path(this_script_location, 
-                                'simple_user_memory_intensive_workload'),
-        f'--analysis_tool_path "{simple_analysis_path}"'
-        f'--dont_add_communications_with_host_to_workload'
+        f'--analysis_tool_path "{simple_analysis_path}" '
+        f'--dont_add_communications_with_host_to_workload '
+        f'--workload_path_on_host {workload_path} '
         )
     
     # print(mem_tracer_output)
@@ -192,35 +191,27 @@ def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
     
 
-# TODO: actually run this test. orenmn: I didn't manage to run it, because it
-# requires installing `make` and `gcc` on the guest (in order to compile the
-# LKM on it), and I had trouble connecting the guest machine to the internet.
 def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                               qemu_with_GMBEOO_path, guest_image_path,
-                              snapshot_name, ):
+                              snapshot_name):
+    # TODO: implement and run this test.
+    # orenmn: I didn't manage to run it, because it requires installing `make`
+    # and `gcc` on the guest (in order to compile the LKM on it), and I had 
+    # trouble connecting the guest machine to the internet.
+    # 
+    # The relevant files are in the directory
+    # simple_kernel_memory_intensive_workload_lkm.
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
-    workload_path = os.path.join(this_script_location,
-                                 'simple_kernel_memory_intensive_workload_lkm')
+    # check_mem_accesses(mem_tracer_output,
+    #                    OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
+    raise NotImplementedError
 
-    mem_tracer_output = get_mem_tracer_output(
-        this_script_location,
-        qemu_mem_tracer_script_path,
-        qemu_with_GMBEOO_path,
-        guest_image_path,
-        snapshot_name,
-        os.path.join(this_script_location,
-                     'simple_kernel_memory_intensive_workload_runner.bash'),
-        f'--analysis_tool_path "{simple_analysis_path}" '
-        f'--workload_path {workload_path}')
-
-    check_mem_accesses(mem_tracer_output,
-                       OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
 def _test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
-                                   snapshot_name, ):
+                                   snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     mem_tracer_output = get_mem_tracer_output(
@@ -250,7 +241,7 @@ def _test_trace_only_CPL3_code_GMBE(this_script_location,
 def _test_invalid_log_of_cmd_args(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
-                                 snapshot_name, ):
+                                 snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     try:
@@ -342,7 +333,7 @@ def _test_invalid_log_of_cmd_args(this_script_location,
 def _test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
-                  snapshot_name, ):
+                  snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     mem_tracer_output = get_mem_tracer_error_and_output(
@@ -389,7 +380,7 @@ def _test_sampling(this_script_location,
 def _test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
-                                 snapshot_name, ):
+                                 snapshot_name):
     with tempfile.TemporaryDirectory() as temp_dir_path:
         trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
         os.mkfifo(trace_fifo_path)
@@ -448,7 +439,7 @@ def _test_trace_fifo_path_cmd_arg(this_script_location,
 
 def _test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
         this_script_location, qemu_mem_tracer_script_path,
-        qemu_with_GMBEOO_path, guest_image_path, snapshot_name, ):
+        qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
     expected_err_message = ('Exactly one of --analysis_tool_path and '
                             '--trace_fifo_path must be specified.')
     try:
@@ -483,7 +474,7 @@ def _test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
 
 def _test_invalid_file_or_dir_cmd_arg(
         this_script_location, qemu_mem_tracer_script_path,
-        qemu_with_GMBEOO_path, guest_image_path, snapshot_name, ):
+        qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     must_be_a_file_expected_err_message = ('must be a file path, but')
@@ -586,9 +577,10 @@ def _test_invalid_file_or_dir_cmd_arg(
 def print_workload_durations(this_script_location,
                              qemu_mem_tracer_script_path,
                              qemu_with_GMBEOO_path, guest_image_path,
-                             snapshot_name,
-                             workload_runner_path, num_of_iterations,
-                             workload_path=None, log_of_GMBE_block_len=16,
+                             snapshot_name, num_of_iterations,
+                             workload_path_on_host=None,
+                             workload_path_on_guest=None,
+                             log_of_GMBE_block_len=16,
                              log_of_GMBE_tracing_ratio=10,
                              run_native_only=False):
     assert(num_of_iterations > 0)
@@ -599,10 +591,13 @@ def print_workload_durations(this_script_location,
         squares = [(num - avg) ** 2 for num in nums]
         return get_avg(squares) ** 0.5
 
-    if workload_path:
-        workload_path_cmd_arg_str = f'--workload_path {workload_path}'
+    if workload_path_on_guest:
+        workload_path_cmd_arg_str = (
+            f'--workload_path_on_guest {workload_path_on_guest}')
     else:
-        workload_path_cmd_arg_str = ''
+        assert(workload_path_on_host)
+        workload_path_cmd_arg_str = (
+            f'--workload_path_on_host {workload_path_on_host}')
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     native_durations = []
@@ -617,8 +612,6 @@ def print_workload_durations(this_script_location,
             'dummy_qemu_with_GMBEOO_path',
             'dummy_guest_image_path',
             'dummy_snapshot_name',
-            'dummy_host_password',
-            workload_runner_path,
             f'--dont_use_qemu '
             f'{workload_path_cmd_arg_str}')
         native_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
@@ -637,7 +630,7 @@ def print_workload_durations(this_script_location,
                 qemu_with_GMBEOO_path,
                 guest_image_path,
                 snapshot_name,
-                workload_runner_path,
+                workload_path,
                 f'--analysis_tool_path "{simple_analysis_path}" --dont_trace '
                 f'{workload_path_cmd_arg_str}')
             no_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
@@ -653,7 +646,7 @@ def print_workload_durations(this_script_location,
                     qemu_with_GMBEOO_path,
                     guest_image_path,
                     snapshot_name,
-                    workload_runner_path,
+                    workload_path,
                     f'--analysis_tool_path "{simple_analysis_path}" '
                     f'--log_of_GMBE_block_len {log_of_GMBE_block_len} '
                     f'--log_of_GMBE_tracing_ratio {log_of_GMBE_tracing_ratio} '
@@ -721,7 +714,7 @@ def print_workload_durations(this_script_location,
 def _test_toy_workload_durations(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
-                                snapshot_name, ):
+                                snapshot_name):
     print_workload_durations(
         this_script_location,
         qemu_mem_tracer_script_path,
@@ -736,7 +729,7 @@ def _test_toy_workload_durations(this_script_location,
 def _test_mcf_workload(this_script_location,
                       qemu_mem_tracer_script_path,
                       qemu_with_GMBEOO_path, guest_image_path,
-                      snapshot_name, ):
+                      snapshot_name):
     print_workload_durations(
         this_script_location,
         qemu_mem_tracer_script_path,

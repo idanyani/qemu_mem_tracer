@@ -64,7 +64,7 @@ for attr in dir(tests):
         print(f'---start running {attr}---')
         test_func(this_script_location, args.qemu_mem_tracer_script_path,
                   args.qemu_with_GMBEOO_path, args.guest_image_path,
-                  args.snapshot_name, args.host_password)
+                  args.snapshot_name)
         print(f'---{attr} completed successfully---\n')
 print(f'--------done running tests--------\n')
 

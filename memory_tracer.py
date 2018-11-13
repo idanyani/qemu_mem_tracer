@@ -28,7 +28,7 @@ WRITE_SCRIPT_TO_SERIAL_REL_PATH = os.path.join(
 
 
 def read_file(file_path):
-    with open(file_path, 'b') as f:
+    with open(file_path, 'r') as f:
         return f.read()
 
 def write_file(file_path, contents):
@@ -138,6 +138,8 @@ def parse_cmd_args():
                         help='The name of the snapshot saved by the monitor '
                              'command `savevm`, which was specially constructed '
                              'for running a workload with GMBE tracing.')
+    parser.add_argument('qemu_with_GMBEOO_path', type=str,
+                        help='The path of qemu_with_GMBEOO.')
     workload_path = parser.add_mutually_exclusive_group(required=True)
     workload_path.add_argument('--workload_path_on_guest', type=str,
                                help='The path of the workload on the guest.')
@@ -145,18 +147,6 @@ def parse_cmd_args():
                                help='The path of the workload on the host. The '
                                     'file in that path would be sent to the '
                                     'guest to run as the workload.')
-    parser.add_argument(
-        '--dont_add_communications_with_host_to_workload', action='store_true',
-        help='If specified, the workload script would not be wrapped with code '
-             'that handles the required communications between the guest and '
-             'the host, e.g. printing "Ready to trace. Press enter to continue" '
-             'and then waiting for a key press.')
-    parser.add_argument('host_password', type=str,
-                        help='If you don’t like the idea of your password in plain '
-                             'text, feel free to patch our code so that scp would '
-                             'use keys instead.')
-    parser.add_argument('qemu_with_GMBEOO_path', type=str,
-                        help='The path of qemu_with_GMBEOO.')
     analysis_or_fifo = parser.add_mutually_exclusive_group(required=True)
     analysis_or_fifo.add_argument(
         '--analysis_tool_path', type=str, default='/dev/null',
@@ -169,6 +159,12 @@ def parse_cmd_args():
              'in which the FIFO\'s buffer getting full is bad, and '
              'so it is recommended to use a FIFO whose buffer is '
              'of size `cat /proc/sys/fs/pipe-max-size`.')
+    parser.add_argument(
+        '--dont_add_communications_with_host_to_workload', action='store_true',
+        help='If specified, the workload script would not be wrapped with code '
+             'that handles the required communications between the guest and '
+             'the host, e.g. printing "Ready to trace. Press enter to continue" '
+             'and then waiting for a key press.')
     parser.add_argument('--trace_only_CPL3_code_GMBE',
                         action='store_const',
                         const='on', default='off',
@@ -251,10 +247,10 @@ def parse_cmd_args():
                         help='If specified, debug messages are printed.')
     args = parser.parse_args()
 
-    verify_arg_is_file(args.workload_runner_path, 'workload_runner_path')
-    if args.workload_path:
-        verify_arg_is_file_or_dir(args.workload_path, 'workload_path')
-
+    if args.workload_path_on_host:
+        verify_arg_is_file(args.workload_path_on_host, 'workload_path_on_host')
+    else:
+        verify_arg_is_file(args.workload_path_on_guest, 'workload_path_on_guest')
     if not args.dont_use_qemu:
         verify_arg_is_file(args.guest_image_path, 'guest_image_path')
         verify_arg_is_dir(args.qemu_with_GMBEOO_path, 'qemu_with_GMBEOO_path')
@@ -304,7 +300,6 @@ if __name__ == '__main__':
             return
 
     guest_image_path = os.path.realpath(args.guest_image_path)
-    workload_runner_path = os.path.realpath(args.workload_runner_path)
 
     this_script_path = os.path.realpath(__file__)
     this_script_location = os.path.split(this_script_path)[0]
@@ -312,13 +307,12 @@ if __name__ == '__main__':
     verify_this_script_location(this_script_location)
 
     with tempfile.TemporaryDirectory() as temp_dir_path:
-        if args.workload_path.workload_path_on_host:
-            workload_runner_source = read_file(
-                args.workload_path.workload_path_on_host)
+        if args.workload_path_on_host:
+            workload_runner_source = read_file(args.workload_path_on_host)
         else:
             workload_runner_source = (
                 f'#!/bin/bash\n'
-                f'{args.workload_path.workload_path_on_guest}\n')
+                f'{args.workload_path_on_guest}\n')
         if not args.dont_add_communications_with_host_to_workload:
             workload_runner_source = (
                 f'#!/bin/bash\n'

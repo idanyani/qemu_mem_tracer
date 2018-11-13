@@ -28,6 +28,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+
+
     size_t script_size = 0;
     assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
     size_t num_of_dwords_read = fread(&script_size, 4, 1, serial_port_ttyS0);
