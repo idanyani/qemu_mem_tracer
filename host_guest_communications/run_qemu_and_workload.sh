@@ -1,6 +1,46 @@
 #!/usr/bin/expect -f
 # exp_internal 1
 
+# sane people:
+#   "Why didn't you write this code in Python so that everyone would
+#   be able to read it easily?
+# orenmn:
+#   That's a good question. Please let me know if you find a better way
+#   to do this:
+#       - Start qemu_with_GMBEOO.
+#       - Parse qemu's message about the pseudo-terminal that it created for us.
+#       - Let qemu_with_GMBEOO run in the background.
+#       - Start a reader of the pseudo-terminal, and let it run in the background.
+#       - Write the received file (either the workload or a script that would
+#         run the workload) to the pseudo-terminal. (So that the guest would
+#         run it.)
+#       - Parse the workload info that the reader of the pseudo-terminal has
+#         read.
+#   
+# sane people:
+#   But why do we need this workload info? Why would we want
+#   memory_tracer to run the analysis tool for us?
+# orenmn: 
+#   If workload info hadn't existed, than it wouldn't have made sense for
+#   memory_tracer to run the analysis tool.
+#   However, there are some scenarios in which you want the analysis tool to
+#   have some info that the workload acquires only in runtime. E.g. in the main
+#   test of memory_tracer, a toy workload mallocs a buffer, and then accesses
+#   it many times. The test made sure that the traces received by the analysis
+#   tool included the expected number of memory accesses to the buffer. To
+#   count the number of accesses to the buffer, the analysis tool had to know
+#   the address of the buffer. In addition, the tracing should start only after
+#   the analysis tool received the workload info, to prevent a scenario in
+#   which the trace FIFO gets full because the analysis tool doesn't read from
+#   it). Therefore, you can't start tracing and then let the workload and the
+#   analysis tool communicate with each other.
+#    that the
+#   workload allocates  was as expected, and for this, I needed some
+#   way to pass the address of the buffer from the workload to the
+#   analysis tool.
+# 
+# and send commands 
+
 set timeout 360000
 
 # Silent various messages.
@@ -61,12 +101,12 @@ set monitor_id $spawn_id
 debug_print "---parsing qemu's message about pseudo-terminals that it opened---\n"
 expect -i $monitor_id "serial pty: char device redirected to " {
     expect -i $monitor_id -re {^/dev/pts/\d+} {
-         set guest_ttyS0_pty_path $expect_out(0,string)
+         set pseudo_terminal_path $expect_out(0,string)
     }
 }
 
-spawn cat $guest_ttyS0_pty_path
-set guest_ttyS0_reader_id $spawn_id
+spawn cat $pseudo_terminal_path
+set pseudo_terminal_reader_id $spawn_id
 
 # (required if -nographic was used)
 # Switch to monitor interface 
@@ -74,15 +114,15 @@ set guest_ttyS0_reader_id $spawn_id
 # send "c"
 
 sleep 1
-debug_print "\n---writing $file_to_write_to_serial_path to $guest_ttyS0_pty_path---\n"
-exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $guest_ttyS0_pty_path $dont_add_communications > /home/orenmn/aoeu.txt
+debug_print "\n---writing $file_to_write_to_serial_path to $pseudo_terminal_path---\n"
+exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $pseudo_terminal_path $dont_add_communications > /home/orenmn/aoeu.txt
 
 # interact -i $monitor_id
 
 # The guest would now receive the workload_runner script and run it.
 
 debug_print "\n---expecting workload info---\n"
-expect -i $guest_ttyS0_reader_id -indices -re \
+expect -i $pseudo_terminal_reader_id -indices -re \
         "-----begin workload info-----(.*)-----end workload info-----" {
     set workload_info [string trim $expect_out(1,string)]
 }
@@ -92,7 +132,7 @@ if {$workload_info != ""} {
 }
 
 debug_print "\n---expecting ready to trace message---\n"
-expect_and_check_eof $guest_ttyS0_reader_id guest_ttyS0_reader \
+expect_and_check_eof $pseudo_terminal_reader_id pseudo_terminal_reader \
     "Ready to trace. Press enter to continue"
 send -i $monitor_id "stop\r"
 
@@ -138,7 +178,7 @@ send -i $monitor_id "sendkey ret\r"
 # interact -i $monitor_id
 
 debug_print "\n---expecting Stop tracing message---\n"
-expect_and_check_eof $guest_ttyS0_reader_id guest_ttyS0_reader "Stop tracing"
+expect_and_check_eof $pseudo_terminal_reader_id pseudo_terminal_reader "Stop tracing"
 
 send -i $monitor_id "stop\r"
 # flush the trace file twice, to make GMBEOO's code in `writeout_thread` run
