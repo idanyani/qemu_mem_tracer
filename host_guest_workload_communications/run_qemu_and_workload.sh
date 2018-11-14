@@ -55,8 +55,7 @@ debug_print "---start run_qemu_and_workload.sh---\n"
 debug_print "---starting qemu---\n"
 spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
     -hda $guest_image_path -monitor stdio \
-    -serial pty -serial pty
-    # -serial pty
+    -serial pty -loadvm $snapshot_name
 set monitor_id $spawn_id
 
 debug_print "---parsing qemu's message about pseudo-terminals that it opened---\n"
@@ -73,17 +72,6 @@ set guest_ttyS0_reader_id $spawn_id
 # Switch to monitor interface 
 # send "\x01"
 # send "c"
-
-# debug_print "\ncp $qemu_mem_tracer_dir_path/copy_workload_from_host_and_run_it.bash ~/qemu_mem_tracer_temp_dir_for_guest_to_download_from/workload_runner.bash\n"
-# set aoeu_cmd [list cp $qemu_mem_tracer_dir_path/copy_workload_from_host_and_run_it.bash /home/orenmn/qemu_mem_tracer_workload_runner.bash]
-# eval exec $aoeu_cmd 
-
-debug_print "\n---loading snapshot---\n"
-send -i $monitor_id "loadvm $snapshot_name\r"
-expect_and_check_eof $monitor_id qemu_monitor "(qemu)"
-send -i $monitor_id "cont\r"
-expect_and_check_eof $monitor_id qemu_monitor "(qemu)"
-sleep 1
 
 debug_print "\n---writing $file_to_write_to_serial_path to $guest_ttyS0_pty_path---\n"
 exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $guest_ttyS0_pty_path $dont_add_communications > /home/orenmn/aoeu.txt

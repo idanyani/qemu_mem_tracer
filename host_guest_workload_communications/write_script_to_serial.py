@@ -1,7 +1,9 @@
 import argparse
-import struct
-import serial
+# import struct
+# import serial
 import subprocess
+
+SYNC_BYTES = b'serial sync '
 
 def parse_cmd_args():
     parser = argparse.ArgumentParser(
@@ -32,18 +34,10 @@ if __name__ == '__main__':
         script_contents = f.read()
 
     script_size = len(script_contents)
-    script_size_bytes = struct.pack('<i', script_size)
-    assert(len(script_size_bytes) == 4)
-    print(args.dont_add_communications_with_host_to_workload)
-    print(args.dont_add_communications_with_host_to_workload)
-    print(args.dont_add_communications_with_host_to_workload)
-    dont_add_communications = (
-        1 if args.dont_add_communications_with_host_to_workload == 'True' else 0)
-    print(dont_add_communications)
-    print(dont_add_communications)
-    print(dont_add_communications)
-    dont_add_communications_bytes = struct.pack('B', dont_add_communications)
-    assert(len(dont_add_communications_bytes) == 1)
+    script_size_bytes = str(script_size).encode('ascii')
+
+    dont_add_communications_bytes = (
+        b'1' if args.dont_add_communications_with_host_to_workload == 'True' else b'0')
 
     # echo -e "\012"
     # execute_cmd(f'echo -en "\x41"'
@@ -56,23 +50,21 @@ if __name__ == '__main__':
 
     # execute_cmd(f'cat {args.script_path} > {args.serial_port_path}')
 
-    # with open(args.serial_port_path, 'wb') as f:
-    #     print('aoeu1')
-    #     f.write(dont_add_communications_bytes)
-    #     print('aoeu2')
-    #     f.write(script_size_bytes)
-    #     print('aoeu3')
-    #     f.write(script_contents)
+    with open(args.serial_port_path, 'wb') as f:
+        f.write(SYNC_BYTES)
+        f.write(dont_add_communications_bytes)
+        f.write(script_size_bytes)
+        f.write(script_contents.hex())
 
-    print('aoeu')
+    # print('aoeu')
 
-    ser = serial.Serial(args.serial_port_path, baudrate=115200)
-    if not ser.isOpen():
-        raise RuntimeError(f'Failed to open serial {args.serial_port_path}')
+    # ser = serial.Serial(args.serial_port_path, baudrate=115200)
+    # if not ser.isOpen():
+    #     raise RuntimeError(f'Failed to open serial {args.serial_port_path}')
     
-    ser.write(dont_add_communications_bytes)
-    print(dont_add_communications_bytes)
-    ser.write(script_size_bytes)
-    print(script_size_bytes)
-    # ser.write(script_contents)
+    # ser.write(dont_add_communications_bytes)
+    # print(dont_add_communications_bytes)
+    # ser.write(script_size_bytes)
+    # print(script_size_bytes)
+    # # ser.write(script_contents)
 
