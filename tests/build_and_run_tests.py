@@ -57,7 +57,7 @@ compile_c_files(this_script_location)
 
 print(f'\n\n--------start running tests--------')
 if args.verbose:
-    tests.VERBOSE_LEVEL = 2
+    tests.VERBOSE_LEVEL = 1
 for attr in dir(tests):
     if attr.startswith('test_'):
         test_func = getattr(tests, attr)

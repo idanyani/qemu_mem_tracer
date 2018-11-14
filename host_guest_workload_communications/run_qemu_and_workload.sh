@@ -77,9 +77,7 @@ sleep 1
 debug_print "\n---writing $file_to_write_to_serial_path to $guest_ttyS0_pty_path---\n"
 exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $guest_ttyS0_pty_path $dont_add_communications > /home/orenmn/aoeu.txt
 
-interact -i $monitor_id
-
-# exec cat $file_to_write_to_serial_path > $guest_ttyS0_pty_path
+# interact -i $monitor_id
 
 # The guest would now receive the workload_runner script and run it.
 

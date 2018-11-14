@@ -18,8 +18,9 @@
 }
 
 #define TTYS0_PATH              ("/dev/ttyS0")
-#define SCRIPT_LOCAL_COPY_PATH  ("/tmp/workload_script_received_from_serial")
-#define REDIRECT_TO_TTYS0       (" > /dev/ttyS0 2>&1")
+#define SCRIPT_LOCAL_COPY_PATH  ("/tmp/script_received_from_serial")
+#define REDIRECT_TO_TTYS0       (" 2>&1 | tee /dev/ttyS0")
+#define CHMOD_777               ("chmod 777 ")
 #define SYNC_BYTES              ("serial sync\n")
 #define NUM_OF_SYNC_BYTES       (strlen(SYNC_BYTES))
 #define SCRIPT_SIZE_STR_LEN     (30)
@@ -128,11 +129,31 @@ bool receive_script_and_write_to_file(FILE *serial_port_ttyS0, int script_size) 
         printf("failed to write script contents to the local copy. "
                "ferror: %d, feof: %d, errno: %d\n",
                ferror(script_local_copy), feof(script_local_copy), errno);
-        if (fclose(script_local_copy) != 0) {
-            printf("failed to close script local copy.\n");
-        }
         return false;
     }
+
+    if (fclose(script_local_copy) != 0) {
+        printf("failed to close script local copy.\n");
+        return false;
+    }
+
+    char cmd_str[300];
+    assert(strlen(CHMOD_777) + strlen(SCRIPT_LOCAL_COPY_PATH) < sizeof(cmd_str));
+    if (cmd_str != strcpy(cmd_str, CHMOD_777)) {
+        printf("`strcpy()` failed.\n");
+        return false;
+    }
+    if (cmd_str != strcat(cmd_str, SCRIPT_LOCAL_COPY_PATH)) {
+        printf("`strcat()` failed.\n");
+        return false;
+    }
+    int system_result = system(cmd_str);
+    if (system_result != 0) {
+        printf("`system(\"%s\")` failed. result code: %d errno: %d\n",
+               cmd_str, system_result, errno);
+        return false;
+    }
+
     return true;
 }
 
@@ -191,7 +212,7 @@ int main(int argc, char **argv) {
     }
     printf("Received script and wrote it to local file.\n");
 
-    system("chmod 777 ",,,o , ao e);
+
 
 
     char cmd_str[300];
@@ -199,16 +220,20 @@ int main(int argc, char **argv) {
            sizeof(cmd_str));
     if (cmd_str != strcpy(cmd_str, SCRIPT_LOCAL_COPY_PATH)) {
         printf("`strcpy()` failed.\n");
+        result = 1;
+        goto cleanup;
     }
     if (cmd_str != strcat(cmd_str, REDIRECT_TO_TTYS0)) {
         printf("`strcat()` failed.\n");
+        result = 1;
+        goto cleanup;
     }
 
     if (dont_add_communications) {
         int system_result = system(cmd_str);
         if (system_result != 0) {
-            printf("`system()` failed. result code: %d errno: %d\n",
-                   system_result, errno);
+            printf("`system(\"%s\")` failed. result code: %d errno: %d\n",
+                   cmd_str, system_result, errno);
             result = 1;
             goto cleanup;
         }
@@ -222,8 +247,8 @@ int main(int argc, char **argv) {
         
         int system_result = system(cmd_str);
         if (system_result != 0) {
-            printf("`system()` failed. result code: %d errno: %d\n",
-                   system_result, errno);
+            printf("`system(\"%s\")` failed. result code: %d errno: %d\n",
+                   cmd_str, system_result, errno);
             result = 1;
             goto cleanup;
         }

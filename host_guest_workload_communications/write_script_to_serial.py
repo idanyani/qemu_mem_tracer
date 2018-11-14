@@ -52,12 +52,11 @@ if __name__ == '__main__':
         f.write(SYNC_BYTES)
         f.write(dont_add_communications_bytes)
         f.write(script_size_bytes)
-        time.sleep(1)
         # print(script_size * 3)
         for i in range(0, len(script_contents_as_hex), 2):
             hex_repr_and_line_feed_bytes = (
                 f'{script_contents_as_hex[i:i+2]}\n'.encode('ascii'))
-            time.sleep(0.0003)
+            # time.sleep(0.00001)
             # print(i)
             f.write(hex_repr_and_line_feed_bytes)
 
