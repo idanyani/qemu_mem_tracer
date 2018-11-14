@@ -19,11 +19,14 @@ def execute_cmd_in_dir(cmd, dir_path):
         print(f'executing cmd (in {dir_path}): {cmd}')
     subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
 
+def does_dir_contain_c_files(dir_path):
+    return subprocess.run(f'ls {dir_path} *.c *.C', shell=True, check=False,
+                          capture_output=True).stdout != b''
+
 def compile_c_files(dir_path):
     for root_dir_path, dir_names, file_fullnames in os.walk(dir_path):
-        if (not root_dir_path.endswith(OUTPUT_DIR_NAME)) and (
-                not root_dir_path.endswith(LOADABLE_KERNEL_MODULE_SUFFIX)) and (
-                not '999.specrand' in root_dir_path):
+        if not root_dir_path.endswith(LOADABLE_KERNEL_MODULE_SUFFIX) and (
+                does_dir_contain_c_files(dir_path)):
             output_dir_path = os.path.join(root_dir_path, OUTPUT_DIR_NAME)
             shutil.rmtree(output_dir_path, ignore_errors=True)
             os.mkdir(output_dir_path)

@@ -25,6 +25,9 @@ NUM_OF_ACCESSES_FOR_INC = 2
 
 VERBOSE_LEVEL = 0
 
+TESTS_BIN_DIR_REL_PATH = os.path.join('toy_workloads_and_analysis_tools',
+                                      'tests_bin')
+
 
 def read_file_until_it_contains_str(file_path, expected_str):
     if VERBOSE_LEVEL:
@@ -50,7 +53,7 @@ def get_output_of_executed_cmd_in_dir(cmd, dir_path='.'):
     return execute_cmd_in_dir(cmd, dir_path).stdout.strip().decode()
 
 def get_tests_bin_file_path(this_script_location, file_name):
-    return os.path.join(this_script_location, 'tests_bin', file_name)
+    return os.path.join(this_script_location, TESTS_BIN_DIR_REL_PATH, file_name)
 
 def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
                        qemu_with_GMBEOO_path, guest_image_path,
@@ -86,14 +89,17 @@ def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path
                                snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
+    workload_path = get_tests_bin_file_path(this_script_location,
+                                            'dummy_workload_without_info')
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path,
         guest_image_path,
         snapshot_name,
-        get_tests_bin_file_path(this_script_location, 'dummy_workload_without_info'),
-        f'--analysis_tool_path "{simple_analysis_path}"')
+        f'--analysis_tool_path "{simple_analysis_path}" '
+        f'--dont_add_communications_with_host_to_workload '
+        f'--workload_path_on_host {workload_path} ')
     
     # match succeeding means that the workload info isn't printed.
     assert(re.match(
@@ -105,15 +111,17 @@ def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pa
                                 snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
+    workload_path = get_tests_bin_file_path(this_script_location, 
+                                            'dummy_workload_with_funny_test_info')
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path,
         guest_image_path,
         snapshot_name,
-        get_tests_bin_file_path(this_script_location, 
-                                'dummy_workload_with_funny_test_info'),
-        f'--analysis_tool_path "{simple_analysis_path}"')
+        f'--analysis_tool_path "{simple_analysis_path}" '
+        f'--dont_add_communications_with_host_to_workload '
+        f'--workload_path_on_host {workload_path} ')
     analysis_cmd_args_as_str = re.match(
         r'^workload info:.*analysis output:.*analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL).group(1)
@@ -214,16 +222,18 @@ def test_trace_only_CPL3_code_GMBE(this_script_location,
                                    snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
+    workload_path = get_tests_bin_file_path(this_script_location, 
+                                            'simple_user_memory_intensive_workload')
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path,
         guest_image_path,
         snapshot_name,
-        get_tests_bin_file_path(this_script_location, 
-                                'simple_user_memory_intensive_workload'),
         f'--analysis_tool_path "{simple_analysis_path}" '
-        f'--trace_only_CPL3_code_GMBE')
+        f'--trace_only_CPL3_code_GMBE '
+        f'--dont_add_communications_with_host_to_workload '
+        f'--workload_path_on_host {workload_path} ')
     
     check_mem_accesses(mem_tracer_output,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
@@ -381,7 +391,7 @@ def _test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def test_trace_fifo_path_cmd_arg(this_script_location,
+def _test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):
