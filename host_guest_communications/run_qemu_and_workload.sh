@@ -2,44 +2,61 @@
 # exp_internal 1
 
 # sane people:
-#   "Why didn't you write this code in Python so that everyone would
-#   be able to read it easily?
+#   Why didn't you write this code in Python, so that everyone would be able
+#   to read it easily?
 # orenmn:
-#   That's a good question. Please let me know if you find a better way
-#   to do this:
-#       - Start qemu_with_GMBEOO.
-#       - Parse qemu's message about the pseudo-terminal that it created for us.
-#       - Let qemu_with_GMBEOO run in the background.
-#       - Start a reader of the pseudo-terminal, and let it run in the background.
+#   That's a good question - I had a fair amount of struggling with expect
+#   while writing this code, and if you can replace this code with something
+#   better that does the same job, I think it would be great (and please let me
+#   know about that).
+#   However, I am not aware of a better tool for doing what this expect code
+#   does (essentially, you need a tool to communicate with three different
+#   processes: qemu's monitor, the workload, and the analysis tool):
+#       - Start qemu_with_GMBEOO. (for brevity, I would refer to
+#         qemu_with_GMBEOO simply as qemu.)
+#       - Extract from a message that qemu prints the path of the
+#         pseudo-terminal that qemu created for us.
+#       - Let qemu keep running in the background.
+#       - Start a reader of the pseudo-terminal, and let it run in the
+#         background.
 #       - Write the received file (either the workload or a script that would
 #         run the workload) to the pseudo-terminal. (So that the guest would
 #         run it.)
-#       - Parse the workload info that the reader of the pseudo-terminal has
-#         read.
-#   
+#       - Parse the workload info that the pseudo-terminal's reader has read.
+#       - When the pseudo-terminal's reader reads
+#         "Ready to trace. Press enter to continue", pause qemu and start the
+#         analysis tool, while passing the workload info to it.
+#       - When the analysis tool prints "Ready to analyze", start tracing and
+#         then resume qemu and the workload (by using monitor commands).
+#       - When the workload prints "Stop tracing":
+#           * Pause qemu.
+#           * Send monitor commands to qemu to make it write to the trace FIFO
+#             traces that were left in its internal trace_buf.
+#           * Stop the analysis tool and print its output.
+#           * Send a monitor command to qemu to print extra info about the
+#             tracing, and print it.
 # sane people:
-#   But why do we need this workload info? Why would we want
-#   memory_tracer to run the analysis tool for us?
+#   But why do we need this workload info? Why would we want memory_tracer to
+#   run the analysis tool for us?
 # orenmn: 
-#   If workload info hadn't existed, than it wouldn't have made sense for
+#   If workload info hadn't existed, then it wouldn't have made sense for
 #   memory_tracer to run the analysis tool.
 #   However, there are some scenarios in which you want the analysis tool to
 #   have some info that the workload acquires only in runtime. E.g. in the main
 #   test of memory_tracer, a toy workload mallocs a buffer, and then accesses
-#   it many times. The test made sure that the traces received by the analysis
-#   tool included the expected number of memory accesses to the buffer. To
-#   count the number of accesses to the buffer, the analysis tool had to know
-#   the address of the buffer. In addition, the tracing should start only after
-#   the analysis tool received the workload info, to prevent a scenario in
-#   which the trace FIFO gets full because the analysis tool doesn't read from
-#   it). Therefore, you can't start tracing and then let the workload and the
-#   analysis tool communicate with each other.
-#    that the
-#   workload allocates  was as expected, and for this, I needed some
-#   way to pass the address of the buffer from the workload to the
-#   analysis tool.
-# 
-# and send commands 
+#   it many times. The test makes sure that the traces received by the analysis
+#   tool include the expected number of memory accesses to the buffer. To
+#   count the number of accesses to the buffer, the analysis tool has to know
+#   the address of the buffer.
+# sane peaple:
+#   So why not just start tracing and then start the workload and the analysis
+#   tool, and let them communicate with each other?
+# orenmn:
+#   If you start the tracing while the analysis tool is waiting for the
+#   workload info, i.e. before the analysis tool starts reading from the trace
+#   FIFO, it is very probable that the trace FIFO will get full, which will
+#   cause qemu's internal trace_buf to get full, which will cause discarding
+#   traces.
 
 set timeout 360000
 
@@ -181,12 +198,13 @@ debug_print "\n---expecting Stop tracing message---\n"
 expect_and_check_eof $pseudo_terminal_reader_id pseudo_terminal_reader "Stop tracing"
 
 send -i $monitor_id "stop\r"
+set tracing_end_time [clock milliseconds]
 # flush the trace file twice, to make GMBEOO's code in `writeout_thread` run
 # twice, which might be needed due to the way GMBEOO's code works (and the fact
 # that `trace_buf` is a cyclic buffer).
+sleep 0.5
 send -i $monitor_id "trace-file flush\r"
 send -i $monitor_id "trace-file flush\r"
-set tracing_end_time [clock milliseconds]
 
 set tracing_duration_in_milliseconds [expr $tracing_end_time - $tracing_start_time]
 send_user "tracing_duration_in_milliseconds: $tracing_duration_in_milliseconds\n"
@@ -194,7 +212,7 @@ send_user "tracing_duration_in_milliseconds: $tracing_duration_in_milliseconds\n
 debug_print "\n---$analysis_tool_path---\n"
 if {$analysis_tool_path != "/dev/null"} {
     # Give the analysis tool a second to finish reading from the FIFO.
-    sleep 1
+    sleep 0.5
     
     debug_print "\n---sending SIGUSR1 to $analysis_tool_path---\n"
     exec kill -SIGUSR1 $analysis_tool_pid

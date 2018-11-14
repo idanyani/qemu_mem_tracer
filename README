@@ -59,13 +59,13 @@ setup:
 
 usage: memory_tracer.py [-h]
                         (--workload_path_on_guest WORKLOAD_PATH_ON_GUEST | --workload_path_on_host WORKLOAD_PATH_ON_HOST)
-                        (--analysis_tool_path ANALYSIS_TOOL_PATH | --trace_fifo_path TRACE_FIFO_PATH)
+                        (--analysis_tool_path ANALYSIS_TOOL_PATH | --trace_fifo_path TRACE_FIFO_PATH | --dont_trace | --dont_use_qemu)
                         [--dont_add_communications_with_host_to_workload]
                         [--trace_only_CPL3_code_GMBE]
                         [--log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN]
                         [--log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO]
-                        [--dont_exit_qemu_when_done] [--print_trace_info]
-                        [--dont_trace] [--dont_use_qemu] [--verbose]
+                        [--print_trace_info] [--dont_exit_qemu_when_done]
+                        [--verbose]
                         guest_image_path snapshot_name qemu_with_GMBEOO_path
 
 Run a workload on the QEMU guest while writing optimized GMBE trace records to a FIFO.
@@ -110,6 +110,8 @@ If --analysis_tool_path is specified, the provided analysis tool must do the fol
 4. Open the trace FIFO for read, and start reading trace records from it. Note that the reading from the FIFO should be as fast as possible. Otherwise, the FIFO's buffer would get full, and qemu_with_GMBEOO would start blocking when it tries to write to the FIFO. Soon, trace_buf would get full, and trace records of new GMBE events would be dropped.
 (If any of the messages isn't printed, it will probably seem like memory_tracer.py is stuck.)
 
+Note that some of the command line arguments might be irrelevant to you as a user of memory_tracer, but they exist because they are useful while developing memory_tracer.
+
 positional arguments:
   guest_image_path      The path of the qcow2 file which is the image of the
                         guest.
@@ -136,56 +138,6 @@ optional arguments:
                         which the FIFO's buffer getting full is bad, and so it
                         is recommended to use a FIFO whose buffer is of size
                         `cat /proc/sys/fs/pipe-max-size`.
-  --dont_add_communications_with_host_to_workload
-                        If specified, the workload script would not be wrapped
-                        with code that handles the required communications
-                        between the guest and the host, e.g. printing "Ready
-                        to trace. Press enter to continue" and then waiting
-                        for a key press.
-  --trace_only_CPL3_code_GMBE
-                        If specified, qemu would only trace memory accesses by
-                        CPL3 code. Otherwise, qemu would trace all accesses.
-  --log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN
-                        Log of the length of a GMBE_block, i.e. the number of
-                        GMBE events in a GMBE_block. (It is used when
-                        determining whether to trace a GMBE event.)
-  --log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO
-                        Log of the ratio between the number of blocks of GMBE
-                        events we trace to the total number of blocks. E.g. if
-                        GMBE_tracing_ratio is 16, we trace 1 block, then skip
-                        15 blocks, then trace 1, then skip 15, and so on...
-  --dont_exit_qemu_when_done
-                        If specified, qemu won't be terminated after running
-                        the workload, and you would be able to use the
-                        terminal to send monitor commands, as well as use the
-                        qemu guest directly, in case you have a graphic
-                        interface (which isn't the case if you are running
-                        memory_tracer.py on a remote server using ssh). Still,
-                        you would be able to use the qemu guest, e.g. by
-                        connecting to it using ssh. Remember that the guest
-                        would probably be in the state it was before running
-                        the workload, which is probably a quite uncommon
-                        state, e.g. /dev/tty is overwritten by /dev/ttyS0.
-  --print_trace_info    If specified, memory_tracer.py would also print some
-                        additional trace info:
-                        num_of_events_waiting_in_trace_buf (only if it isn't
-                        0, which probably shouldn't happen);
-                        num_of_GMBE_events_since_enabling_GMBEOO (excluding
-                        non-CPL3 GMBE events, in case
-                        --trace_only_CPL3_code_GMBE was specified);
-                        num_of_events_written_to_trace_buf;
-                        num_of_missing_events (i.e.
-                        `num_of_events_written_to_trace_buf -
-                        num_of_events_written_to_trace_file -
-                        num_of_events_waiting_in_trace_buf`, but only if it
-                        isn't 0, which is probably a bug in qemu_with_GMBEOO);
-                        actual_tracing_ratio (i.e.
-                        num_of_GMBE_events_since_enabling_GMBEOO /
-                        num_of_events_written_to_trace_buf);
-                        num_of_dropped_events (i.e. events such that when
-                        qemu_with_GMBEOO tried to write them to the trace_buf,
-                        it was full, so they were discarded. This shouldn't
-                        happen normally.
   --dont_trace          If specified, memory_tracer.py will run without
                         enabling the tracing feature of qemu_with_GMBEOO.
                         Therefore, it will not print the trace info (even if
@@ -210,4 +162,54 @@ optional arguments:
                         workload_runner doesn't send all the expected messages
                         itself (e.g. "Ready to trace. Press enter to
                         continue").)
+  --dont_add_communications_with_host_to_workload
+                        If specified, the workload script would not be wrapped
+                        with code that handles the required communications
+                        between the guest and the host, e.g. printing "Ready
+                        to trace. Press enter to continue" and then waiting
+                        for a key press.
+  --trace_only_CPL3_code_GMBE
+                        If specified, qemu would only trace memory accesses by
+                        CPL3 code. Otherwise, qemu would trace all accesses.
+  --log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN
+                        Log of the length of a GMBE_block, i.e. the number of
+                        GMBE events in a GMBE_block. (It is used when
+                        determining whether to trace a GMBE event.)
+  --log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO
+                        Log of the ratio between the number of blocks of GMBE
+                        events we trace to the total number of blocks. E.g. if
+                        GMBE_tracing_ratio is 16, we trace 1 block, then skip
+                        15 blocks, then trace 1, then skip 15, and so on...
+  --print_trace_info    If specified, memory_tracer.py would also print some
+                        additional trace info:
+                        num_of_events_waiting_in_trace_buf (only if it isn't
+                        0, which probably shouldn't happen);
+                        num_of_GMBE_events_since_enabling_GMBEOO (excluding
+                        non-CPL3 GMBE events, in case
+                        --trace_only_CPL3_code_GMBE was specified);
+                        num_of_events_written_to_trace_buf;
+                        num_of_missing_events (i.e.
+                        `num_of_events_written_to_trace_buf -
+                        num_of_events_written_to_trace_file -
+                        num_of_events_waiting_in_trace_buf`, but only if it
+                        isn't 0, which is probably a bug in qemu_with_GMBEOO);
+                        actual_tracing_ratio (i.e.
+                        num_of_GMBE_events_since_enabling_GMBEOO /
+                        num_of_events_written_to_trace_buf);
+                        num_of_dropped_events (i.e. events such that when
+                        qemu_with_GMBEOO tried to write them to the trace_buf,
+                        it was full, so they were discarded. This shouldn't
+                        happen normally.
+  --dont_exit_qemu_when_done
+                        If specified, qemu won't be terminated after running
+                        the workload, and you would be able to use the
+                        terminal to send monitor commands, as well as use the
+                        qemu guest directly, in case you have a graphic
+                        interface (which isn't the case if you are running
+                        memory_tracer.py on a remote server using ssh). Still,
+                        you would be able to use the qemu guest, e.g. by
+                        connecting to it using ssh. Remember that the guest
+                        would probably be in the state it was before running
+                        the workload, which is probably a quite uncommon
+                        state, e.g. /dev/tty is overwritten by /dev/ttyS0.
   --verbose, -v         If specified, debug messages are printed.

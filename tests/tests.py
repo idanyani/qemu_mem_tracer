@@ -166,7 +166,7 @@ def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr
     #     if counter > min_num_of_expected_accesses_for_elem:
     #         print(hex(i), hex(our_buf_addr_in_workload_info + i * 4), counter)
 
-def ___test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -190,9 +190,10 @@ def ___test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
     
 
-def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
-                              qemu_with_GMBEOO_path, guest_image_path,
-                              snapshot_name):
+def ______test_kernel_mem_accesses(this_script_location,
+                             qemu_mem_tracer_script_path,
+                             qemu_with_GMBEOO_path, guest_image_path,
+                             snapshot_name):
     # TODO: implement and run this test.
     # orenmn: I didn't manage to run it, because it requires installing `make`
     # and `gcc` on the guest (in order to compile the LKM on it), and I had 
@@ -700,7 +701,7 @@ def print_workload_durations(this_script_location,
         print(f'avg_with_trace_duration / avg_no_trace_duration: '
               f'{avg_with_trace_duration / avg_no_trace_duration} ')
 
-def test_toy_workload_durations(this_script_location,
+def _test_toy_workload_durations(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):

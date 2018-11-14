@@ -1,3 +1,28 @@
+/* 
+sane people:
+    Why did you write all of this code, when we simply have to copy a file
+    from the host to the qemu guest, and then make the guest run it?
+orenmn:
+    At first, I tried using scp and ssh from the host to do that, but for some
+    reason ssh from the host to the guest took a really long time on my laptop
+    (several minutes).
+    scp from the guest to the host was actually pretty fast, and I used that at
+    first. But I think that was quite ugly, as you can see if you look at
+    previous commits.
+    I then thought about using a shared folder, but when I used a shared folder
+    (by following the instructions at http://www.linux-kvm.org/page/9p_virtio),
+    I found out that qemu doesn't support the `savevm` monitor command when
+    using shared folders this way (as explained a bit at
+    (https://patchwork.kernel.org/patch/9018051/).
+
+    Also, note that this code also implements the feature of adding the
+    communications with the guest to the workload, so that porting a workload
+    on memory_tracer is fairly simple.
+
+    By the way, I used only printable characters in the communication over the
+    serial port in order to avoid using serial control characters.
+*/
+
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>

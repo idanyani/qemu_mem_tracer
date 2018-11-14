@@ -2,6 +2,10 @@ import argparse
 import time
 import subprocess
 
+# orenmn:
+#   I used only printable characters in the communication over the serial port
+#   in order to avoid using serial control characters.
+
 SYNC_BYTES = b'serial sync\n'
 
 def parse_cmd_args():

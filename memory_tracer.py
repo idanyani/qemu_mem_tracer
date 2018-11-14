@@ -81,7 +81,8 @@ def parse_cmd_args():
                     '    uint8_t cpl        : 2;\n'
                     '    uint64_t unused2   : 56;\n'
                     '    uint64_t virt_addr : 64;\n'
-                    '};\n\n'
+                    '};\n'
+                    '\n'
                     'memory_tracer.py also prints the workload info (in case it '
                     'isn\'t the empty string), and the tracing duration in '
                     'miliseconds.\n'
@@ -125,7 +126,12 @@ def parse_cmd_args():
                     'tries to write to the FIFO. Soon, trace_buf would get full, '
                     'and trace records of new GMBE events would be dropped.\n'
                     '(If any of the messages isn\'t printed, it will '
-                    'probably seem like memory_tracer.py is stuck.)\n\n'
+                    'probably seem like memory_tracer.py is stuck.)\n'
+                    '\n'
+                    'Note that some of the command line arguments might be '
+                    'irrelevant to you as a user of memory_tracer, but they '
+                    'exist because they are useful while developing '
+                    'memory_tracer.'
                     )
     parser.add_argument('guest_image_path', type=str,
                         help='The path of the qcow2 file which is the image of the'
@@ -155,63 +161,6 @@ def parse_cmd_args():
              'in which the FIFO\'s buffer getting full is bad, and '
              'so it is recommended to use a FIFO whose buffer is '
              'of size `cat /proc/sys/fs/pipe-max-size`.')
-    parser.add_argument(
-        '--dont_add_communications_with_host_to_workload', action='store_true',
-        help='If specified, the workload script would not be wrapped with code '
-             'that handles the required communications between the guest and '
-             'the host, e.g. printing "Ready to trace. Press enter to continue" '
-             'and then waiting for a key press.')
-    parser.add_argument('--trace_only_CPL3_code_GMBE',
-                        action='store_const',
-                        const='on', default='off',
-                        help='If specified, qemu would only trace memory accesses '
-                             'by CPL3 code. Otherwise, qemu would trace all '
-                             'accesses.')
-    parser.add_argument('--log_of_GMBE_block_len', type=int, default=0,
-                        help='Log of the length of a GMBE_block, i.e. the number '
-                             'of GMBE events in a GMBE_block. (It is used when '
-                             'determining whether to trace a GMBE event.)')
-    parser.add_argument('--log_of_GMBE_tracing_ratio', type=int, default=0,
-                        help='Log of the ratio between the number of blocks '
-                             'of GMBE events we trace to the '
-                             'total number of blocks. E.g. if GMBE_tracing_ratio '
-                             'is 16, we trace 1 block, then skip 15 blocks, then '
-                             'trace 1, then skip 15, and so on...')
-    parser.add_argument('--dont_exit_qemu_when_done', action='store_true',
-                        help='If specified, qemu won\'t be terminated after running '
-                             'the workload, and you would be able to use the '
-                             'terminal to send monitor commands, as well as use '
-                             'the qemu guest directly, in case you have a graphic '
-                             'interface (which isn\'t the case if you are running '
-                             'memory_tracer.py on a remote server using ssh). '
-                             'Still, you would be able to use the qemu guest, e.g. '
-                             'by connecting to it using ssh.\n\n'
-                             'Remember that the guest would probably be in the '
-                             'state it was before running the workload, which is '
-                             'probably a quite uncommon state, e.g. /dev/tty is '
-                             'overwritten by /dev/ttyS0.')
-    parser.add_argument('--print_trace_info', action='store_true',
-                        help='If specified, memory_tracer.py would also print some '
-                             'additional trace info: '
-                             'num_of_events_waiting_in_trace_buf (only if it isn\'t '
-                             '0, which probably shouldn\'t happen); '
-                             'num_of_GMBE_events_since_enabling_GMBEOO (excluding '
-                             'non-CPL3 GMBE events, in case '
-                             '--trace_only_CPL3_code_GMBE was specified); '
-                             'num_of_events_written_to_trace_buf; '
-                             'num_of_missing_events (i.e. '
-                             '`num_of_events_written_to_trace_buf - '
-                             'num_of_events_written_to_trace_file - '
-                             'num_of_events_waiting_in_trace_buf`, but only if it '
-                             'isn\'t 0, which is probably a bug in '
-                             'qemu_with_GMBEOO); '
-                             'actual_tracing_ratio (i.e. '
-                             'num_of_GMBE_events_since_enabling_GMBEOO / '
-                             'num_of_events_written_to_trace_buf); '
-                             'num_of_dropped_events (i.e. events such that when '
-                             'qemu_with_GMBEOO tried to write them to the '
-                             'trace_buf, it was full, so they were discarded. '
-                             'This shouldn\'t happen normally.')
     analysis_or_fifo.add_argument(
         '--dont_trace', action='store_true',
         help='If specified, memory_tracer.py will run without '
@@ -241,6 +190,63 @@ def parse_cmd_args():
              '(i.e. it would get stuck in case workload_runner '
              'doesn\'t send all the expected messages itself '
              '(e.g. "Ready to trace. Press enter to continue").)')
+    parser.add_argument(
+        '--dont_add_communications_with_host_to_workload', action='store_true',
+        help='If specified, the workload script would not be wrapped with code '
+             'that handles the required communications between the guest and '
+             'the host, e.g. printing "Ready to trace. Press enter to continue" '
+             'and then waiting for a key press.')
+    parser.add_argument('--trace_only_CPL3_code_GMBE',
+                        action='store_const',
+                        const='on', default='off',
+                        help='If specified, qemu would only trace memory accesses '
+                             'by CPL3 code. Otherwise, qemu would trace all '
+                             'accesses.')
+    parser.add_argument('--log_of_GMBE_block_len', type=int, default=0,
+                        help='Log of the length of a GMBE_block, i.e. the number '
+                             'of GMBE events in a GMBE_block. (It is used when '
+                             'determining whether to trace a GMBE event.)')
+    parser.add_argument('--log_of_GMBE_tracing_ratio', type=int, default=0,
+                        help='Log of the ratio between the number of blocks '
+                             'of GMBE events we trace to the '
+                             'total number of blocks. E.g. if GMBE_tracing_ratio '
+                             'is 16, we trace 1 block, then skip 15 blocks, then '
+                             'trace 1, then skip 15, and so on...')
+    parser.add_argument('--print_trace_info', action='store_true',
+                        help='If specified, memory_tracer.py would also print some '
+                             'additional trace info: '
+                             'num_of_events_waiting_in_trace_buf (only if it isn\'t '
+                             '0, which probably shouldn\'t happen); '
+                             'num_of_GMBE_events_since_enabling_GMBEOO (excluding '
+                             'non-CPL3 GMBE events, in case '
+                             '--trace_only_CPL3_code_GMBE was specified); '
+                             'num_of_events_written_to_trace_buf; '
+                             'num_of_missing_events (i.e. '
+                             '`num_of_events_written_to_trace_buf - '
+                             'num_of_events_written_to_trace_file - '
+                             'num_of_events_waiting_in_trace_buf`, but only if it '
+                             'isn\'t 0, which is probably a bug in '
+                             'qemu_with_GMBEOO); '
+                             'actual_tracing_ratio (i.e. '
+                             'num_of_GMBE_events_since_enabling_GMBEOO / '
+                             'num_of_events_written_to_trace_buf); '
+                             'num_of_dropped_events (i.e. events such that when '
+                             'qemu_with_GMBEOO tried to write them to the '
+                             'trace_buf, it was full, so they were discarded. '
+                             'This shouldn\'t happen normally.')
+    parser.add_argument('--dont_exit_qemu_when_done', action='store_true',
+                        help='If specified, qemu won\'t be terminated after running '
+                             'the workload, and you would be able to use the '
+                             'terminal to send monitor commands, as well as use '
+                             'the qemu guest directly, in case you have a graphic '
+                             'interface (which isn\'t the case if you are running '
+                             'memory_tracer.py on a remote server using ssh). '
+                             'Still, you would be able to use the qemu guest, e.g. '
+                             'by connecting to it using ssh.\n\n'
+                             'Remember that the guest would probably be in the '
+                             'state it was before running the workload, which is '
+                             'probably a quite uncommon state, e.g. /dev/tty is '
+                             'overwritten by /dev/ttyS0.')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='If specified, debug messages are printed.')
     args = parser.parse_args()
