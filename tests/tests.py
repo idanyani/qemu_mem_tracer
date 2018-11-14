@@ -166,7 +166,7 @@ def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr
     #     if counter > min_num_of_expected_accesses_for_elem:
     #         print(hex(i), hex(our_buf_addr_in_workload_info + i * 4), counter)
 
-def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def ___test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -207,7 +207,7 @@ def ____test_kernel_mem_accesses(this_script_location, qemu_mem_tracer_script_pa
     raise NotImplementedError
 
 
-def _test_trace_only_CPL3_code_GMBE(this_script_location,
+def test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name):
@@ -237,7 +237,7 @@ def _test_trace_only_CPL3_code_GMBE(this_script_location,
         num_of_mem_accesses_by_non_CPL3_code_as_str.strip())
     assert(num_of_mem_accesses_by_non_CPL3_code == 0)
 
-def _test_invalid_log_of_cmd_args(this_script_location,
+def test_invalid_log_of_cmd_args(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):
@@ -329,7 +329,7 @@ def _test_invalid_log_of_cmd_args(this_script_location,
     else:
         assert(False)
 
-def _test_sampling(this_script_location,
+def test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name):
@@ -376,7 +376,7 @@ def _test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def _test_trace_fifo_path_cmd_arg(this_script_location,
+def test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):
@@ -436,11 +436,11 @@ def _test_trace_fifo_path_cmd_arg(this_script_location,
             except ProcessLookupError:
                 pass
 
-def _test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
+def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
         this_script_location, qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
-    expected_err_message = ('Exactly one of --analysis_tool_path and '
-                            '--trace_fifo_path must be specified.')
+    expected_err_message = ('error: one of the arguments --analysis_tool_path '
+                            '--trace_fifo_path is required')
     try:
         get_mem_tracer_error_and_output(
             this_script_location,
@@ -448,9 +448,10 @@ def _test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'))
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host /bin/date')
     except subprocess.CalledProcessError as e:
+        # print(e.stderr.decode())
         assert(expected_err_message in e.stderr.decode())
     else:
         assert(False)
@@ -463,15 +464,14 @@ def _test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
-            '--analysis_tool_path a --trace_fifo_path b')
+            f'--analysis_tool_path a --trace_fifo_path b'
+            f'--workload_path_on_host /bin/date')
     except subprocess.CalledProcessError as e:
         assert(expected_err_message in e.stderr.decode())
     else:
         assert(False)
 
-def _test_invalid_file_or_dir_cmd_arg(
+def test_invalid_file_or_dir_cmd_arg(
         this_script_location, qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
@@ -710,7 +710,7 @@ def print_workload_durations(this_script_location,
         print(f'avg_with_trace_duration / avg_no_trace_duration: '
               f'{avg_with_trace_duration / avg_no_trace_duration}')
 
-def _test_toy_workload_durations(this_script_location,
+def test_toy_workload_durations(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
