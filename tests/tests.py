@@ -28,7 +28,7 @@ VERBOSE_LEVEL = 0
 
 def read_file_until_it_contains_str(file_path, expected_str):
     if VERBOSE_LEVEL:
-        print(f'expecting to find "{expected_str}" in {file_path}')
+        print(f'expecting to find "{expected_str}" in {file_path} ')
     while True:
         file_contents = read_file(file_path)
         if expected_str in file_contents:
@@ -42,7 +42,7 @@ def read_file(file_path):
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.PIPE,
                        stderr_dest=sys.stderr):
     if VERBOSE_LEVEL:
-        print(f'executing cmd (in {dir_path}): {cmd}')
+        print(f'executing cmd (in {dir_path}): {cmd} ')
     return subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
                           stdout=stdout_dest, stderr=stderr_dest)
 
@@ -56,9 +56,9 @@ def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
                        qemu_with_GMBEOO_path, guest_image_path,
                        snapshot_name, extra_cmd_args=''):
     if VERBOSE_LEVEL > 1:
-        verbose_cmd_arg = '--verbose'
+        verbose_cmd_arg = '--verbose '
     else:
-        verbose_cmd_arg = ''
+        verbose_cmd_arg = ' '
     return (f'python3.7 {qemu_mem_tracer_script_path} '
             f'"{guest_image_path}" '
             f'"{snapshot_name}" '
@@ -78,7 +78,7 @@ def get_mem_tracer_output(*args, **kwargs):
 def check_mem_tracer_output_attention(mem_tracer_output):
     if 'ATTENTION' in mem_tracer_output:
         print(mem_tracer_output)
-        print('\n\n---mem_tracer_output contains an ATTENTION message.'
+        print('\n\n---mem_tracer_output contains an ATTENTION message. '
               'You should probably take a look.---\n\n')
 
 def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
@@ -243,6 +243,8 @@ def test_invalid_log_of_cmd_args(this_script_location,
                                  snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
+    workload_path = get_tests_bin_file_path(this_script_location, 
+                                            'simple_user_memory_intensive_workload')
     try:
         get_mem_tracer_error_and_output(
             this_script_location,
@@ -250,10 +252,10 @@ def test_invalid_log_of_cmd_args(this_script_location,
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
             f'--analysis_tool_path "{simple_analysis_path}" '
-            f'--log_of_GMBE_block_len "-1" --log_of_GMBE_tracing_ratio 4')
+            f'--log_of_GMBE_block_len "-1" --log_of_GMBE_tracing_ratio 4 '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
     except subprocess.CalledProcessError as e:
         assert('log_of_GMBE_block_len must be in range [0, 64], but -1 '
                'isn\'t.' in e.stderr.decode())
@@ -267,10 +269,10 @@ def test_invalid_log_of_cmd_args(this_script_location,
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
             f'--analysis_tool_path "{simple_analysis_path}" '
-            f'--log_of_GMBE_block_len "65" --log_of_GMBE_tracing_ratio 4')
+            f'--log_of_GMBE_block_len "65" --log_of_GMBE_tracing_ratio 4 '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
     except subprocess.CalledProcessError as e:
         assert('log_of_GMBE_block_len must be in range [0, 64], but 65 '
                'isn\'t.' in e.stderr.decode())
@@ -284,10 +286,10 @@ def test_invalid_log_of_cmd_args(this_script_location,
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
             f'--analysis_tool_path "{simple_analysis_path}" '
-            f'--log_of_GMBE_block_len 4 --log_of_GMBE_tracing_ratio "-1"')
+            f'--log_of_GMBE_block_len 4 --log_of_GMBE_tracing_ratio "-1" '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
     except subprocess.CalledProcessError as e:
         assert('log_of_GMBE_tracing_ratio must be in range [0, 64], but -1 '
                'isn\'t.' in e.stderr.decode())
@@ -301,10 +303,10 @@ def test_invalid_log_of_cmd_args(this_script_location,
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
             f'--analysis_tool_path "{simple_analysis_path}" '
-            f'--log_of_GMBE_block_len 4 --log_of_GMBE_tracing_ratio 65')
+            f'--log_of_GMBE_block_len 4 --log_of_GMBE_tracing_ratio 65 '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
     except subprocess.CalledProcessError as e:
         assert('log_of_GMBE_tracing_ratio must be in range [0, 64], but 65 '
                'isn\'t.' in e.stderr.decode())
@@ -318,10 +320,10 @@ def test_invalid_log_of_cmd_args(this_script_location,
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
             f'--analysis_tool_path "{simple_analysis_path}" '
-            f'--log_of_GMBE_block_len 32 --log_of_GMBE_tracing_ratio 33')
+            f'--log_of_GMBE_block_len 32 --log_of_GMBE_tracing_ratio 33 '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
     except subprocess.CalledProcessError as e:
         assert('log_of_GMBE_block_len + log_of_GMBE_tracing_ratio '
                'must be in range [0, 64], but 32 + 33 = 65 '
@@ -329,23 +331,25 @@ def test_invalid_log_of_cmd_args(this_script_location,
     else:
         assert(False)
 
-def test_sampling(this_script_location,
+def _test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
+    workload_path = get_tests_bin_file_path(this_script_location, 
+                                            'simple_user_memory_intensive_workload')
     mem_tracer_output = get_mem_tracer_error_and_output(
         this_script_location,
         qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path,
         guest_image_path,
         snapshot_name,
-        get_tests_bin_file_path(this_script_location, 
-                                'simple_user_memory_intensive_workload'),
         f'--analysis_tool_path "{simple_analysis_path}" '
         f'--log_of_GMBE_block_len 3 --log_of_GMBE_tracing_ratio 4 --verbose '
-        f'--print_trace_info')
+        f'--print_trace_info '
+        f'--dont_add_communications_with_host_to_workload '
+        f'--workload_path_on_host {workload_path} ')
     check_mem_tracer_output_attention(mem_tracer_output)
 
     regex = (
@@ -364,11 +368,11 @@ def test_sampling(this_script_location,
         qemu_with_GMBEOO_path,
         guest_image_path,
         snapshot_name,
-        get_tests_bin_file_path(this_script_location, 
-                                'simple_user_memory_intensive_workload'),
         f'--analysis_tool_path "{simple_analysis_path}" '
         f'--log_of_GMBE_block_len 4 --log_of_GMBE_tracing_ratio 3 --verbose '
-        f'--print_trace_info')
+        f'--print_trace_info '
+        f'--dont_add_communications_with_host_to_workload '
+        f'--workload_path_on_host {workload_path} ')
     check_mem_tracer_output_attention(mem_tracer_output)
     
     mask_of_GMBE_block_idx, actual_tracing_ratio = re.search(
@@ -380,10 +384,13 @@ def test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):
+    workload_path = get_tests_bin_file_path(this_script_location, 
+                                            'simple_user_memory_intensive_workload')
+
     with tempfile.TemporaryDirectory() as temp_dir_path:
         trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
         os.mkfifo(trace_fifo_path)
-        print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
+        print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size '
         fifo_max_size_as_str = get_output_of_executed_cmd_in_dir(
             print_fifo_max_size_cmd)
         fifo_max_size = int(fifo_max_size_as_str)
@@ -411,9 +418,9 @@ def test_trace_fifo_path_cmd_arg(this_script_location,
                 qemu_with_GMBEOO_path,
                 guest_image_path,
                 snapshot_name,
-                get_tests_bin_file_path(this_script_location, 
-                                        'simple_user_memory_intensive_workload'),
-                f'--trace_fifo_path {trace_fifo_path} --print_trace_info')
+                f'--trace_fifo_path {trace_fifo_path} --print_trace_info '
+                f'--dont_add_communications_with_host_to_workload '
+                f'--workload_path_on_host {workload_path} ')
             check_mem_tracer_output_attention(mem_tracer_output)
 
             os.kill(simple_analysis_pid, signal.SIGUSR1)
@@ -439,8 +446,6 @@ def test_trace_fifo_path_cmd_arg(this_script_location,
 def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
         this_script_location, qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
-    expected_err_message = ('error: one of the arguments --analysis_tool_path '
-                            '--trace_fifo_path is required')
     try:
         get_mem_tracer_error_and_output(
             this_script_location,
@@ -449,10 +454,9 @@ def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
             guest_image_path,
             snapshot_name,
             f'--dont_add_communications_with_host_to_workload '
-            f'--workload_path_on_host /bin/date')
+            f'--workload_path_on_host /bin/date ')
     except subprocess.CalledProcessError as e:
-        # print(e.stderr.decode())
-        assert(expected_err_message in e.stderr.decode())
+        pass
     else:
         assert(False)
 
@@ -465,9 +469,10 @@ def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
             guest_image_path,
             snapshot_name,
             f'--analysis_tool_path a --trace_fifo_path b'
-            f'--workload_path_on_host /bin/date')
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host /bin/date ')
     except subprocess.CalledProcessError as e:
-        assert(expected_err_message in e.stderr.decode())
+        pass
     else:
         assert(False)
 
@@ -476,10 +481,11 @@ def test_invalid_file_or_dir_cmd_arg(
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
+    workload_path = get_tests_bin_file_path(this_script_location, 
+                                            'simple_user_memory_intensive_workload')
     must_be_a_file_expected_err_message = ('must be a file path, but')
     must_be_a_fifo_expected_err_message = ('must be a fifo path, but')
     must_be_a_dir_expected_err_message = ('must be a dir path, but')
-    must_be_a_file_or_dir_expected_err_message = ('must be a file/dir path, but')
     try:
         get_mem_tracer_error_and_output(
             this_script_location,
@@ -487,9 +493,9 @@ def test_invalid_file_or_dir_cmd_arg(
             qemu_with_GMBEOO_path,
             'definitely/not/a/file/path',
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
-            f'--analysis_tool_path "{simple_analysis_path}" ')
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
 
     except subprocess.CalledProcessError as e:
         assert(must_be_a_file_expected_err_message in e.stderr.decode())
@@ -503,8 +509,9 @@ def test_invalid_file_or_dir_cmd_arg(
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            'definitely/not/a/file/path',
-            f'--analysis_tool_path "{simple_analysis_path}" ')
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host definitely/not/a/file/path')
     except subprocess.CalledProcessError as e:
         assert(must_be_a_file_expected_err_message in e.stderr.decode())
     else:
@@ -517,9 +524,9 @@ def test_invalid_file_or_dir_cmd_arg(
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
-            '--analysis_tool_path definitely/not/a/file/path')
+            '--analysis_tool_path definitely/not/a/file/path '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
     except subprocess.CalledProcessError as e:
         assert(must_be_a_file_expected_err_message in e.stderr.decode())
     else:
@@ -532,9 +539,9 @@ def test_invalid_file_or_dir_cmd_arg(
             qemu_with_GMBEOO_path,
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
-            '--trace_fifo_path /home')
+            '--trace_fifo_path /home '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
     except subprocess.CalledProcessError as e:
         assert(must_be_a_fifo_expected_err_message in e.stderr.decode())
     else:
@@ -547,30 +554,13 @@ def test_invalid_file_or_dir_cmd_arg(
             'definitely/not/a/dir/path',
             guest_image_path,
             snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
-            f'--analysis_tool_path "{simple_analysis_path}" ')
+            f'--analysis_tool_path "{simple_analysis_path}" '
+            f'--dont_add_communications_with_host_to_workload '
+            f'--workload_path_on_host {workload_path} ')
     except subprocess.CalledProcessError as e:
         assert(must_be_a_dir_expected_err_message in e.stderr.decode())
     else:
         assert(False)
-
-    try:
-        get_mem_tracer_error_and_output(
-            this_script_location,
-            qemu_mem_tracer_script_path,
-            qemu_with_GMBEOO_path,
-            guest_image_path,
-            snapshot_name,
-            get_tests_bin_file_path(this_script_location, 
-                                    'simple_user_memory_intensive_workload'),
-            f'--analysis_tool_path "{simple_analysis_path}" '
-            f'--workload_path definitely/not/a/dir/path')
-    except subprocess.CalledProcessError as e:
-        assert(must_be_a_file_or_dir_expected_err_message in e.stderr.decode())
-    else:
-        assert(False)
-
     
 
 def print_workload_durations(this_script_location,
@@ -592,11 +582,11 @@ def print_workload_durations(this_script_location,
 
     if workload_path_on_guest:
         workload_path_cmd_arg_str = (
-            f'--workload_path_on_guest {workload_path_on_guest}')
+            f'--workload_path_on_guest {workload_path_on_guest} ')
     else:
         assert(workload_path_on_host)
         workload_path_cmd_arg_str = (
-            f'--workload_path_on_host {workload_path_on_host}')
+            f'--workload_path_on_host {workload_path_on_host} ')
     simple_analysis_path = get_tests_bin_file_path(this_script_location,
                                                    'simple_analysis')
     native_durations = []
@@ -612,7 +602,7 @@ def print_workload_durations(this_script_location,
             'dummy_guest_image_path',
             'dummy_snapshot_name',
             f'--dont_use_qemu '
-            f'{workload_path_cmd_arg_str}')
+            f'{workload_path_cmd_arg_str} ')
         native_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
                                native_mem_tracer_output).group(1)) / 
                            NUM_OF_MILLISECONDS_IN_SECOND)
@@ -631,7 +621,7 @@ def print_workload_durations(this_script_location,
                 snapshot_name,
                 workload_path,
                 f'--analysis_tool_path "{simple_analysis_path}" --dont_trace '
-                f'{workload_path_cmd_arg_str}')
+                f'{workload_path_cmd_arg_str} ')
             no_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
                                      no_trace_mem_tracer_output).group(1)) /
                                  NUM_OF_MILLISECONDS_IN_SECOND)
@@ -650,7 +640,7 @@ def print_workload_durations(this_script_location,
                     f'--log_of_GMBE_block_len {log_of_GMBE_block_len} '
                     f'--log_of_GMBE_tracing_ratio {log_of_GMBE_tracing_ratio} '
                     f'--print_trace_info '
-                    f'{workload_path_cmd_arg_str}')
+                    f'{workload_path_cmd_arg_str} ')
                 check_mem_tracer_output_attention(with_trace_mem_tracer_output)
 
                 with_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
@@ -669,7 +659,7 @@ def print_workload_durations(this_script_location,
                     num_of_mem_accesses_by_non_CPL3_code_as_str)
                 num_of_mem_accesses = int(num_of_mem_accesses_as_str)
 
-                print(f'num_of_mem_accesses: {num_of_mem_accesses}')
+                print(f'num_of_mem_accesses: {num_of_mem_accesses} ')
                 assert(num_of_mem_accesses > 0)
                 mem_accesses_by_non_CPL3_code_ratios.append(
                     num_of_mem_accesses_by_non_CPL3_code / num_of_mem_accesses)
@@ -693,7 +683,7 @@ def print_workload_durations(this_script_location,
         mem_accesses_by_non_CPL3_code_ratios,
         avg_mem_accesses_by_non_CPL3_code_ratio)
 
-    print(f'avg_native_duration: {avg_native_duration}, SD: {native_duration_SD}'
+    print(f'avg_native_duration: {avg_native_duration}, SD: {native_duration_SD} '
           f'({native_durations})')
     if not run_native_only:
         print(f'avg_no_trace_duration: {avg_no_trace_duration}, '
@@ -706,23 +696,24 @@ def print_workload_durations(this_script_location,
               f'({mem_accesses_by_non_CPL3_code_ratios})')
 
         print(f'avg_with_trace_duration / avg_native_duration: '
-              f'{avg_with_trace_duration / avg_native_duration}')
+              f'{avg_with_trace_duration / avg_native_duration} ')
         print(f'avg_with_trace_duration / avg_no_trace_duration: '
-              f'{avg_with_trace_duration / avg_no_trace_duration}')
+              f'{avg_with_trace_duration / avg_no_trace_duration} ')
 
 def test_toy_workload_durations(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
+    workload_path = get_tests_bin_file_path(this_script_location, 
+                                            'simple_user_memory_intensive_workload')
+                                            # 'simple_long_user_memory_intensive_workload')
     print_workload_durations(
         this_script_location,
         qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path,
         snapshot_name,
-        get_tests_bin_file_path(this_script_location, 
-                                # 'simple_user_memory_intensive_workload'),
-                                'simple_long_user_memory_intensive_workload'),
         5,
+        workload_path_on_host=workload_path,
         log_of_GMBE_tracing_ratio=10)
 
 def _test_mcf_workload(this_script_location,

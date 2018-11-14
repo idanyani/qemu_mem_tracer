@@ -52,10 +52,6 @@ def verify_arg_is_dir(arg, arg_name):
     if not os.path.isdir(arg):
         raise RuntimeError(f'{arg_name} must be a dir path, but {arg} isn\'t.')
 
-def verify_arg_is_file_or_dir(arg, arg_name):
-    if not os.path.isfile(arg) and not os.path.isdir(arg):
-        raise RuntimeError(f'{arg_name} must be a file/dir path, but {arg} isn\'t.')
-
 def verify_arg_is_in_range(arg, arg_name, low, high):
     if not (low <= arg <= high):
         raise RuntimeError(f'{arg_name} must be in range [{low}, {high}], but '
@@ -216,33 +212,35 @@ def parse_cmd_args():
                              'qemu_with_GMBEOO tried to write them to the '
                              'trace_buf, it was full, so they were discarded. '
                              'This shouldn\'t happen normally.')
-    parser.add_argument('--dont_trace', action='store_true',
-                        help='If specified, memory_tracer.py will run without '
-                             'enabling the tracing feature of qemu_with_GMBEOO. '
-                             'Therefore, it will not print the trace info (even '
-                             'if --print_trace_info is specified). '
-                             'This is useful for comparing the speed of '
-                             'qemu_with_GMBEOO with and without tracing.')
-    parser.add_argument('--dont_use_qemu', action='store_true',
-                        help='If specified, memory_tracer.py will run the '
-                             'workload on the host (i.e. native). Specifically, '
-                             'both workload_runner and workload will be copied to '
-                             'a temporary directory, and there workload_runner '
-                             'will be executed. Please pass dummy non-empty '
-                             'strings as the arguments guest_image_path, '
-                             'snapshot_name, host_password and '
-                             'qemu_with_GMBEOO_path. '
-                             'As expected, no trace info will be printed (even if '
-                             '--print_trace_info is specified). Also, the '
-                             'analysis tool will not be executed (even if '
-                             '--analysis_tool_path is specified). '
-                             'This is useful for comparing the speed of '
-                             'qemu_with_GMBEOO to running the code natively. '
-                             'Note that This feature is somewhat limited, '
-                             'as it only captures the prints by workload_runner. '
-                             '(i.e. it would get stuck in case workload_runner '
-                             'doesn\'t send all the expected messages itself '
-                             '(e.g. "Ready to trace. Press enter to continue").)')
+    analysis_or_fifo.add_argument(
+        '--dont_trace', action='store_true',
+        help='If specified, memory_tracer.py will run without '
+             'enabling the tracing feature of qemu_with_GMBEOO. '
+             'Therefore, it will not print the trace info (even '
+             'if --print_trace_info is specified). '
+             'This is useful for comparing the speed of '
+             'qemu_with_GMBEOO with and without tracing.')
+    analysis_or_fifo.add_argument(
+        '--dont_use_qemu', action='store_true',
+        help='If specified, memory_tracer.py will run the '
+             'workload on the host (i.e. native). Specifically, '
+             'both workload_runner and workload will be copied to '
+             'a temporary directory, and there workload_runner '
+             'will be executed. Please pass dummy non-empty '
+             'strings as the arguments guest_image_path, '
+             'snapshot_name, host_password and '
+             'qemu_with_GMBEOO_path. '
+             'As expected, no trace info will be printed (even if '
+             '--print_trace_info is specified). Also, the '
+             'analysis tool will not be executed (even if '
+             '--analysis_tool_path is specified). '
+             'This is useful for comparing the speed of '
+             'qemu_with_GMBEOO to running the code natively. '
+             'Note that This feature is somewhat limited, '
+             'as it only captures the prints by workload_runner. '
+             '(i.e. it would get stuck in case workload_runner '
+             'doesn\'t send all the expected messages itself '
+             '(e.g. "Ready to trace. Press enter to continue").)')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='If specified, debug messages are printed.')
     args = parser.parse_args()
