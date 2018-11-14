@@ -25,7 +25,8 @@ NUM_OF_ACCESSES_FOR_INC = 2
 
 VERBOSE_LEVEL = 0
 
-TESTS_BIN_DIR_REL_PATH = os.path.join('toy_workloads_and_analysis_tools',
+TOY_WORKLOAD_AND_ANALYSIS_TOOLS_DIR_REL_PATH = 'toy_workloads_and_analysis_tools'
+TESTS_BIN_DIR_REL_PATH = os.path.join(TOY_WORKLOAD_AND_ANALYSIS_TOOLS_DIR_REL_PATH,
                                       'tests_bin')
 
 
@@ -52,8 +53,12 @@ def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.PIPE,
 def get_output_of_executed_cmd_in_dir(cmd, dir_path='.'):
     return execute_cmd_in_dir(cmd, dir_path).stdout.strip().decode()
 
-def get_tests_bin_file_path(this_script_location, file_name):
+def get_toy_elf_path(this_script_location, file_name):
     return os.path.join(this_script_location, TESTS_BIN_DIR_REL_PATH, file_name)
+
+def get_toy_bash_path(this_script_location, file_name):
+    return os.path.join(this_script_location,
+                        TOY_WORKLOAD_AND_ANALYSIS_TOOLS_DIR_REL_PATH, file_name)
 
 def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
                        qemu_with_GMBEOO_path, guest_image_path,
@@ -87,10 +92,9 @@ def check_mem_tracer_output_attention(mem_tracer_output):
 def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name):
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
-    workload_path = get_tests_bin_file_path(this_script_location,
-                                            'dummy_workload_without_info')
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
+    workload_path = get_toy_bash_path(this_script_location, 'empty_workload.bash')
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
@@ -98,7 +102,6 @@ def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path
         guest_image_path,
         snapshot_name,
         f'--analysis_tool_path "{simple_analysis_path}" '
-        f'--dont_add_communications_with_host_to_workload '
         f'--workload_path_on_host {workload_path} ')
     
     # match succeeding means that the workload info isn't printed.
@@ -109,10 +112,10 @@ def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path
 def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
-    workload_path = get_tests_bin_file_path(this_script_location, 
-                                            'dummy_workload_with_funny_test_info')
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
+    workload_path = get_toy_elf_path(this_script_location, 
+                                     'dummy_workload_with_funny_test_info')
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
@@ -177,9 +180,9 @@ def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr
 def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name):
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
-    workload_path = get_tests_bin_file_path(
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
+    workload_path = get_toy_elf_path(
         this_script_location, 'simple_user_memory_intensive_workload')
 
     mem_tracer_output = get_mem_tracer_output(
@@ -209,21 +212,21 @@ def ______test_kernel_mem_accesses(this_script_location,
     # 
     # The relevant files are in the directory
     # simple_kernel_memory_intensive_workload_lkm.
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
     # check_mem_accesses(mem_tracer_output,
     #                    OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
     raise NotImplementedError
 
 
-def test_trace_only_CPL3_code_GMBE(this_script_location,
+def _test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name):
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
-    workload_path = get_tests_bin_file_path(this_script_location, 
-                                            'simple_user_memory_intensive_workload')
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
+    workload_path = get_toy_elf_path(this_script_location, 
+                                     'simple_user_memory_intensive_workload')
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
@@ -252,10 +255,10 @@ def test_invalid_log_of_cmd_args(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
-    workload_path = get_tests_bin_file_path(this_script_location, 
-                                            'simple_user_memory_intensive_workload')
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
+    workload_path = get_toy_elf_path(this_script_location, 
+                                     'simple_user_memory_intensive_workload')
     try:
         get_mem_tracer_error_and_output(
             this_script_location,
@@ -346,10 +349,10 @@ def _test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name):
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
-    workload_path = get_tests_bin_file_path(this_script_location, 
-                                            'simple_user_memory_intensive_workload')
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
+    workload_path = get_toy_elf_path(this_script_location, 
+                                     'simple_user_memory_intensive_workload')
     mem_tracer_output = get_mem_tracer_error_and_output(
         this_script_location,
         qemu_mem_tracer_script_path,
@@ -395,8 +398,8 @@ def _test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):
-    workload_path = get_tests_bin_file_path(this_script_location, 
-                                            'simple_user_memory_intensive_workload')
+    workload_path = get_toy_elf_path(this_script_location, 
+                                     'simple_user_memory_intensive_workload')
 
     with tempfile.TemporaryDirectory() as temp_dir_path:
         trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
@@ -411,8 +414,8 @@ def _test_trace_fifo_path_cmd_arg(this_script_location,
         assert(fcntl.fcntl(fifo_fd, F_GETPIPE_SZ) == fifo_max_size)
         os.close(fifo_fd)
 
-        simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                       'simple_analysis')
+        simple_analysis_path = get_toy_elf_path(this_script_location,
+                                                'simple_analysis')
         simple_analysis_output_path = os.path.join(temp_dir_path,
                                                    'analysis_output')
         start_simple_analylsis_cmd = (
@@ -490,10 +493,10 @@ def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
 def test_invalid_file_or_dir_cmd_arg(
         this_script_location, qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
-    workload_path = get_tests_bin_file_path(this_script_location, 
-                                            'simple_user_memory_intensive_workload')
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
+    workload_path = get_toy_elf_path(this_script_location, 
+                                     'simple_user_memory_intensive_workload')
     must_be_a_file_expected_err_message = ('must be a file path, but')
     must_be_a_fifo_expected_err_message = ('must be a fifo path, but')
     must_be_a_dir_expected_err_message = ('must be a dir path, but')
@@ -598,8 +601,8 @@ def print_workload_durations(this_script_location,
         assert(workload_path_on_host)
         workload_path_cmd_arg_str = (
             f'--workload_path_on_host {workload_path_on_host} ')
-    simple_analysis_path = get_tests_bin_file_path(this_script_location,
-                                                   'simple_analysis')
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
     native_durations = []
     no_trace_durations = []
     with_trace_durations = []
@@ -715,8 +718,8 @@ def _test_toy_workload_durations(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
-    workload_path = get_tests_bin_file_path(this_script_location, 
-                                            'simple_user_memory_intensive_workload')
+    workload_path = get_toy_elf_path(this_script_location, 
+                                     'simple_user_memory_intensive_workload')
                                             # 'simple_long_user_memory_intensive_workload')
     print_workload_durations(
         this_script_location,
