@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <signal.h>
 #include <assert.h>
+#include <ctype.h>
 
 #define PRINT_TO_TTYS0(str) {           \
     fprintf(serial_port_ttyS0, str);    \
@@ -19,19 +20,20 @@
 #define TTYS0_PATH              ("/dev/ttyS0")
 #define SCRIPT_LOCAL_COPY_PATH  ("~/workload_script_received_from_serial")
 #define REDIRECT_TO_TTYS0       (" > /dev/ttyS0 2>&1")
-#define SYNC_BYTES              ("serial sync ")
+#define SYNC_BYTES              ("serial sync\n")
 #define NUM_OF_SYNC_BYTES       (strlen(SYNC_BYTES))
 #define SCRIPT_SIZE_STR_LEN     (30)
 #define DECIMAL_BASE            (10)
 #define HEXADECIMAL_BASE        (16)
-#define BYTE_HEX_REPR_SIZE      (2)
+#define BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED      (3)
 
 
 bool were_sync_bytes_received(char *sync_cyclic_buf, int cyclic_buf_start_idx) {
+    assert(cyclic_buf_start_idx == cyclic_buf_start_idx % NUM_OF_SYNC_BYTES);
     // Assumes that sync_cyclic_buf is a buffer of size NUM_OF_SYNC_BYTES.
     char *sync_bytes = SYNC_BYTES;
     for (int i = 0; i < NUM_OF_SYNC_BYTES; ++i) {
-        if (sync_cyclic_buf[cyclic_buf_start_idx + i % NUM_OF_SYNC_BYTES] !=
+        if (sync_cyclic_buf[(cyclic_buf_start_idx + i) % NUM_OF_SYNC_BYTES] !=
             sync_bytes[i])
         {
             return false;
@@ -40,12 +42,15 @@ bool were_sync_bytes_received(char *sync_cyclic_buf, int cyclic_buf_start_idx) {
     return true;
 }
 
+bool read_from_serial()
+
 bool wait_for_sync_bytes(FILE *serial_port_ttyS0) {
     char sync_cyclic_buf[NUM_OF_SYNC_BYTES];
     int i = 0;
     while (!were_sync_bytes_received(sync_cyclic_buf, i)) {
         size_t num_of_bytes_read = fread(
             &sync_cyclic_buf[i], 1, 1, serial_port_ttyS0);
+        // printf("received: %c\n", sync_cyclic_buf[i]);
         if (num_of_bytes_read != 1) {
             printf("failed to read while waiting for sync bytes. "
                    "ferror: %d, feof: %d, errno: %d\n, fread_return_value: %zu",
@@ -54,7 +59,7 @@ bool wait_for_sync_bytes(FILE *serial_port_ttyS0) {
             return false;
         }
 
-        i = i + 1 % NUM_OF_SYNC_BYTES;
+        i = (i + 1) % NUM_OF_SYNC_BYTES;
     }
     return true;
 }
@@ -92,11 +97,11 @@ bool receive_script_and_write_to_file(FILE *serial_port_ttyS0, int script_size) 
     }
 
     for (int i = 0; i < script_size; ++i) {
-        char hex_repr[BYTE_HEX_REPR_SIZE + 1];
-        hex_repr[BYTE_HEX_REPR_SIZE] = 0;
+        printf("i: %d\n", i);
+        char hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED];
         
         size_t num_of_hex_reprs_read = fread(
-            &hex_repr, BYTE_HEX_REPR_SIZE, 1, serial_port_ttyS0);
+            &hex_repr, BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED, 1, serial_port_ttyS0);
         if (num_of_hex_reprs_read != 1) {
             printf("failed to read while receiving script contents. "
                    "ferror: %d, feof: %d, errno: %d\n, fread_return_value: %zu",
@@ -104,6 +109,9 @@ bool receive_script_and_write_to_file(FILE *serial_port_ttyS0, int script_size) 
                    num_of_hex_reprs_read);
             return false;
         }
+        assert(hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED - 1] == '\n');
+        hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED - 1] = 0;
+        printf("hex_repr: %s\n", hex_repr);
         script_contents[i] = strtol(hex_repr, NULL, HEXADECIMAL_BASE);
     }
 
@@ -129,20 +137,7 @@ bool receive_script_and_write_to_file(FILE *serial_port_ttyS0, int script_size) 
 }
 
 int main(int argc, char **argv) {
-    size_t num_of_bytes_read = 0;
-    int i = 0;
     int result = 0;
-
-    // if (freopen(TTYS0_PATH, "w", stdout) == NULL) {
-    //     printf("failed to redirect stdout to /dev/ttyS0. errno: %d\n", errno);
-    //     return 1;
-    // }
-
-    // if (freopen(TTYS0_PATH, "w", stderr) == NULL) {
-    //     printf("failed to redirect stderr to /dev/ttyS0. errno: %d\n", errno);
-    //     result = 1;
-    //     goto cleanup1;
-    // }
 
     // This should work in case `sudo chmod 666 /dev/ttyS0` was executed.
     FILE *serial_port_ttyS0 = fopen(TTYS0_PATH, "rw");
@@ -150,11 +145,13 @@ int main(int argc, char **argv) {
         printf("failed to open /dev/ttyS0. errno: %d\n", errno);
         return 1;
     }
+    printf("Opened /dev/ttyS0.\n");
 
     if (!wait_for_sync_bytes(serial_port_ttyS0)) {
         result = 1;
-        goto cleanup1;
+        goto cleanup;
     }
+    printf("Received sync bytes.\n");
 
     char dont_add_communications_with_host_to_workload;
     size_t num_of_bytes_read = fread(
@@ -165,7 +162,7 @@ int main(int argc, char **argv) {
                ferror(serial_port_ttyS0), feof(serial_port_ttyS0), errno,
                num_of_bytes_read);
         result = 1;
-        goto cleanup1;
+        goto cleanup;
     }
     if (dont_add_communications_with_host_to_workload != '1' && 
         dont_add_communications_with_host_to_workload != '0')
@@ -174,27 +171,26 @@ int main(int argc, char **argv) {
                "but it must be '0' or '1'.\n",
                dont_add_communications_with_host_to_workload);
         result = 1;
-        goto cleanup1;
+        goto cleanup;
     }
     bool dont_add_communications = 
         dont_add_communications_with_host_to_workload == '1' ? true : false;
+    printf("Received dont_add_communications_with_host_to_workload: %d\n",
+           dont_add_communications);
 
     int script_size = receive_script_size(serial_port_ttyS0);
     if (script_size == -1) {
         result = 1;
-        goto cleanup1;
+        goto cleanup;
     }
-    printf("script_size: %d\n", script_size);
+    printf("Received script_size: %d\n", script_size);
 
     if (!receive_script_and_write_to_file(serial_port_ttyS0, script_size)) {
         result = 1;
-        goto cleanup1;
+        goto cleanup;
     }
+    printf("Received script and wrote it to local file.\n");
 
-
-    
-
-    
     char cmd_str[300];
     assert(strlen(SCRIPT_LOCAL_COPY_PATH) + strlen(REDIRECT_TO_TTYS0) <
            sizeof(cmd_str));
@@ -205,13 +201,13 @@ int main(int argc, char **argv) {
         printf("`strcat()` failed.\n");
     }
 
-    if (dont_add_communications_with_host_to_workload) {
+    if (dont_add_communications) {
         int system_result = system(cmd_str);
         if (system_result != 0) {
             printf("`system()` failed. result code: %d errno: %d\n",
                    system_result, errno);
             result = 1;
-            goto cleanup2;
+            goto cleanup;
         }
     }
     else {
@@ -226,15 +222,13 @@ int main(int argc, char **argv) {
             printf("`system()` failed. result code: %d errno: %d\n",
                    system_result, errno);
             result = 1;
-            goto cleanup2;
+            goto cleanup;
         }
 
         PRINT_TO_TTYS0("Stop tracing");
     }
-
-
     
-cleanup1:
+cleanup:
     if (fclose(serial_port_ttyS0) != 0) {
         printf("failed to close /dev/ttyS0.\n");
     }

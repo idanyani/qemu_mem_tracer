@@ -53,7 +53,7 @@ debug_print "---start run_qemu_and_workload.sh---\n"
 #   terminals that qemu creates.
 #   The guest doesn't start running (-S), as we load a snapshot anyway.
 debug_print "---starting qemu---\n"
-spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 -S \
+spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
     -hda $guest_image_path -monitor stdio \
     -serial pty -loadvm $snapshot_name
 set monitor_id $spawn_id
@@ -73,6 +73,7 @@ set guest_ttyS0_reader_id $spawn_id
 # send "\x01"
 # send "c"
 
+sleep 1
 debug_print "\n---writing $file_to_write_to_serial_path to $guest_ttyS0_pty_path---\n"
 exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $guest_ttyS0_pty_path $dont_add_communications > /home/orenmn/aoeu.txt
 
