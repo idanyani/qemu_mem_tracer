@@ -81,7 +81,7 @@ def check_mem_tracer_output_attention(mem_tracer_output):
         print('\n\n---mem_tracer_output contains an ATTENTION message.'
               'You should probably take a look.---\n\n')
 
-def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
+def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name):
     simple_analysis_path = get_tests_bin_file_path(this_script_location,

@@ -46,7 +46,6 @@ parser.add_argument('qemu_mem_tracer_script_path', type=str,
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('guest_image_path', type=str)
 parser.add_argument('snapshot_name', type=str)
-parser.add_argument('host_password', type=str)
 parser.add_argument('--verbose', '-v', action='store_true')
 args = parser.parse_args()
 

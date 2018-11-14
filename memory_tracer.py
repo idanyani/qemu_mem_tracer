@@ -14,7 +14,7 @@ F_SETPIPE_SZ = 1031  # Linux 2.6.35+
 F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
 FILE_TO_WRITE_TO_SERIAL_NAME = 'workload_runner.bash'
-COMMUNICATIONS_DIR_NAME = 'host_guest_workload_communications'
+COMMUNICATIONS_DIR_NAME = 'host_guest_communications'
 RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME = 'run_qemu_and_workload.sh'
 RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH = os.path.join(
     COMMUNICATIONS_DIR_NAME, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME)
@@ -117,9 +117,9 @@ def parse_cmd_args():
                     'open it for reading yet.'
                     '2. Register a handler for the signal SIGUSR1 (e.g. '
                     'by calling the `signal` syscall). The handler must:\n'
-                    '  a. Print "-----begin analysis output-----".\n'
-                    '  b. Print the output of the analysis tool.\n'
-                    '  c. Print "-----end analysis output-----".\n'
+                    '    a. Print "-----begin analysis output-----".\n'
+                    '    b. Print the output of the analysis tool.\n'
+                    '    c. Print "-----end analysis output-----".\n'
                     '3. Print "Ready to analyze" when you wish the '
                     'tracing to start.\n'
                     '4. Open the trace FIFO for read, and start reading trace '

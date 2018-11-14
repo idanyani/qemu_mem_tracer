@@ -12,7 +12,7 @@ TO_RUN_ON_GUEST_DIR_NAME = 'to_run_on_guest'
 RUN_SCRIPT_FROM_SERIAL_ELF_NAME = 'run_script_from_serial'
 RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH = os.path.join(
     TO_RUN_ON_GUEST_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_ELF_NAME)
-COMMUNICATIONS_DIR_NAME = 'host_guest_workload_communications'
+COMMUNICATIONS_DIR_NAME = 'host_guest_communications'
 RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME = f'{RUN_SCRIPT_FROM_SERIAL_ELF_NAME}.c'
 RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH = os.path.join(
     COMMUNICATIONS_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME)
@@ -37,12 +37,11 @@ parser.add_argument('--dont_compile_qemu', action='store_true',
                     help='If specified, this script doesn\'t build '
                          'qemu_with_GMBEOO.')
 parser.add_argument('--run_tests', action='store_true',
-                    help='If specified, this script doesn\'t run tests (that '
+                    help='If specified, this script runs tests (that '
                          'check whether qemu_mem_tracer works as '
                          'expected).')
 parser.add_argument('--guest_image_path', type=str)
 parser.add_argument('--snapshot_name', type=str)
-parser.add_argument('--host_password', type=str)
 args = parser.parse_args()
 
 this_script_path = os.path.realpath(__file__)
@@ -78,7 +77,7 @@ if not args.dont_compile_qemu:
 
 
 if args.run_tests:
-    for arg_name in ('guest_image_path', 'snapshot_name', 'host_password'):
+    for arg_name in ('guest_image_path', 'snapshot_name'):
         if getattr(args, arg_name) is None:
             raise RuntimeError(f'--run_tests was specified, but '
                                f'--{arg_name} was not specified.')
@@ -93,7 +92,6 @@ if args.run_tests:
                        f'{args.qemu_with_GMBEOO_path} '
                        f'{args.guest_image_path} '
                        f'{args.snapshot_name} '
-                       f'{args.host_password} '
                        f'--verbose '
                        ,
                        tests_dir_path)
