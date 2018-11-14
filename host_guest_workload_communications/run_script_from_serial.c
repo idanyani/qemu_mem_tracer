@@ -18,7 +18,7 @@
 }
 
 #define TTYS0_PATH              ("/dev/ttyS0")
-#define SCRIPT_LOCAL_COPY_PATH  ("~/workload_script_received_from_serial")
+#define SCRIPT_LOCAL_COPY_PATH  ("/tmp/workload_script_received_from_serial")
 #define REDIRECT_TO_TTYS0       (" > /dev/ttyS0 2>&1")
 #define SYNC_BYTES              ("serial sync\n")
 #define NUM_OF_SYNC_BYTES       (strlen(SYNC_BYTES))
@@ -42,7 +42,7 @@ bool were_sync_bytes_received(char *sync_cyclic_buf, int cyclic_buf_start_idx) {
     return true;
 }
 
-bool read_from_serial()
+// bool read_from_serial()
 
 bool wait_for_sync_bytes(FILE *serial_port_ttyS0) {
     char sync_cyclic_buf[NUM_OF_SYNC_BYTES];
@@ -97,7 +97,7 @@ bool receive_script_and_write_to_file(FILE *serial_port_ttyS0, int script_size) 
     }
 
     for (int i = 0; i < script_size; ++i) {
-        printf("i: %d\n", i);
+        // printf("i: %d\n", i);
         char hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED];
         
         size_t num_of_hex_reprs_read = fread(
@@ -111,11 +111,11 @@ bool receive_script_and_write_to_file(FILE *serial_port_ttyS0, int script_size) 
         }
         assert(hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED - 1] == '\n');
         hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED - 1] = 0;
-        printf("hex_repr: %s\n", hex_repr);
+        // printf("hex_repr: %s\n", hex_repr);
         script_contents[i] = strtol(hex_repr, NULL, HEXADECIMAL_BASE);
     }
 
-    FILE *script_local_copy = fopen(SCRIPT_LOCAL_COPY_PATH, "wb");
+    FILE *script_local_copy = fopen(SCRIPT_LOCAL_COPY_PATH, "w+");
     if (script_local_copy == NULL) {
         printf("failed to open a file for the script's local copy. errno: %d\n",
                errno);
@@ -190,6 +190,9 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
     printf("Received script and wrote it to local file.\n");
+
+    system("chmod 777 ",,,o , ao e);
+
 
     char cmd_str[300];
     assert(strlen(SCRIPT_LOCAL_COPY_PATH) + strlen(REDIRECT_TO_TTYS0) <

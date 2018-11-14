@@ -19,15 +19,6 @@ def execute_cmd(cmd):
     print(f'executing cmd: {cmd}')
     subprocess.run(cmd, shell=True, check=True)
 
-def get_byte_repr_for_serial(byte_to_convert):
-    return f'\\x{hex(byte_to_convert)[2:].zfill(2)}\n'
-
-def get_bytes_repr_for_serial(bytes_to_convert):
-    result = ''
-    for b in bytes_to_convert:
-        result += get_byte_repr_for_serial(b)
-    return result
-
 if __name__ == '__main__':
     args = parse_cmd_args()
 
@@ -42,7 +33,9 @@ if __name__ == '__main__':
     dont_add_communications_bytes = (
         b'1' if args.dont_add_communications_with_host_to_workload == 'True' else b'0')
 
-    script_contents_bytes = script_contents.hex().encode('ascii')
+    script_contents_as_hex = script_contents.hex()
+    assert(len(script_contents_as_hex) == script_size * 2)
+    print(script_contents_as_hex)
 
     # echo -e "\012"
     # execute_cmd(f'echo -en "\x41"'
@@ -60,11 +53,13 @@ if __name__ == '__main__':
         f.write(dont_add_communications_bytes)
         f.write(script_size_bytes)
         time.sleep(1)
-        print(script_size * 3)
-        for i in range(0, script_size * 3, 999):
-            time.sleep(0.1)
-            print(i)
-            f.write(script_contents_bytes[i:i + 999])
+        # print(script_size * 3)
+        for i in range(0, len(script_contents_as_hex), 2):
+            hex_repr_and_line_feed_bytes = (
+                f'{script_contents_as_hex[i:i+2]}\n'.encode('ascii'))
+            time.sleep(0.0003)
+            # print(i)
+            f.write(hex_repr_and_line_feed_bytes)
 
     # print('aoeu')
 
