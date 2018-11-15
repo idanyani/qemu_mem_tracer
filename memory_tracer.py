@@ -92,24 +92,6 @@ def parse_cmd_args():
                     'miliseconds.\n'
                     'In case --analysis_tool_path is specified, memory_tracer.py '
                     'also prints the output of the analysis tool.\n\n'
-                    'Either workload_runner or the workload itself must '
-                    'do the following:\n'
-                    '1. Print "-----begin workload info-----".\n'
-                    '2. Print runtime info of the workload. This info '
-                    'will be written to stdout, as well as passed as cmd '
-                    'arguments to the analysis tool in case of '
-                    '--analysis_tool_path was specified. (Print nothing '
-                    'if you don\'t need any runtime info.)\n'
-                    '3. Print "-----end workload info-----".\n'
-                    '4. Print "Ready to trace. Press enter to continue" '
-                    'when you wish the tracing to start.\n'
-                    '5. Wait until enter is pressed, and only then '
-                    'start executing the code you wish to run while '
-                    'tracing.\n'
-                    '6. Print "Stop tracing" when you wish the tracing '
-                    'to stop.\n'
-                    '(If any of the messages isn\'t printed, it will '
-                    'probably seem like memory_tracer.py is stuck.)\n\n'
                     'Note that workload_runner can also be an ELF that '
                     'includes the workload and the aforementioned prints.\n\n'
                     'If --analysis_tool_path is specified, the provided analysis '
@@ -222,10 +204,26 @@ def parse_cmd_args():
              'include the communications.')
     dont_add_communications_or_timeout.add_argument(
         '--dont_add_communications_with_host_to_workload', action='store_true',
-        help='If specified, the workload script would not be wrapped with code '
+        help='If specified, the workload would not be wrapped with code '
              'that handles the required communications between the guest and '
-             'the host, e.g. printing "Ready to trace. Press enter to continue" '
-             'and then waiting for a key press.')
+             'the host, i.e. the workload (given in workload_path_on_host or '
+             'workload_path_on_guest) must do the following:\n'
+             '1. Print "-----begin workload info-----".\n'
+             '2. Print runtime info of the workload. This info '
+             'will be written to stdout, as well as passed as cmd '
+             'arguments to the analysis tool in case of '
+             '--analysis_tool_path was specified. (Print nothing '
+             'if you don\'t need any runtime info.)\n'
+             '3. Print "-----end workload info-----".\n'
+             '4. Print "Ready to trace. Press enter to continue" '
+             'when you wish the tracing to start.\n'
+             '5. Wait until enter is pressed, and only then '
+             'start executing the code you wish to run while '
+             'tracing.\n'
+             '6. Print "Stop tracing" when you wish the tracing '
+             'to stop.\n'
+             '(If any of the messages isn\'t printed, it will '
+             'probably seem like memory_tracer.py is stuck.)\n\n')
     parser.add_argument('--print_trace_info', action='store_true',
                         help='If specified, memory_tracer.py would also print some '
                              'additional trace info: '
@@ -338,7 +336,7 @@ def get_executables_paths(workload_path_on_guest, workload_path_on_host,
             f'(cd {executable2_dir_path_when_running_executable1} && '
             f'{run_executable_2_cmd})')
 
-    if dont_add_communications or dont_use_qemu:
+    if dont_add_communications:
         executable1_source = (f'{BASH_SCRIPT_FIRST_LINE}\n'
                               f'{run_executable_2_cmd}\n')
     else: 
@@ -357,9 +355,6 @@ def get_executables_paths(workload_path_on_guest, workload_path_on_host,
     # os.chmod(executable1_path, stat.S_IEXEC)
 
     return executable1_path, executable2_path    
-
-
-
 
 
 def get_trace_fifo_path(trace_fifo_path_cmd_arg):

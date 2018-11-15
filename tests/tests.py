@@ -603,9 +603,15 @@ def print_workload_durations(this_script_location,
         assert(workload_path_on_host)
         workload_path_cmd_arg_str_for_non_native = (
             f'--workload_path_on_host {workload_path_on_host} ')
+    
+    if dont_add_communications:
+        dont_add_communications_cmd_arg_str = (
+            '--dont_add_communications_with_host_to_workload')
+    else:
+        dont_add_communications_cmd_arg_str = ''
 
     if timeout:
-        timeout_cmd_arg_str = '--timeout {timeout}'
+        timeout_cmd_arg_str = f'--timeout {timeout}'
     else:
         timeout_cmd_arg_str = ''
 
@@ -625,7 +631,7 @@ def print_workload_durations(this_script_location,
             'dummy_snapshot_name',
             f'--dont_use_qemu '
             f'--workload_path_on_host {workload_path_on_host} '
-            f'{timeout_cmd_arg_str} ')
+            f'{timeout_cmd_arg_str} {dont_add_communications_cmd_arg_str} ')
         native_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
                                native_mem_tracer_output).group(1)) / 
                            NUM_OF_MILLISECONDS_IN_SECOND)
@@ -636,11 +642,6 @@ def print_workload_durations(this_script_location,
         #                        'The test should be edited to run longer.')
 
         if not run_native_only:
-            if dont_add_communications:
-                dont_add_communications_cmd_arg_str = (
-                    '--dont_add_communications_with_host_to_workload')
-            else:
-                dont_add_communications_cmd_arg_str = ''
 
             no_trace_mem_tracer_output = get_mem_tracer_output(
                 this_script_location,
@@ -759,7 +760,8 @@ def _test_workload_path_on_guest(this_script_location,
                                 snapshot_name):
     simple_analysis_path = get_toy_elf_path(this_script_location,
                                             'simple_analysis')
-    workload_path = '\~/toy_workloads/simple_user_memory_intensive_workload'
+    workload_path_on_guest = os.path.join('\~', 'toy_workloads',
+                                          'simple_user_memory_intensive_workload')
     mem_tracer_output = get_mem_tracer_output(
         this_script_location,
         qemu_mem_tracer_script_path,
@@ -767,13 +769,24 @@ def _test_workload_path_on_guest(this_script_location,
         guest_image_path,
         snapshot_name,
         f'--analysis_tool_path "{simple_analysis_path}" '
-        f'--workload_path_on_guest {workload_path} '
+        f'--workload_path_on_guest {workload_path_on_guest} '
         f'--dont_add_communications_with_host_to_workload '
         f'--print_trace_info ')
     # print(mem_tracer_output)
     check_mem_accesses(mem_tracer_output,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
+    # Just verify that no error is raised when using workload_path_on_guest and
+    # also not specifying --dont_add_communications_with_host_to_workload.
+    get_mem_tracer_output(
+        this_script_location,
+        qemu_mem_tracer_script_path,
+        qemu_with_GMBEOO_path,
+        guest_image_path,
+        snapshot_name,
+        f'--analysis_tool_path "{simple_analysis_path}" '
+        f'--workload_path_on_guest /bin/date '
+        f'--print_trace_info ')
 
 
 def test_toy_workload_durations(this_script_location,
@@ -789,7 +802,6 @@ def test_toy_workload_durations(this_script_location,
         qemu_with_GMBEOO_path, guest_image_path,
         snapshot_name,
         2,
-        workload_path_on_guest='\~/toy_workloads/simple_user_memory_intensive_workload',
         workload_path_on_host=workload_path,
         log_of_GMBE_tracing_ratio=10,
         dont_add_communications=True)
@@ -798,34 +810,16 @@ def _test_mcf_workload(this_script_location,
                       qemu_mem_tracer_script_path,
                       qemu_with_GMBEOO_path, guest_image_path,
                       snapshot_name):
-    # print_workload_durations(
-    #     this_script_location,
-    #     qemu_mem_tracer_script_path,
-    #     qemu_with_GMBEOO_path, guest_image_path,
-    #     snapshot_name,
-    #     '429.mcf/run.sh',
-    #     1, workload_path='429.mcf/workload',
-    #     # log_of_GMBE_tracing_ratio=0,
-    #     )
-    #     # run_native_only=True)
-    # simple_analysis_path = get_toy_elf_path(this_script_location,
-    #                                         'simple_analysis')
-    workload_path = '\~/429.mcf/run.sh'
-    mem_tracer_output = get_mem_tracer_output(
+    mcf_path_on_host = os.path.join(this_script_location, '429.mcf', 'run.sh')
+    mcf_path_on_guest = os.path.join('\~', '429.mcf', 'run.sh')
+    print_workload_durations(
         this_script_location,
         qemu_mem_tracer_script_path,
-        qemu_with_GMBEOO_path,
-        guest_image_path,
+        qemu_with_GMBEOO_path, guest_image_path,
         snapshot_name,
-        f'--analysis_tool_path "{simple_analysis_path}" '
-        f'--workload_path_on_guest {workload_path} --timeout 10 '
-        f'--print_trace_info ')
-    num_of_mem_accesses_as_str = (
-        re.search(r'num_of_mem_accesses:\s+(\d+)',
-                  mem_tracer_output, re.DOTALL).group(1))
-    num_of_mem_accesses = int(num_of_mem_accesses_as_str)
-    assert(num_of_mem_accesses > 0)
-    print(mem_tracer_output)
-
-
+        2,
+        workload_path_on_guest=mcf_path_on_guest,
+        workload_path_on_host=mcf_path_on_host,
+        log_of_GMBE_tracing_ratio=10,
+        timeout=10)
 

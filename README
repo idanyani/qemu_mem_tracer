@@ -63,8 +63,7 @@ usage: memory_tracer.py [-h]
                         [--trace_only_CPL3_code_GMBE]
                         [--log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN]
                         [--log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO]
-                        [--timeout TIMEOUT]
-                        [--dont_add_communications_with_host_to_workload]
+                        [--timeout TIMEOUT | --dont_add_communications_with_host_to_workload]
                         [--print_trace_info] [--dont_exit_qemu_when_done]
                         [--verbose]
                         guest_image_path snapshot_name qemu_with_GMBEOO_path
@@ -90,15 +89,6 @@ struct GMBEOO_TraceRecord {
 
 memory_tracer.py also prints the workload info (in case it isn't the empty string), and the tracing duration in miliseconds.
 In case --analysis_tool_path is specified, memory_tracer.py also prints the output of the analysis tool.
-
-Either workload_runner or the workload itself must do the following:
-1. Print "-----begin workload info-----".
-2. Print runtime info of the workload. This info will be written to stdout, as well as passed as cmd arguments to the analysis tool in case of --analysis_tool_path was specified. (Print nothing if you don't need any runtime info.)
-3. Print "-----end workload info-----".
-4. Print "Ready to trace. Press enter to continue" when you wish the tracing to start.
-5. Wait until enter is pressed, and only then start executing the code you wish to run while tracing.
-6. Print "Stop tracing" when you wish the tracing to stop.
-(If any of the messages isn't printed, it will probably seem like memory_tracer.py is stuck.)
 
 Note that workload_runner can also be an ELF that includes the workload and the aforementioned prints.
 
@@ -182,11 +172,23 @@ optional arguments:
                         Otherwise, the timeout doesn't include the
                         communications.
   --dont_add_communications_with_host_to_workload
-                        If specified, the workload script would not be wrapped
-                        with code that handles the required communications
-                        between the guest and the host, e.g. printing "Ready
-                        to trace. Press enter to continue" and then waiting
-                        for a key press.
+                        If specified, the workload would not be wrapped with
+                        code that handles the required communications between
+                        the guest and the host, i.e. the workload (given in
+                        workload_path_on_host or workload_path_on_guest) must
+                        do the following: 1. Print "-----begin workload
+                        info-----". 2. Print runtime info of the workload.
+                        This info will be written to stdout, as well as passed
+                        as cmd arguments to the analysis tool in case of
+                        --analysis_tool_path was specified. (Print nothing if
+                        you don't need any runtime info.) 3. Print "-----end
+                        workload info-----". 4. Print "Ready to trace. Press
+                        enter to continue" when you wish the tracing to start.
+                        5. Wait until enter is pressed, and only then start
+                        executing the code you wish to run while tracing. 6.
+                        Print "Stop tracing" when you wish the tracing to
+                        stop. (If any of the messages isn't printed, it will
+                        probably seem like memory_tracer.py is stuck.)
   --print_trace_info    If specified, memory_tracer.py would also print some
                         additional trace info:
                         num_of_events_waiting_in_trace_buf (only if it isn't
@@ -220,3 +222,37 @@ optional arguments:
                         the workload, which is probably a quite uncommon
                         state, e.g. /dev/tty is overwritten by /dev/ttyS0.
   --verbose, -v         If specified, debug messages are printed.
+
+
+
+future work (i.e. ideas for ways to improve memory_tracer):
+1. Squeeze `GMBEOO_TraceRecord` into 8 bytes (the current implementation of
+   qemu_with_GMBEOO assumes that `sizeof(GMBEOO_TraceRecord)` is a power of 2,
+   and it is currently 16 bytes). To achieve this, you can use some of the
+   highest bits in a 64bit virtual address (as they are always equal to the
+   most significant bit (see
+   https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt)) to store
+   the CPL of the code that made the memory access, as well as whether it was
+   a load/store, etc.
+2. With regard to optimizing the code that handles a GMBE event, it might be
+   better to not extract the CPL in the handler of a GMBE event, and instead
+   extract it in the handler of an event that occurs on every CPL change (and
+   just store the current CPL in a global variable).
+3. Lluis Vilanova (who is also a PostDoc in the Technion) has done a lot of
+   work on qemu. Some of his work wasn't merged into upstream qemu, and he said
+   that we might leverage this work to significantly improve the performance of
+   memory_tracer (though it would require a non-trivial amount of work). Lluis'
+   work on qemu can be found (if I understand correctly) at
+   https://projects.gso.ac.upc.edu/projects/qemu-dbi.
+4. qemu_with_GMBEOO was forked from qemu tag v3.0.0 (August 2018). I guess
+   the performance of upstream qemu would improve in the future, so merging
+   upstream into qemu_with_GMBEOO would probably help.
+   Note that merging upstream qemu into qemu_with_GMBEOO might break
+   `GMBEOO_add_cpl_to_GMBE_info_if_should_trace` (it is quite obvious from the
+   code of this short function what might break it, and how to easily fix that).
+5. With regard to optimizing `writeout_thread` (in qemu_with_GMBEOO/trace/simple.c),
+   you might use a bitmap of `TRACE_BUF_LEN / sizeof(GMBEOO_TraceRecord)` bits
+   to store for each trace record in trace_buf whether it is valid or not. Then,
+   you might also use x86's bit scan instructions to find the first invalid
+   trace record.
+

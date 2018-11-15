@@ -1,7 +1,7 @@
 /* 
 sane people:
-    Why did you write all of this code, when we simply have to copy a file
-    from the host to the qemu guest, and then make the guest run it?
+    Why did you write all of this code, when we simply have to copy files
+    from the host to the qemu guest, and then make the guest run the first one?
 orenmn:
     At first, I tried using scp and ssh from the host to do that, but for some
     reason ssh from the host to the guest took a really long time on my laptop
@@ -255,10 +255,12 @@ int main(int argc, char **argv) {
         result = 1;
         goto cleanup;
     }
+    printf("Done Receiving executable1.\n");
     if (!receive_executable(serial_port_ttyS0, EXECUTABLE2_LOCAL_COPY_PATH)) {
         result = 1;
         goto cleanup;
     }
+    printf("Done Receiving executable2.\n");
 
     int system_result = system(RUN_EXECUTABLE1_CMD);
     if (system_result != 0) {
