@@ -52,7 +52,8 @@ orenmn:
 #define BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED      (3)
 
 
-bool were_sync_bytes_received(char *sync_cyclic_buf, int cyclic_buf_start_idx) {
+static bool were_sync_bytes_received(char *sync_cyclic_buf,
+                                     int cyclic_buf_start_idx) {
     assert(cyclic_buf_start_idx == cyclic_buf_start_idx % NUM_OF_SYNC_BYTES);
     // Assumes that sync_cyclic_buf is a buffer of size NUM_OF_SYNC_BYTES.
     char *sync_bytes = SYNC_BYTES;
@@ -66,7 +67,7 @@ bool were_sync_bytes_received(char *sync_cyclic_buf, int cyclic_buf_start_idx) {
     return true;
 }
 
-bool wait_for_sync_bytes(FILE *serial_port_ttyS0) {
+static bool wait_for_sync_bytes(FILE *serial_port_ttyS0) {
     char sync_cyclic_buf[NUM_OF_SYNC_BYTES];
     int i = 0;
     while (!were_sync_bytes_received(sync_cyclic_buf, i)) {
@@ -86,14 +87,14 @@ bool wait_for_sync_bytes(FILE *serial_port_ttyS0) {
     return true;
 }
 
-int receive_executable_size(FILE *serial_port_ttyS0) {
+static int receive_uint_decimal_repr(FILE *serial_port_ttyS0) {
     char executable_size_str[EXECUTABLE_SIZE_STR_LEN];
     memset(executable_size_str, 0, EXECUTABLE_SIZE_STR_LEN);
     for (int i = 0; i < EXECUTABLE_SIZE_STR_LEN; ++i) {
         size_t num_of_bytes_read = fread(
             &executable_size_str[i], 1, 1, serial_port_ttyS0);
         if (num_of_bytes_read != 1) {
-            printf("failed to read while receiving executable size. "
+            printf("failed to read while receiving decimal repr of a uint. "
                    "ferror: %d, feof: %d, errno: %d\n, fread_return_value: %zu",
                    ferror(serial_port_ttyS0), feof(serial_port_ttyS0), errno,
                    num_of_bytes_read);
@@ -109,9 +110,10 @@ int receive_executable_size(FILE *serial_port_ttyS0) {
     return -1;
 }
 
-bool receive_executable_contents_and_write_to_file(FILE *serial_port_ttyS0,
-                                                   int executable_size,
-                                                   char *executable_local_path) {
+static bool receive_executable_contents_and_write_to_file(
+    FILE *serial_port_ttyS0, int executable_size, char *executable_local_path,
+    uint16_t expected_16_bit_checksum)
+{
     if (executable_size == 0) {
         return true;
     }
@@ -123,6 +125,7 @@ bool receive_executable_contents_and_write_to_file(FILE *serial_port_ttyS0,
         return false;
     }
 
+    uint16_t actual_16_bit_checksum = 0;
     for (int i = 0; i < executable_size; ++i) {
         // printf("i: %d\n", i);
         char hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED];
@@ -140,7 +143,18 @@ bool receive_executable_contents_and_write_to_file(FILE *serial_port_ttyS0,
         assert(hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED - 1] == '\n');
         hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED - 1] = 0;
         // printf("hex_repr: %s\n", hex_repr);
-        executable_contents[i] = strtol(hex_repr, NULL, HEXADECIMAL_BASE);
+        uint8_t byte_value = strtol(hex_repr, NULL, HEXADECIMAL_BASE);
+        actual_16_bit_checksum += byte_value;
+        executable_contents[i] = byte_value;
+    }
+
+    if (actual_16_bit_checksum != expected_16_bit_checksum) {
+        printf("Checksum check failed.\n"
+               "actual_16_bit_checksum: %u\n"
+               "expected_16_bit_checksum: %u\n",
+               actual_16_bit_checksum, expected_16_bit_checksum);
+        result = false;
+        goto cleanup1;
     }
 
     FILE *executable_local_copy = fopen(executable_local_path, "w+");
@@ -195,20 +209,25 @@ cleanup1:
     return result;
 }
 
-bool receive_executable(FILE *serial_port_ttyS0, char *executable_local_path) {
-    int executable_size = receive_executable_size(serial_port_ttyS0);
+static bool receive_executable(FILE *serial_port_ttyS0,
+                               char *executable_local_path) {
+    int expected_16_bit_checksum = receive_uint_decimal_repr(serial_port_ttyS0);
+    if (expected_16_bit_checksum == -1) {
+        return false;
+    }
+    int executable_size = receive_uint_decimal_repr(serial_port_ttyS0);
     if (executable_size == -1) {
-        result = 1;
-        goto cleanup;
+        return false;
     }
     printf("Received executable_size: %d\n", executable_size);
 
-    if (!receive_executable_contents_and_write_to_file(serial_port_ttyS0,
-                                                   executable_size)) {
-        result = 1;
-        goto cleanup;
+    if (!receive_executable_contents_and_write_to_file(
+            serial_port_ttyS0, executable_size, executable_local_path,
+            (uint16_t)expected_16_bit_checksum)) {
+        return false;
     }
     printf("Received executable and wrote it to local file.\n");
+    return true;
 }
 
 int main(int argc, char **argv) {
@@ -253,15 +272,19 @@ int main(int argc, char **argv) {
     printf("Received dont_add_communications_with_host_to_workload: %d\n",
            dont_add_communications);
 
-    receive_executable()
-
-
-
+    if (!receive_executable(serial_port_ttyS0, EXECUTABLE1_LOCAL_COPY_PATH)) {
+        result = 1;
+        goto cleanup;
+    }
+    if (!receive_executable(serial_port_ttyS0, EXECUTABLE2_LOCAL_COPY_PATH)) {
+        result = 1;
+        goto cleanup;
+    }
 
     char cmd_str[300];
     assert(strlen(EXECUTABLE1_LOCAL_COPY_PATH) + strlen(REDIRECT_TO_TTYS0) <
            sizeof(cmd_str));
-    if (cmd_str != strcpy(cmd_str, EXECUTABLE_LOCAL_COPY_PATH)) {
+    if (cmd_str != strcpy(cmd_str, EXECUTABLE1_LOCAL_COPY_PATH)) {
         printf("`strcpy()` failed.\n");
         result = 1;
         goto cleanup;
