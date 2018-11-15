@@ -13,7 +13,11 @@ import stat
 F_SETPIPE_SZ = 1031  # Linux 2.6.35+
 F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
-FILE_TO_WRITE_TO_SERIAL_NAME = 'workload_runner.bash'
+EXECUTABLE1_FOR_SERIAL_NAME = 'executable1'
+EXECUTABLE2_FOR_SERIAL_NAME = 'executable2'
+EMPTY_FILE_NAME = 'empty'
+EXECUTABLE1_PATH_ON_GUEST = os.path.join('/tmp', EXECUTABLE1_FOR_SERIAL_NAME)
+EXECUTABLE2_PATH_ON_GUEST = os.path.join('/tmp', EXECUTABLE2_FOR_SERIAL_NAME)
 COMMUNICATIONS_DIR_NAME = 'host_guest_communications'
 RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_NAME = 'run_qemu_and_workload.sh'
 RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH = os.path.join(
@@ -21,10 +25,10 @@ RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH = os.path.join(
 RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_NAME = 'run_workload_natively.sh'
 RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_REL_PATH = os.path.join(
     COMMUNICATIONS_DIR_NAME, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_NAME)
-WRITE_SCRIPT_TO_SERIAL_NAME = 'write_script_to_serial.py'
-WRITE_SCRIPT_TO_SERIAL_REL_PATH = os.path.join(
-    COMMUNICATIONS_DIR_NAME, WRITE_SCRIPT_TO_SERIAL_NAME)
-
+WRITE_EXECUTABLES_TO_SERIAL_NAME = 'write_executables_to_serial.py'
+WRITE_EXECUTABLES_TO_SERIAL_REL_PATH = os.path.join(
+    COMMUNICATIONS_DIR_NAME, WRITE_EXECUTABLES_TO_SERIAL_NAME)
+BASH_SCRIPT_FIRST_LINE = '#!/bin/bash'
 
 
 def read_file_bytes(file_path):
@@ -190,12 +194,6 @@ def parse_cmd_args():
              '(i.e. it would get stuck in case workload_runner '
              'doesn\'t send all the expected messages itself '
              '(e.g. "Ready to trace. Press enter to continue").)')
-    parser.add_argument(
-        '--dont_add_communications_with_host_to_workload', action='store_true',
-        help='If specified, the workload script would not be wrapped with code '
-             'that handles the required communications between the guest and '
-             'the host, e.g. printing "Ready to trace. Press enter to continue" '
-             'and then waiting for a key press.')
     parser.add_argument('--trace_only_CPL3_code_GMBE',
                         action='store_const',
                         const='on', default='off',
@@ -212,6 +210,20 @@ def parse_cmd_args():
                              'total number of blocks. E.g. if GMBE_tracing_ratio '
                              'is 16, we trace 1 block, then skip 15 blocks, then '
                              'trace 1, then skip 15, and so on...')
+    parser.add_argument('--timeout', type=float,
+                        help='If specified, the workload would be stopped '
+                             'when the specified timeout elapses. '
+                             'Note that if you use '
+                             '--dont_add_communications_with_host_to_workload, '
+                             'then the timeout includes the communications '
+                             'with the host. Otherwise, the timeout doesn\'t '
+                             'include the communications.')
+    parser.add_argument(
+        '--dont_add_communications_with_host_to_workload', action='store_true',
+        help='If specified, the workload script would not be wrapped with code '
+             'that handles the required communications between the guest and '
+             'the host, e.g. printing "Ready to trace. Press enter to continue" '
+             'and then waiting for a key press.')
     parser.add_argument('--print_trace_info', action='store_true',
                         help='If specified, memory_tracer.py would also print some '
                              'additional trace info: '
@@ -290,6 +302,75 @@ def verify_this_script_location(this_script_location):
             if user_input == 'y':
                 break
 
+def create_empty_file(file_path):
+    with open(file_path, 'w'):
+        pass
+
+def get_executables_paths(workload_path_on_guest, workload_path_on_host,
+                          timeout, dont_use_qemu, dont_add_communications,
+                          temp_dir_path):
+    empty_file_path = os.path.join(temp_dir_path, EMPTY_FILE_NAME)
+    create_empty_file(empty_file_path)
+
+    if timeout:
+        timeout_cmd_prefix = f'timeout {timeout} '
+    else:
+        timeout_cmd_prefix = ''
+
+    if dont_use_qemu:
+        run_executable_2_cmd = f'{timeout_cmd_prefix}{workload_path_on_host}'
+        executable2_path = empty_file_path
+    elif workload_path_on_guest:
+        run_executable_2_cmd = f'{timeout_cmd_prefix}{workload_path_on_guest}'
+        executable2_path = empty_file_path
+    else:
+        assert(workload_path_on_host)
+        run_executable_2_cmd = f'{timeout_cmd_prefix}{EXECUTABLE2_PATH_ON_GUEST}'
+        executable2_path = workload_path_on_host
+
+    if dont_add_communications or dont_use_qemu:
+        executable1_source = (f'{BASH_SCRIPT_FIRST_LINE}\n'
+                              f'{run_executable_2_cmd}\n')
+    else: 
+        executable1_source = (
+            f'{BASH_SCRIPT_FIRST_LINE}\n'
+            f'echo "-----begin workload info-----"\n'
+            f'echo "-----end workload info-----"\n'
+            f'echo "Ready to trace. Press enter to continue"\n'
+            f'read -n1\n'
+            f'{run_executable_2_cmd}\n'
+            f'echo "Stop tracing"\n'
+            )
+    executable1_path = os.path.join(temp_dir_path, EXECUTABLE1_FOR_SERIAL_NAME)
+    write_file(executable1_path, executable1_source)
+
+    return executable1_path, executable2_path    
+
+
+
+
+
+def get_trace_fifo_path(trace_fifo_path_cmd_arg):
+    if trace_fifo_path_cmd_arg:
+        return trace_fifo_path_cmd_arg
+
+    trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
+    os.mkfifo(trace_fifo_path)
+    print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
+    fifo_max_size_as_str = execute_cmd_in_dir(
+        print_fifo_max_size_cmd,
+        stdout_dest=subprocess.PIPE).stdout.strip().decode()
+    fifo_max_size = int(fifo_max_size_as_str)
+    
+    debug_print(f'change {trace_fifo_path} to size {fifo_max_size} '
+                f'(/proc/sys/fs/pipe-max-size)')
+    fifo_fd = os.open(trace_fifo_path, os.O_NONBLOCK)
+    fcntl.fcntl(fifo_fd, F_SETPIPE_SZ, fifo_max_size)
+    assert(fcntl.fcntl(fifo_fd, F_GETPIPE_SZ) == fifo_max_size)
+    os.close(fifo_fd)
+
+    return trace_fifo_path
+
 
 if __name__ == '__main__':
     args = parse_cmd_args()
@@ -311,46 +392,26 @@ if __name__ == '__main__':
     verify_this_script_location(this_script_location)
 
     with tempfile.TemporaryDirectory() as temp_dir_path:
-        if args.workload_path_on_host:
-            file_to_write_to_serial_path = args.workload_path_on_host
-        else:
-            file_to_write_to_serial_path = os.path.join(temp_dir_path,
-                                                        FILE_TO_WRITE_TO_SERIAL_NAME)
-            workload_runner_source = (
-                f'#!/bin/bash\n'
-                f'{args.workload_path_on_guest}\n')
-            write_file(file_to_write_to_serial_path, workload_runner_source)
-        
-
         if not args.dont_use_qemu:
-            if args.trace_fifo_path is None:
-                trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
-                os.mkfifo(trace_fifo_path)
-                print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
-                fifo_max_size_as_str = execute_cmd_in_dir(
-                    print_fifo_max_size_cmd,
-                    stdout_dest=subprocess.PIPE).stdout.strip().decode()
-                fifo_max_size = int(fifo_max_size_as_str)
-                
-                debug_print(f'change {trace_fifo_path} to size {fifo_max_size} '
-                            f'(/proc/sys/fs/pipe-max-size)')
-                fifo_fd = os.open(trace_fifo_path, os.O_NONBLOCK)
-                fcntl.fcntl(fifo_fd, F_SETPIPE_SZ, fifo_max_size)
-                assert(fcntl.fcntl(fifo_fd, F_GETPIPE_SZ) == fifo_max_size)
-                os.close(fifo_fd)
-            else:
-                trace_fifo_path = args.trace_fifo_path
+            executable1_path, executable2_path = get_executables_paths(
+                args.workload_path_on_guest, args.workload_path_on_host,
+                args.timeout, args.dont_use_qemu,
+                args.dont_add_communications_with_host_to_workload,
+                temp_dir_path)
 
-            write_script_to_serial_path = os.path.join(
-                this_script_location, WRITE_SCRIPT_TO_SERIAL_REL_PATH)
+            trace_fifo_path = get_trace_fifo_path(args.trace_fifo_path)
+
+            write_executables_to_serial_path = os.path.join(
+                this_script_location, WRITE_EXECUTABLES_TO_SERIAL_REL_PATH)
             qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
             run_qemu_and_workload_expect_script_path = os.path.join(
                 this_script_location, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH)
             run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                                          f'"{guest_image_path}" '
                                          f'"{args.snapshot_name}" '
-                                         f'"{file_to_write_to_serial_path}" '
-                                         f'"{write_script_to_serial_path}" '
+                                         f'"{executable1_path}" '
+                                         f'"{executable2_path}" '
+                                         f'"{write_executables_to_serial_path}" '
                                          f'{args.trace_only_CPL3_code_GMBE} '
                                          f'{args.log_of_GMBE_block_len} '
                                          f'{args.log_of_GMBE_tracing_ratio} '
@@ -371,7 +432,7 @@ if __name__ == '__main__':
             run_workload_natively_expect_script_path = os.path.join(
                 this_script_location, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_REL_PATH)
             run_workload_cmd = (f'{run_workload_natively_expect_script_path} '
-                                f'"{file_to_write_to_serial_path}" '
+                                f'"{args.workload_path_on_host}" '
                                 f'{args.verbose} '
                                 )
 

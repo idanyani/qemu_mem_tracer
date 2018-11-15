@@ -19,9 +19,9 @@
 #       - Let qemu keep running in the background.
 #       - Start a reader of the pseudo-terminal, and let it run in the
 #         background.
-#       - Write the received file (either the workload or a script that would
-#         run the workload) to the pseudo-terminal. (So that the guest would
-#         run it.)
+#       - Write the received executable files to the pseudo-terminal. (The
+#         guest would write both of them to a temporary directory, and run the
+#         first.)
 #       - Parse the workload info that the pseudo-terminal's reader has read.
 #       - When the pseudo-terminal's reader reads
 #         "Ready to trace. Press enter to continue", pause qemu and start the
@@ -69,19 +69,20 @@ match_max -d 1000000
 
 set guest_image_path [lindex $argv 0]
 set snapshot_name [lindex $argv 1]
-set file_to_write_to_serial_path [lindex $argv 2]
-set write_script_to_serial_path [lindex $argv 3]
-set trace_only_CPL3_code_GMBE [lindex $argv 4]
-set log_of_GMBE_block_len [lindex $argv 5]
-set log_of_GMBE_tracing_ratio [lindex $argv 6]
-set analysis_tool_path [lindex $argv 7]
-set trace_fifo_path [lindex $argv 8]
-set qemu_with_GMBEOO_dir_path [lindex $argv 9]
-set verbose [lindex $argv 10]
-set dont_exit_qemu_when_done [lindex $argv 11]
-set print_trace_info [lindex $argv 12]
-set dont_trace [lindex $argv 13]
-set dont_add_communications [lindex $argv 14]
+set file1_to_write_to_serial_path [lindex $argv 2]
+set file2_to_write_to_serial_path [lindex $argv 3]
+set write_executables_to_serial_path [lindex $argv 4]
+set trace_only_CPL3_code_GMBE [lindex $argv 5]
+set log_of_GMBE_block_len [lindex $argv 6]
+set log_of_GMBE_tracing_ratio [lindex $argv 7]
+set analysis_tool_path [lindex $argv 8]
+set trace_fifo_path [lindex $argv 9]
+set qemu_with_GMBEOO_dir_path [lindex $argv 10]
+set verbose [lindex $argv 11]
+set dont_exit_qemu_when_done [lindex $argv 12]
+set print_trace_info [lindex $argv 13]
+set dont_trace [lindex $argv 14]
+set dont_add_communications [lindex $argv 15]
 
 proc debug_print {msg} {
     if {$::verbose == "True"} {
@@ -131,12 +132,12 @@ set pseudo_terminal_reader_id $spawn_id
 # send "c"
 
 sleep 1
-debug_print "\n---writing $file_to_write_to_serial_path to $pseudo_terminal_path---\n"
-exec python3.7 $write_script_to_serial_path $file_to_write_to_serial_path $pseudo_terminal_path $dont_add_communications > /home/orenmn/aoeu.txt
+debug_print "\n---writing $file1_to_write_to_serial_path and $file2_to_write_to_serial_path to $pseudo_terminal_path---\n"
+exec python3.7 $write_executables_to_serial_path $file1_to_write_to_serial_path $file2_to_write_to_serial_path $pseudo_terminal_path > /home/orenmn/aoeu.txt
 
 # interact -i $monitor_id
 
-# The guest would now receive the workload_runner script and run it.
+# The guest would now receive the executables and run the first.
 
 debug_print "\n---expecting workload info---\n"
 expect -i $pseudo_terminal_reader_id -indices -re \

@@ -109,7 +109,7 @@ def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path
         '^tracing_duration_in_milliseconds:.*analysis output:.*analysis cmd args:.*',
         mem_tracer_output, re.DOTALL) is not None)
 
-def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
+def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
     simple_analysis_path = get_toy_elf_path(this_script_location,
@@ -177,7 +177,7 @@ def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr
     #     if counter > min_num_of_expected_accesses_for_elem:
     #         print(hex(i), hex(our_buf_addr_in_workload_info + i * 4), counter)
 
-def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name):
     simple_analysis_path = get_toy_elf_path(this_script_location,
@@ -219,7 +219,7 @@ def ______test_kernel_mem_accesses(this_script_location,
     raise NotImplementedError
 
 
-def _test_trace_only_CPL3_code_GMBE(this_script_location,
+def test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name):
@@ -345,7 +345,7 @@ def test_invalid_log_of_cmd_args(this_script_location,
     else:
         assert(False)
 
-def _test_sampling(this_script_location,
+def test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name):
@@ -394,7 +394,7 @@ def _test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def _test_trace_fifo_path_cmd_arg(this_script_location,
+def test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):

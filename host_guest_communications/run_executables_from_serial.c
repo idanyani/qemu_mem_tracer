@@ -39,17 +39,18 @@ orenmn:
     fflush(serial_port_ttyS0);          \
 }
 
-#define TTYS0_PATH              ("/dev/ttyS0")
-#define EXECUTABLE1_LOCAL_COPY_PATH  ("/tmp/executable1_from_serial")
-#define EXECUTABLE2_LOCAL_COPY_PATH  ("/tmp/executable2_from_serial")
-#define REDIRECT_TO_TTYS0       (" 2>&1 | tee /dev/ttyS0")
-#define CHMOD_777               ("chmod 777 ")
-#define SYNC_BYTES              ("serial sync\n")
-#define NUM_OF_SYNC_BYTES       (strlen(SYNC_BYTES))
-#define EXECUTABLE_SIZE_STR_LEN     (30)
-#define DECIMAL_BASE            (10)
-#define HEXADECIMAL_BASE        (16)
-#define BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED      (3)
+#define TTYS0_PATH                      "/dev/ttyS0"
+#define EXECUTABLE1_LOCAL_COPY_PATH     "/tmp/executable1"
+#define EXECUTABLE2_LOCAL_COPY_PATH     "/tmp/executable2"
+#define REDIRECT_TO_TTYS0               " 2>&1 | tee /dev/ttyS0"
+#define RUN_EXECUTABLE1_CMD             (EXECUTABLE1_LOCAL_COPY_PATH REDIRECT_TO_TTYS0)
+#define CHMOD_777                       "chmod 777 "
+#define SYNC_BYTES                      "serial sync\n"
+#define NUM_OF_SYNC_BYTES               (strlen(SYNC_BYTES))
+#define EXECUTABLE_SIZE_STR_LEN         (30)
+#define DECIMAL_BASE                    (10)
+#define HEXADECIMAL_BASE                (16)
+#define BYTE_HEX_REPR_SIZE_INCLUDING_LF (3)
 
 
 static bool were_sync_bytes_received(char *sync_cyclic_buf,
@@ -114,9 +115,7 @@ static bool receive_executable_contents_and_write_to_file(
     FILE *serial_port_ttyS0, int executable_size, char *executable_local_path,
     uint16_t expected_16_bit_checksum)
 {
-    if (executable_size == 0) {
-        return true;
-    }
+    assert(executable_size > 0);
     bool result = true;
 
     uint8_t *executable_contents = malloc(executable_size);
@@ -128,10 +127,10 @@ static bool receive_executable_contents_and_write_to_file(
     uint16_t actual_16_bit_checksum = 0;
     for (int i = 0; i < executable_size; ++i) {
         // printf("i: %d\n", i);
-        char hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED];
+        char hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LF];
         
         size_t num_of_hex_reprs_read = fread(
-            &hex_repr, BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED, 1, serial_port_ttyS0);
+            &hex_repr, BYTE_HEX_REPR_SIZE_INCLUDING_LF, 1, serial_port_ttyS0);
         if (num_of_hex_reprs_read != 1) {
             printf("failed to read while receiving executable contents. "
                    "ferror: %d, feof: %d, errno: %d\n, fread_return_value: %zu",
@@ -140,8 +139,8 @@ static bool receive_executable_contents_and_write_to_file(
             result = false;
             goto cleanup1;
         }
-        assert(hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED - 1] == '\n');
-        hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LINE_FEED - 1] = 0;
+        assert(hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LF - 1] == '\n');
+        hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LF - 1] = 0;
         // printf("hex_repr: %s\n", hex_repr);
         uint8_t byte_value = strtol(hex_repr, NULL, HEXADECIMAL_BASE);
         actual_16_bit_checksum += byte_value;
@@ -211,15 +210,20 @@ cleanup1:
 
 static bool receive_executable(FILE *serial_port_ttyS0,
                                char *executable_local_path) {
-    int expected_16_bit_checksum = receive_uint_decimal_repr(serial_port_ttyS0);
-    if (expected_16_bit_checksum == -1) {
-        return false;
-    }
     int executable_size = receive_uint_decimal_repr(serial_port_ttyS0);
     if (executable_size == -1) {
         return false;
     }
     printf("Received executable_size: %d\n", executable_size);
+    if (executable_size == 0) {
+        return true;
+    }
+
+    int expected_16_bit_checksum = receive_uint_decimal_repr(serial_port_ttyS0);
+    if (expected_16_bit_checksum == -1) {
+        return false;
+    }
+    printf("Received expected_16_bit_checksum: %d\n", expected_16_bit_checksum);
 
     if (!receive_executable_contents_and_write_to_file(
             serial_port_ttyS0, executable_size, executable_local_path,
@@ -234,7 +238,7 @@ int main(int argc, char **argv) {
     int result = 0;
 
     // This should work in case `sudo chmod 666 /dev/ttyS0` was executed.
-    FILE *serial_port_ttyS0 = fopen(TTYS0_PATH, "rw");
+    FILE *serial_port_ttyS0 = fopen(TTYS0_PATH, "r");
     if (serial_port_ttyS0 == NULL) {
         printf("failed to open /dev/ttyS0. errno: %d\n", errno);
         return 1;
@@ -247,31 +251,6 @@ int main(int argc, char **argv) {
     }
     printf("Received sync bytes.\n");
 
-    char dont_add_communications_with_host_to_workload;
-    size_t num_of_bytes_read = fread(
-            &dont_add_communications_with_host_to_workload, 1, 1, serial_port_ttyS0);
-    if (num_of_bytes_read != 1) {
-        printf("failed to read dont_add_communications_with_host_to_workload char. "
-               "ferror: %d, feof: %d, errno: %d, num_of_bytes_read: %zu\n",
-               ferror(serial_port_ttyS0), feof(serial_port_ttyS0), errno,
-               num_of_bytes_read);
-        result = 1;
-        goto cleanup;
-    }
-    if (dont_add_communications_with_host_to_workload != '1' && 
-        dont_add_communications_with_host_to_workload != '0')
-    {
-        printf("dont_add_communications_with_host_to_workload = '%c', "
-               "but it must be '0' or '1'.\n",
-               dont_add_communications_with_host_to_workload);
-        result = 1;
-        goto cleanup;
-    }
-    bool dont_add_communications = 
-        dont_add_communications_with_host_to_workload == '1' ? true : false;
-    printf("Received dont_add_communications_with_host_to_workload: %d\n",
-           dont_add_communications);
-
     if (!receive_executable(serial_port_ttyS0, EXECUTABLE1_LOCAL_COPY_PATH)) {
         result = 1;
         goto cleanup;
@@ -281,45 +260,12 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
 
-    char cmd_str[300];
-    assert(strlen(EXECUTABLE1_LOCAL_COPY_PATH) + strlen(REDIRECT_TO_TTYS0) <
-           sizeof(cmd_str));
-    if (cmd_str != strcpy(cmd_str, EXECUTABLE1_LOCAL_COPY_PATH)) {
-        printf("`strcpy()` failed.\n");
+    int system_result = system(RUN_EXECUTABLE1_CMD);
+    if (system_result != 0) {
+        printf("`system(\"%s\")` failed. result code: %d errno: %d\n",
+               RUN_EXECUTABLE1_CMD, system_result, errno);
         result = 1;
         goto cleanup;
-    }
-    if (cmd_str != strcat(cmd_str, REDIRECT_TO_TTYS0)) {
-        printf("`strcat()` failed.\n");
-        result = 1;
-        goto cleanup;
-    }
-
-    if (dont_add_communications) {
-        int system_result = system(cmd_str);
-        if (system_result != 0) {
-            printf("`system(\"%s\")` failed. result code: %d errno: %d\n",
-                   cmd_str, system_result, errno);
-            result = 1;
-            goto cleanup;
-        }
-    }
-    else {
-        PRINT_TO_TTYS0("-----begin workload info-----");
-        PRINT_TO_TTYS0("-----end workload info-----");
-
-        PRINT_TO_TTYS0("Ready to trace. Press enter to continue");
-        getchar(); /* The host would use 'sendkey' when it is ready. */
-        
-        int system_result = system(cmd_str);
-        if (system_result != 0) {
-            printf("`system(\"%s\")` failed. result code: %d errno: %d\n",
-                   cmd_str, system_result, errno);
-            result = 1;
-            goto cleanup;
-        }
-
-        PRINT_TO_TTYS0("Stop tracing");
     }
     
 cleanup:

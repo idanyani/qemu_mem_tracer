@@ -15,7 +15,6 @@ def parse_cmd_args():
     parser.add_argument('executable1_path', type=str)
     parser.add_argument('executable2_path', type=str)
     parser.add_argument('serial_port_path', type=str)
-    parser.add_argument('dont_add_communications_with_host_to_workload', type=str)
     return parser.parse_args()
 
 def execute_cmd(cmd):
@@ -26,11 +25,14 @@ def get_16_bit_checksum(file_contents):
     return sum(file_contents) & 0xffff
 
 def get_bytes_to_write_file_to_serial(file_path):
-    with open(args.file_path, 'rb') as f:
+    with open(file_path, 'rb') as f:
         file_contents = f.read()
 
-    checksum = get_16_bit_checksum(file_contents)
     file_size = len(file_contents)
+    if file_size == 0:
+        return b'0\n'
+
+    checksum = get_16_bit_checksum(file_contents)
 
     file_contents_as_hex = file_contents.hex()
     assert(len(file_contents_as_hex) == file_size * 2)
@@ -39,8 +41,8 @@ def get_bytes_to_write_file_to_serial(file_path):
     for i in range(0, len(file_contents_as_hex), 2):
         file_contents_as_hex_for_serial += f'{file_contents_as_hex[i:i+2]}\n'
     
-    return (f'{checksum}\n'
-            f'{file_size}\n'
+    return (f'{file_size}\n'
+            f'{checksum}\n'
             f'{file_contents_as_hex_for_serial}'.encode('ascii'))
 
 if __name__ == '__main__':
