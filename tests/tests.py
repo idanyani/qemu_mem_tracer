@@ -201,7 +201,7 @@ def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
     
 
-def ______test_kernel_mem_accesses(this_script_location,
+def _____test_kernel_mem_accesses(this_script_location,
                              qemu_mem_tracer_script_path,
                              qemu_with_GMBEOO_path, guest_image_path,
                              snapshot_name):
@@ -620,6 +620,7 @@ def print_workload_durations(this_script_location,
     native_durations = []
     no_trace_durations = []
     with_trace_durations = []
+    with_trace_MAPS = []
     mem_accesses_by_non_CPL3_code_ratios = []
     for i in range(num_of_iterations):
         print(f'iteration number {i + 1}...')
@@ -690,6 +691,10 @@ def print_workload_durations(this_script_location,
                 num_of_mem_accesses_by_non_CPL3_code_as_str)
             num_of_mem_accesses = int(num_of_mem_accesses_as_str)
 
+            assert(with_trace_duration > 0)
+            mem_accesses_per_second = num_of_mem_accesses / with_trace_duration
+            with_trace_MAPS.append(mem_accesses_per_second)
+
             # print(f'num_of_mem_accesses: {num_of_mem_accesses} ')
             assert(num_of_mem_accesses > 0)
             mem_accesses_by_non_CPL3_code_ratios.append(
@@ -704,6 +709,7 @@ def print_workload_durations(this_script_location,
     avg_with_trace_duration = get_avg(with_trace_durations)
     avg_mem_accesses_by_non_CPL3_code_ratio = get_avg(
         mem_accesses_by_non_CPL3_code_ratios)
+    avg_with_trace_MAPS = get_avg(with_trace_MAPS)
     native_duration_SD = get_standard_deviation(native_durations,
                                                 avg_native_duration)
     no_trace_duration_SD = get_standard_deviation(no_trace_durations,
@@ -713,6 +719,8 @@ def print_workload_durations(this_script_location,
     mem_accesses_by_non_CPL3_code_ratio_SD = get_standard_deviation(
         mem_accesses_by_non_CPL3_code_ratios,
         avg_mem_accesses_by_non_CPL3_code_ratio)
+    with_trace_MAPS_SD = get_standard_deviation(with_trace_MAPS,
+                                                avg_with_trace_MAPS)
 
     print(f'avg_native_duration: {avg_native_duration}, SD: {native_duration_SD} '
           f'({native_durations})')
@@ -725,11 +733,16 @@ def print_workload_durations(this_script_location,
               f'{avg_mem_accesses_by_non_CPL3_code_ratio}, '
               f'SD: {mem_accesses_by_non_CPL3_code_ratio_SD} '
               f'({mem_accesses_by_non_CPL3_code_ratios})')
+        print(f'avg_with_trace_MAPS: {avg_with_trace_MAPS}, '
+              f'SD: {with_trace_MAPS_SD} ({with_trace_MAPS})')
 
-        print(f'avg_with_trace_duration / avg_native_duration: '
-              f'{avg_with_trace_duration / avg_native_duration} ')
-        print(f'avg_with_trace_duration / avg_no_trace_duration: '
-              f'{avg_with_trace_duration / avg_no_trace_duration} ')
+        if avg_native_duration > 0:
+            print(f'avg_with_trace_duration / avg_native_duration: '
+                  f'{avg_with_trace_duration / avg_native_duration} ')
+        if avg_no_trace_duration > 0:
+            print(f'avg_with_trace_duration / avg_no_trace_duration: '
+                  f'{avg_with_trace_duration / avg_no_trace_duration} ')
+
 
 def _test_timeout(this_script_location,
                  qemu_mem_tracer_script_path,
@@ -794,14 +807,14 @@ def test_toy_workload_durations(this_script_location,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
     workload_path = get_toy_elf_path(this_script_location, 
-                                     'simple_user_memory_intensive_workload')
-                                     # 'simple_long_user_memory_intensive_workload')
+                                     # 'simple_user_memory_intensive_workload')
+                                     'simple_long_user_memory_intensive_workload')
     print_workload_durations(
         this_script_location,
         qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path,
         snapshot_name,
-        2,
+        10,
         workload_path_on_host=workload_path,
         log_of_GMBE_tracing_ratio=10,
         dont_add_communications=True)
