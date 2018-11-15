@@ -20,13 +20,14 @@ def execute_cmd_in_dir(cmd, dir_path):
     subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
 
 def does_dir_contain_c_files(dir_path):
-    return subprocess.run(f'ls {dir_path} *.c *.C', shell=True, check=False,
+    return subprocess.run(f'ls {dir_path}/*.c {dir_path}/*.C', shell=True, check=False,
                           capture_output=True).stdout != b''
 
 def compile_c_files(dir_path):
     for root_dir_path, dir_names, file_fullnames in os.walk(dir_path):
         if not root_dir_path.endswith(LOADABLE_KERNEL_MODULE_SUFFIX) and (
-                does_dir_contain_c_files(dir_path)):
+                does_dir_contain_c_files(root_dir_path)):
+            print(root_dir_path)
             output_dir_path = os.path.join(root_dir_path, OUTPUT_DIR_NAME)
             shutil.rmtree(output_dir_path, ignore_errors=True)
             os.mkdir(output_dir_path)

@@ -38,15 +38,15 @@ setup:
 		  I didn’t do that at first, and used snapshots that were created right
 		  after startup. When I started using snapshots that were taken only
 		  after startup really completed, the speedup was significant.
-		- Copy run_script_from_serial from the host into the guest. E.g. (inside
-		  the guest, 10.0.2.2 is the host):
-			* scp orenmn@10.0.2.2:to_run_on_guest/run_script_from_serial run_script_from_serial
-		- chmod 777 run_script_from_serial
+		- Copy run_executables_from_serial from the host into the guest. E.g.
+		  (inside the guest, 10.0.2.2 is the host):
+			* scp orenmn@10.0.2.2:to_run_on_guest/run_executables_from_serial run_executables_from_serial
+		- chmod 777 run_executables_from_serial
 		- sudo chmod 666 /dev/ttyS0
-		- ./run_script_from_serial
-			* run_script_from_serial is waiting for input through the serial.
+		- ./run_executables_from_serial
+			* run_executables_from_serial is waiting for input through the serial.
 			  If it printed "Opened /dev/ttyS0.", proceed to the next step
-			  without terminating run_script_from_serial.
+			  without terminating run_executables_from_serial.
 	e. Save a snapshot of the guest by executing the qemu monitor command
 	   (monitor commands can be sent through the terminal you used to start
 	   qemu_with_GMBEOO):
@@ -60,10 +60,11 @@ setup:
 usage: memory_tracer.py [-h]
                         (--workload_path_on_guest WORKLOAD_PATH_ON_GUEST | --workload_path_on_host WORKLOAD_PATH_ON_HOST)
                         (--analysis_tool_path ANALYSIS_TOOL_PATH | --trace_fifo_path TRACE_FIFO_PATH | --dont_trace | --dont_use_qemu)
-                        [--dont_add_communications_with_host_to_workload]
                         [--trace_only_CPL3_code_GMBE]
                         [--log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN]
                         [--log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO]
+                        [--timeout TIMEOUT]
+                        [--dont_add_communications_with_host_to_workload]
                         [--print_trace_info] [--dont_exit_qemu_when_done]
                         [--verbose]
                         guest_image_path snapshot_name qemu_with_GMBEOO_path
@@ -162,12 +163,6 @@ optional arguments:
                         workload_runner doesn't send all the expected messages
                         itself (e.g. "Ready to trace. Press enter to
                         continue").)
-  --dont_add_communications_with_host_to_workload
-                        If specified, the workload script would not be wrapped
-                        with code that handles the required communications
-                        between the guest and the host, e.g. printing "Ready
-                        to trace. Press enter to continue" and then waiting
-                        for a key press.
   --trace_only_CPL3_code_GMBE
                         If specified, qemu would only trace memory accesses by
                         CPL3 code. Otherwise, qemu would trace all accesses.
@@ -180,6 +175,18 @@ optional arguments:
                         events we trace to the total number of blocks. E.g. if
                         GMBE_tracing_ratio is 16, we trace 1 block, then skip
                         15 blocks, then trace 1, then skip 15, and so on...
+  --timeout TIMEOUT     If specified, the workload would be stopped when the
+                        specified timeout elapses. Note that if you use
+                        --dont_add_communications_with_host_to_workload, then
+                        the timeout includes the communications with the host.
+                        Otherwise, the timeout doesn't include the
+                        communications.
+  --dont_add_communications_with_host_to_workload
+                        If specified, the workload script would not be wrapped
+                        with code that handles the required communications
+                        between the guest and the host, e.g. printing "Ready
+                        to trace. Press enter to continue" and then waiting
+                        for a key press.
   --print_trace_info    If specified, memory_tracer.py would also print some
                         additional trace info:
                         num_of_events_waiting_in_trace_buf (only if it isn't

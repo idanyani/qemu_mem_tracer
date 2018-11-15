@@ -265,8 +265,6 @@ def parse_cmd_args():
 
     if args.workload_path_on_host:
         verify_arg_is_file(args.workload_path_on_host, 'workload_path_on_host')
-    else:
-        verify_arg_is_file(args.workload_path_on_guest, 'workload_path_on_guest')
     if not args.dont_use_qemu:
         verify_arg_is_file(args.guest_image_path, 'guest_image_path')
         verify_arg_is_dir(args.qemu_with_GMBEOO_path, 'qemu_with_GMBEOO_path')
@@ -309,8 +307,6 @@ def create_empty_file(file_path):
 def get_executables_paths(workload_path_on_guest, workload_path_on_host,
                           timeout, dont_use_qemu, dont_add_communications,
                           temp_dir_path):
-    empty_file_path = os.path.join(temp_dir_path, EMPTY_FILE_NAME)
-    create_empty_file(empty_file_path)
 
     if timeout:
         timeout_cmd_prefix = f'timeout {timeout} '
@@ -318,15 +314,32 @@ def get_executables_paths(workload_path_on_guest, workload_path_on_host,
         timeout_cmd_prefix = ''
 
     if dont_use_qemu:
-        run_executable_2_cmd = f'{timeout_cmd_prefix}{workload_path_on_host}'
-        executable2_path = empty_file_path
+        executable2_path_when_running_executable1 = workload_path_on_host
     elif workload_path_on_guest:
-        run_executable_2_cmd = f'{timeout_cmd_prefix}{workload_path_on_guest}'
-        executable2_path = empty_file_path
+        executable2_path_when_running_executable1 = workload_path_on_guest
     else:
-        assert(workload_path_on_host)
-        run_executable_2_cmd = f'{timeout_cmd_prefix}{EXECUTABLE2_PATH_ON_GUEST}'
+        assert(workload_path_on_host and not dont_use_qemu)
+        executable2_path_when_running_executable1 = EXECUTABLE2_PATH_ON_GUEST
         executable2_path = workload_path_on_host
+
+    run_executable_2_cmd = (f'{timeout_cmd_prefix}'
+                            f'{executable2_path_when_running_executable1}')
+
+
+    if dont_use_qemu or workload_path_on_guest:
+        empty_file_path = os.path.join(temp_dir_path, EMPTY_FILE_NAME)
+        create_empty_file(empty_file_path)
+        executable2_path = empty_file_path
+
+        executable2_dir_path_when_running_executable1 = os.path.split(
+            executable2_path_when_running_executable1)[0]
+        echo_stop_tracing = 'echo "Stop tracing"\n'
+        run_executable_2_cmd = (
+            f'pwd=`echo $PWD`\n'
+            f'cd {executable2_dir_path_when_running_executable1}\n'
+            f'{run_executable_2_cmd}\n'
+            f'{echo_stop_tracing if timeout and dont_add_communications else ""}'
+            f'cd $pwd\n')
 
     if dont_add_communications or dont_use_qemu:
         executable1_source = (f'{BASH_SCRIPT_FIRST_LINE}\n'
@@ -415,9 +428,9 @@ if __name__ == '__main__':
                                          f'{args.trace_only_CPL3_code_GMBE} '
                                          f'{args.log_of_GMBE_block_len} '
                                          f'{args.log_of_GMBE_tracing_ratio} '
-                                         f'{args.analysis_tool_path} '
-                                         f'{trace_fifo_path} '
-                                         f'{qemu_with_GMBEOO_path} '
+                                         f'"{args.analysis_tool_path}" '
+                                         f'"{trace_fifo_path}" '
+                                         f'"{qemu_with_GMBEOO_path}" '
                                          f'{args.verbose} '
                                          f'{args.dont_exit_qemu_when_done} '
                                          f'{args.print_trace_info} '
@@ -432,7 +445,7 @@ if __name__ == '__main__':
             run_workload_natively_expect_script_path = os.path.join(
                 this_script_location, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_REL_PATH)
             run_workload_cmd = (f'{run_workload_natively_expect_script_path} '
-                                f'"{args.workload_path_on_host}" '
+                                f'"{executable1_path}" '
                                 f'{args.verbose} '
                                 )
 
