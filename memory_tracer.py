@@ -210,15 +210,17 @@ def parse_cmd_args():
                              'total number of blocks. E.g. if GMBE_tracing_ratio '
                              'is 16, we trace 1 block, then skip 15 blocks, then '
                              'trace 1, then skip 15, and so on...')
-    parser.add_argument('--timeout', type=float,
-                        help='If specified, the workload would be stopped '
-                             'when the specified timeout elapses. '
-                             'Note that if you use '
-                             '--dont_add_communications_with_host_to_workload, '
-                             'then the timeout includes the communications '
-                             'with the host. Otherwise, the timeout doesn\'t '
-                             'include the communications.')
-    parser.add_argument(
+    dont_add_communications_or_timeout = parser.add_mutually_exclusive_group()
+    dont_add_communications_or_timeout.add_argument(
+        '--timeout', type=float,
+        help='If specified, the workload would be stopped '
+             'when the specified timeout elapses. '
+             'Note that if you use '
+             '--dont_add_communications_with_host_to_workload, '
+             'then the timeout includes the communications '
+             'with the host. Otherwise, the timeout doesn\'t '
+             'include the communications.')
+    dont_add_communications_or_timeout.add_argument(
         '--dont_add_communications_with_host_to_workload', action='store_true',
         help='If specified, the workload script would not be wrapped with code '
              'that handles the required communications between the guest and '
@@ -325,7 +327,6 @@ def get_executables_paths(workload_path_on_guest, workload_path_on_host,
     run_executable_2_cmd = (f'{timeout_cmd_prefix}'
                             f'{executable2_path_when_running_executable1}')
 
-
     if dont_use_qemu or workload_path_on_guest:
         empty_file_path = os.path.join(temp_dir_path, EMPTY_FILE_NAME)
         create_empty_file(empty_file_path)
@@ -333,13 +334,9 @@ def get_executables_paths(workload_path_on_guest, workload_path_on_host,
 
         executable2_dir_path_when_running_executable1 = os.path.split(
             executable2_path_when_running_executable1)[0]
-        echo_stop_tracing = 'echo "Stop tracing"\n'
         run_executable_2_cmd = (
-            f'pwd=`echo $PWD`\n'
-            f'cd {executable2_dir_path_when_running_executable1}\n'
-            f'{run_executable_2_cmd}\n'
-            f'{echo_stop_tracing if timeout and dont_add_communications else ""}'
-            f'cd $pwd\n')
+            f'(cd {executable2_dir_path_when_running_executable1} && '
+            f'{run_executable_2_cmd})')
 
     if dont_add_communications or dont_use_qemu:
         executable1_source = (f'{BASH_SCRIPT_FIRST_LINE}\n'
@@ -356,6 +353,8 @@ def get_executables_paths(workload_path_on_guest, workload_path_on_host,
             )
     executable1_path = os.path.join(temp_dir_path, EXECUTABLE1_FOR_SERIAL_NAME)
     write_file(executable1_path, executable1_source)
+    os.chmod(executable1_path, 0o777)
+    # os.chmod(executable1_path, stat.S_IEXEC)
 
     return executable1_path, executable2_path    
 
@@ -405,12 +404,12 @@ if __name__ == '__main__':
     verify_this_script_location(this_script_location)
 
     with tempfile.TemporaryDirectory() as temp_dir_path:
+        executable1_path, executable2_path = get_executables_paths(
+            args.workload_path_on_guest, args.workload_path_on_host,
+            args.timeout, args.dont_use_qemu,
+            args.dont_add_communications_with_host_to_workload,
+            temp_dir_path)
         if not args.dont_use_qemu:
-            executable1_path, executable2_path = get_executables_paths(
-                args.workload_path_on_guest, args.workload_path_on_host,
-                args.timeout, args.dont_use_qemu,
-                args.dont_add_communications_with_host_to_workload,
-                temp_dir_path)
 
             trace_fifo_path = get_trace_fifo_path(args.trace_fifo_path)
 

@@ -597,11 +597,11 @@ def print_workload_durations(this_script_location,
         return get_avg(squares) ** 0.5
 
     if workload_path_on_guest:
-        workload_path_cmd_arg_str = (
+        workload_path_cmd_arg_str_for_non_native = (
             f'--workload_path_on_guest {workload_path_on_guest} ')
     else:
         assert(workload_path_on_host)
-        workload_path_cmd_arg_str = (
+        workload_path_cmd_arg_str_for_non_native = (
             f'--workload_path_on_host {workload_path_on_host} ')
 
     if timeout:
@@ -624,7 +624,8 @@ def print_workload_durations(this_script_location,
             'dummy_guest_image_path',
             'dummy_snapshot_name',
             f'--dont_use_qemu '
-            f'{workload_path_cmd_arg_str} {timeout_cmd_arg_str} ')
+            f'--workload_path_on_host {workload_path_on_host} '
+            f'{timeout_cmd_arg_str} ')
         native_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
                                native_mem_tracer_output).group(1)) / 
                            NUM_OF_MILLISECONDS_IN_SECOND)
@@ -647,7 +648,7 @@ def print_workload_durations(this_script_location,
                 qemu_with_GMBEOO_path,
                 guest_image_path,
                 snapshot_name,
-                f'--dont_trace {workload_path_cmd_arg_str} '
+                f'--dont_trace {workload_path_cmd_arg_str_for_non_native} '
                 f'{dont_add_communications_cmd_arg_str} {timeout_cmd_arg_str} '
                 )
             no_trace_duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
@@ -667,7 +668,7 @@ def print_workload_durations(this_script_location,
                 f'--log_of_GMBE_block_len {log_of_GMBE_block_len} '
                 f'--log_of_GMBE_tracing_ratio {log_of_GMBE_tracing_ratio} '
                 f'--print_trace_info '
-                f'{workload_path_cmd_arg_str} '
+                f'{workload_path_cmd_arg_str_for_non_native} '
                 f'{dont_add_communications_cmd_arg_str} {timeout_cmd_arg_str} ')
             check_mem_tracer_output_attention(with_trace_mem_tracer_output)
 
@@ -752,7 +753,7 @@ def _test_timeout(this_script_location,
     # print(duration)
     assert(6.7 <= duration <= 25)
 
-def test_workload_path_on_guest(this_script_location,
+def _test_workload_path_on_guest(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
@@ -766,16 +767,16 @@ def test_workload_path_on_guest(this_script_location,
         guest_image_path,
         snapshot_name,
         f'--analysis_tool_path "{simple_analysis_path}" '
-        f'--workload_path_on_guest {workload_path} --timeout 700 '
+        f'--workload_path_on_guest {workload_path} '
         f'--dont_add_communications_with_host_to_workload '
         f'--print_trace_info ')
-    print(mem_tracer_output)
+    # print(mem_tracer_output)
     check_mem_accesses(mem_tracer_output,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
 
 
-def _test_toy_workload_durations(this_script_location,
+def test_toy_workload_durations(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
@@ -788,6 +789,7 @@ def _test_toy_workload_durations(this_script_location,
         qemu_with_GMBEOO_path, guest_image_path,
         snapshot_name,
         2,
+        workload_path_on_guest='\~/toy_workloads/simple_user_memory_intensive_workload',
         workload_path_on_host=workload_path,
         log_of_GMBE_tracing_ratio=10,
         dont_add_communications=True)
