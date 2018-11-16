@@ -18,7 +18,8 @@ RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH = os.path.join(
     COMMUNICATIONS_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME)
 
 def execute_cmd_in_dir(cmd, dir_path='.'):
-    print(f'executing cmd (in {dir_path}): {cmd}')
+    if args.verbosity_level > 0:
+        print(f'executing cmd (in {dir_path}): {cmd}')
     subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
 
 parser = argparse.ArgumentParser(
@@ -27,12 +28,13 @@ parser = argparse.ArgumentParser(
                 'Run `python3.7 memory_tracer.py -h` for help about arguments '
                 'that both memory_tracer.py and this script receive.')
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
-parser.add_argument('--enable-debug', dest='debug_flag',
+parser.add_argument('--enable_debug',
                     action='store_const',
-                    const='--enable-debug', default='--disable-debug',
-                    help='If specified, --enable-debug is passed to the '
-                         'configure script of qemu_with_GMBEOO, instead of '
-                         '--disable-debug (the default).')
+                    const='--enable_debug', default='',
+                    help='If specified, `--enable-debug` is passed to the '
+                         'configure script of qemu_with_GMBEOO, instead of: '
+                         '`--disable-debug-mutex --disable-qom-cast-debug '
+                         '--disable-debug-info`.')
 parser.add_argument('--dont_compile_qemu', action='store_true',
                     help='If specified, this script doesn\'t build '
                          'qemu_with_GMBEOO.')
@@ -40,6 +42,7 @@ parser.add_argument('--run_tests', action='store_true',
                     help='If specified, this script runs tests (that '
                          'check whether qemu_mem_tracer works as '
                          'expected).')
+parser.add_argument('--verbosity_level', '-v', type=int, default=0)
 parser.add_argument('--guest_image_path', type=str)
 parser.add_argument('--snapshot_name', type=str)
 args = parser.parse_args()
@@ -72,7 +75,7 @@ if not args.dont_compile_qemu:
     build_qemu_script_path = os.path.join(this_script_location,
                                           BUILD_QEMU_SCRIPT_NAME)
     build_qemu_cmd = (f'python3.7 {BUILD_QEMU_SCRIPT_NAME} '
-                      f'{args.qemu_with_GMBEOO_path} {args.debug_flag}')
+                      f'{args.qemu_with_GMBEOO_path} {args.enable_debug}')
     execute_cmd_in_dir(build_qemu_cmd, this_script_location)
 
 
@@ -92,7 +95,7 @@ if args.run_tests:
                        f'{args.qemu_with_GMBEOO_path} '
                        f'{args.guest_image_path} '
                        f'{args.snapshot_name} '
-                       f'--verbose '
+                       f'--verbosity_level {args.verbosity_level} '
                        ,
                        tests_dir_path)
 

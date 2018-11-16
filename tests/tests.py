@@ -22,7 +22,7 @@ BIG_NUM_OF_ITERS_OVER_OUR_ARR = 500
 
 NUM_OF_ACCESSES_FOR_INC = 2
 
-VERBOSE_LEVEL = 0
+VERBOSITY_LEVEL = 0
 
 TOY_WORKLOAD_AND_ANALYSIS_TOOLS_DIR_REL_PATH = 'toy_workloads_and_analysis_tools'
 TESTS_BIN_DIR_REL_PATH = os.path.join(TOY_WORKLOAD_AND_ANALYSIS_TOOLS_DIR_REL_PATH,
@@ -30,7 +30,7 @@ TESTS_BIN_DIR_REL_PATH = os.path.join(TOY_WORKLOAD_AND_ANALYSIS_TOOLS_DIR_REL_PA
 
 
 def read_file_until_it_contains_str(file_path, expected_str):
-    if VERBOSE_LEVEL:
+    if VERBOSITY_LEVEL:
         print(f'expecting to find "{expected_str}" in {file_path} ')
     while True:
         file_contents = read_file(file_path)
@@ -44,7 +44,7 @@ def read_file(file_path):
 
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.PIPE,
                        stderr_dest=sys.stderr):
-    if VERBOSE_LEVEL:
+    if VERBOSITY_LEVEL:
         print(f'executing cmd (in {dir_path}): {cmd} ')
     return subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
                           stdout=stdout_dest, stderr=stderr_dest)
@@ -62,7 +62,7 @@ def get_toy_bash_path(this_script_location, file_name):
 def get_mem_tracer_cmd(this_script_location, qemu_mem_tracer_script_path,
                        qemu_with_GMBEOO_path, guest_image_path,
                        snapshot_name, extra_cmd_args=''):
-    if VERBOSE_LEVEL > 1:
+    if VERBOSITY_LEVEL > 1:
         verbose_cmd_arg = '--verbose '
     else:
         verbose_cmd_arg = ' '
@@ -369,11 +369,11 @@ def test_sampling(this_script_location,
         r'GMBEOO_mask_of_GMBE_block_idx: (\w+)\s*'
         r'---storing start timestamp and starting to trace---.*'
         r'actual_tracing_ratio \(i\.e\. num_of_GMBE_events_since_enabling_GMBEOO / '
-        r'num_of_events_written_to_trace_buf\): (\d+\.\d+)')
+        r'num_of_events_written_to_trace_buf\): (\d+)')
     mask_of_GMBE_block_idx, actual_tracing_ratio = re.search(
         regex, mem_tracer_output, re.DOTALL).group(1, 2)
-    assert(mask_of_GMBE_block_idx.strip() == '78'.zfill(16))
-    assert(2 ** 4 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 4 + 1)
+    assert(mask_of_GMBE_block_idx == '78'.zfill(16))
+    assert(2 ** 4 - 2 <= int(actual_tracing_ratio) <= 2 ** 4 + 2)
 
     mem_tracer_output = get_mem_tracer_error_and_output(
         this_script_location,
@@ -390,8 +390,8 @@ def test_sampling(this_script_location,
     
     mask_of_GMBE_block_idx, actual_tracing_ratio = re.search(
         regex, mem_tracer_output, re.DOTALL).group(1, 2)
-    assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
-    assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
+    assert(mask_of_GMBE_block_idx == '70'.zfill(16))
+    assert(2 ** 3 - 1 <= int(actual_tracing_ratio) <= 2 ** 3 + 1)
 
 def test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
@@ -682,22 +682,28 @@ def print_workload_durations(this_script_location,
 
 
             # print(with_trace_mem_tracer_output)
-            num_of_mem_accesses_by_non_CPL3_code_as_str, num_of_mem_accesses_as_str = (
+            (num_of_traced_mem_accesses_by_non_CPL3_code_as_str,
+             num_of_traced_mem_accesses_as_str) = (
                 re.search(r'num_of_mem_accesses_by_non_CPL3_code:\s+(\d+).*'
                           r'num_of_mem_accesses:\s+(\d+)',
                           with_trace_mem_tracer_output, re.DOTALL).group(1, 2))
-            num_of_mem_accesses_by_non_CPL3_code = int(
-                num_of_mem_accesses_by_non_CPL3_code_as_str)
-            num_of_mem_accesses = int(num_of_mem_accesses_as_str)
+            num_of_traced_mem_accesses_by_non_CPL3_code = int(
+                num_of_traced_mem_accesses_by_non_CPL3_code_as_str)
+            num_of_traced_mem_accesses = int(num_of_traced_mem_accesses_as_str)
 
+            num_of_GMBE_events = int(re.search(
+                r'num_of_GMBE_events_since_enabling_GMBEOO: (\d+)',
+                with_trace_mem_tracer_output, re.DOTALL).group(1))
             assert(with_trace_duration > 0)
-            mem_accesses_per_second = num_of_mem_accesses / with_trace_duration
+            mem_accesses_per_second = num_of_GMBE_events / with_trace_duration
+            print(f'with_trace_mem_accesses_per_second: {mem_accesses_per_second}')
             with_trace_MAPS.append(mem_accesses_per_second)
 
-            # print(f'num_of_mem_accesses: {num_of_mem_accesses} ')
-            assert(num_of_mem_accesses > 0)
+            # print(f'num_of_traced_mem_accesses: {num_of_traced_mem_accesses} ')
+            assert(num_of_traced_mem_accesses > 0)
             mem_accesses_by_non_CPL3_code_ratios.append(
-                num_of_mem_accesses_by_non_CPL3_code / num_of_mem_accesses)
+                num_of_traced_mem_accesses_by_non_CPL3_code / 
+                num_of_traced_mem_accesses)
 
 
             # print(with_trace_mem_tracer_output)

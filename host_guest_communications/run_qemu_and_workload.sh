@@ -134,7 +134,7 @@ expect -i $monitor_id "serial pty: char device redirected to " {
 spawn cat $pseudo_terminal_path
 set pseudo_terminal_reader_id $spawn_id
 
-sleep 1
+sleep 0.5
 debug_print "\n---writing $file1_to_write_to_serial_path and $file2_to_write_to_serial_path to $pseudo_terminal_path---\n"
 exec python3.7 $write_executables_to_serial_path $file1_to_write_to_serial_path $file2_to_write_to_serial_path $pseudo_terminal_path > /home/orenmn/aoeu.txt
 
@@ -220,7 +220,7 @@ if {$analysis_tool_path != "/dev/null"} {
     
     debug_print "\n---sending SIGUSR1 to $analysis_tool_path---\n"
     exec kill -SIGUSR1 $analysis_tool_pid
-    sleep 3
+    sleep 1
     debug_print "\n---expecting analysis output---\n"
     expect -i $analysis_tool_id -indices -re \
             "-----begin analysis output-----(.*)-----end analysis output-----" {

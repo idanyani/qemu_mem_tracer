@@ -116,11 +116,14 @@ def parse_cmd_args():
                     'and trace records of new GMBE events would be dropped.\n'
                     '(If any of the messages isn\'t printed, it will '
                     'probably seem like memory_tracer.py is stuck.)\n'
-                    '\n'
+                    '\n\n'
                     'Note that some of the command line arguments might be '
                     'irrelevant to you as a user of memory_tracer, but they '
                     'exist because they are useful while developing '
                     'memory_tracer.'
+                    '\n\n'
+                    'Simple usage examples: \n'
+                    'python3.7 memory_tracer.py '
                     )
     parser.add_argument('guest_image_path', type=str,
                         help='The path of the qcow2 file which is the image of the'

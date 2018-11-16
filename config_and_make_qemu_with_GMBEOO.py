@@ -17,9 +17,11 @@ parser = argparse.ArgumentParser(
     description='Call qemu_with_GMBEOO\'s configure and make scripts.\n\n'
                 'Run `python3.7 build.py -h` for help about the cmd arguments.')
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
-parser.add_argument('--enable-debug', dest='debug_flag',
+parser.add_argument('--enable_debug', dest='debug_flag',
                     action='store_const',
-                    const='--enable-debug', default='--disable-debug')
+                    const='--enable-debug',
+                    default='--disable-debug-mutex --disable-qom-cast-debug '
+                            '--disable-debug-info')
 args = parser.parse_args()
 
 qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)

@@ -15,7 +15,7 @@ TEST_SCRIPT_EXT = '.py'
 LOADABLE_KERNEL_MODULE_SUFFIX = '_lkm'
 
 def execute_cmd_in_dir(cmd, dir_path):
-    if args.verbose:
+    if args.verbosity_level > 0:
         print(f'executing cmd (in {dir_path}): {cmd}')
     subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
 
@@ -50,7 +50,7 @@ parser.add_argument('qemu_mem_tracer_script_path', type=str,
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('guest_image_path', type=str)
 parser.add_argument('snapshot_name', type=str)
-parser.add_argument('--verbose', '-v', action='store_true')
+parser.add_argument('--verbosity_level', '-v', type=int, default=0)
 args = parser.parse_args()
 
 this_script_path = os.path.realpath(__file__)
@@ -59,8 +59,7 @@ this_script_location = os.path.split(this_script_path)[0]
 compile_c_files(this_script_location)
 
 print(f'\n\n--------start running tests--------')
-if args.verbose:
-    tests.VERBOSE_LEVEL = 1
+tests.VERBOSITY_LEVEL = args.verbosity_level
 for attr in dir(tests):
     if attr.startswith('test_'):
         test_func = getattr(tests, attr)
