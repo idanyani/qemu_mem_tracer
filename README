@@ -64,17 +64,17 @@ usage: memory_tracer.py [-h]
                         [--log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN]
                         [--log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO]
                         [--timeout TIMEOUT | --dont_add_communications_with_host_to_workload]
-                        [--print_trace_info] [--dont_exit_qemu_when_done]
-                        [--verbose]
+                        [--print_trace_info] [--dont_use_nographic]
+                        [--dont_exit_qemu_when_done] [--verbose]
                         guest_image_path snapshot_name qemu_with_GMBEOO_path
 
-Run a workload on the QEMU guest while writing optimized GMBE trace records to a FIFO.
+Run a workload on the QEMU guest while writing optimized GMBE trace records to a FIFO or to an analysis tool.
 
 (memory_tracer.py assumes you have already run build.py successfully.)
 
-GMBE is short for guest_mem_before_exec. This is an event in upstream QEMU 3.0.0 that occurs on every attempt of the QEMU guest to access a virtual memory address.
+GMBE is short for guest_mem_before_exec. This is an event in upstream QEMU 3.0.0 that occurs on every attempt of the QEMU guest to access a virtual memory address. (For more about tracing in upstream QEMU, see qemu/docs/devel/tracing.txt.)
 
-We optimized QEMU's tracing code for the case in which only trace records of GMBE are gathered (we call it GMBE only optimization - GMBEOO, and so we gave our fork of QEMU the name qemu_with_GMBEOO).
+We optimized QEMU's tracing code for the case in which only trace records of GMBE are gathered. (We call it GMBE only optimization - GMBEOO, and so we gave our fork of QEMU the name qemu_with_GMBEOO. Note that in our documentation and comments, we often refer to qemu_with_GMBEOO as `qemu`.)
 When GMBEOO is enabled (in qemu_with_GMBEOO), a trace record is structured as follows:
 
 struct GMBEOO_TraceRecord {
@@ -90,7 +90,7 @@ struct GMBEOO_TraceRecord {
 memory_tracer.py also prints the workload info (in case it isn't the empty string), and the tracing duration in miliseconds.
 In case --analysis_tool_path is specified, memory_tracer.py also prints the output of the analysis tool.
 
-Note that workload_runner can also be an ELF that includes the workload and the aforementioned prints.
+Note that the given workload can be any executable (e.g. ELF, bash script).
 
 If --analysis_tool_path is specified, the provided analysis tool must do the following:
 1. Receive in argv[1] the path of the trace FIFO, but not open it for reading yet.2. Register a handler for the signal SIGUSR1 (e.g. by calling the `signal` syscall). The handler must:
@@ -102,6 +102,23 @@ If --analysis_tool_path is specified, the provided analysis tool must do the fol
 (If any of the messages isn't printed, it will probably seem like memory_tracer.py is stuck.)
 
 Note that some of the command line arguments might be irrelevant to you as a user of memory_tracer, but they exist because they are useful while developing memory_tracer.
+
+simple usage examples: 
+(1)
+python3.7 ~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --analysis_tool_path ~/qemu_mem_tracer/tests/toy_workloads_and_analysis_tools/tests_bin/simple_analysis --workload_path_on_host /bin/date
+-----> Start a qemu guest (that was specially prepared for memory_tracer) using the disk image ~/oren_vm_disk2.qcow2 and the internal snapshot `ready_for_memory_tracer`, send the workload /bin/date from the host to the guest, and run the workload on the guest, while writing trace records to the analysis tool `simple_analysis`.
+
+(2)
+python3.7 ~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --analysis_tool_path ~/qemu_mem_tracer/tests/toy_workloads_and_analysis_tools/tests_bin/simple_analysis --workload_path_on_guest /bin/date
+-----> Same as (1), but with a workload that was already inside the guest.
+
+(3)
+mkfifo ~/tmp_example_fifo
+tail -f ~/tmp_example_fifo > /dev/null &
+fifo_printer_pid=`echo $!`
+python3.7 ~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --trace_fifo_path ~/tmp_example_fifo --workload_path_on_host /bin/date
+kill -9 $fifo_printer_pid
+-----> Start a qemu guest (that was specially prepared for memory_tracer) using the disk image ~/oren_vm_disk2.qcow2 and the internal snapshot `ready_for_memory_tracer`, send the workload /bin/date from the host to the guest, and run the workload on the guest, while writing trace records to the analysis tool `simple_analysis`.
 
 positional arguments:
   guest_image_path      The path of the qcow2 file which is the image of the
@@ -136,23 +153,13 @@ optional arguments:
                         comparing the speed of qemu_with_GMBEOO with and
                         without tracing.
   --dont_use_qemu       If specified, memory_tracer.py will run the workload
-                        on the host (i.e. native). Specifically, both
-                        workload_runner and workload will be copied to a
-                        temporary directory, and there workload_runner will be
-                        executed. Please pass dummy non-empty strings as the
-                        arguments guest_image_path, snapshot_name,
-                        host_password and qemu_with_GMBEOO_path. As expected,
+                        on the host (i.e. natively). Please pass dummy non-
+                        empty strings as the arguments guest_image_path,
+                        snapshot_name, and qemu_with_GMBEOO_path. As expected,
                         no trace info will be printed (even if
-                        --print_trace_info is specified). Also, the analysis
-                        tool will not be executed (even if
-                        --analysis_tool_path is specified). This is useful for
+                        --print_trace_info is specified).This is useful for
                         comparing the speed of qemu_with_GMBEOO to running the
-                        code natively. Note that This feature is somewhat
-                        limited, as it only captures the prints by
-                        workload_runner. (i.e. it would get stuck in case
-                        workload_runner doesn't send all the expected messages
-                        itself (e.g. "Ready to trace. Press enter to
-                        continue").)
+                        code natively.
   --trace_only_CPL3_code_GMBE
                         If specified, qemu would only trace memory accesses by
                         CPL3 code. Otherwise, qemu would trace all accesses.
@@ -176,16 +183,16 @@ optional arguments:
                         code that handles the required communications between
                         the guest and the host, i.e. the workload (given in
                         workload_path_on_host or workload_path_on_guest) must
-                        do the following: 1. Print "-----begin workload
-                        info-----". 2. Print runtime info of the workload.
+                        do the following: (1) Print "-----begin workload
+                        info-----". (2) Print runtime info of the workload.
                         This info will be written to stdout, as well as passed
                         as cmd arguments to the analysis tool in case of
                         --analysis_tool_path was specified. (Print nothing if
-                        you don't need any runtime info.) 3. Print "-----end
-                        workload info-----". 4. Print "Ready to trace. Press
+                        you don't need any runtime info.) (3) Print "-----end
+                        workload info-----". (4) Print "Ready to trace. Press
                         enter to continue" when you wish the tracing to start.
-                        5. Wait until enter is pressed, and only then start
-                        executing the code you wish to run while tracing. 6.
+                        (5) Wait until enter is pressed, and only then start
+                        executing the code you wish to run while tracing. (6)
                         Print "Stop tracing" when you wish the tracing to
                         stop. (If any of the messages isn't printed, it will
                         probably seem like memory_tracer.py is stuck.)
@@ -209,6 +216,14 @@ optional arguments:
                         qemu_with_GMBEOO tried to write them to the trace_buf,
                         it was full, so they were discarded. This shouldn't
                         happen normally.
+  --dont_use_nographic  If specified, qemu_with_GMBEOO will be started with
+                        the cmd argument `-monitor stdio` instead of
+                        `-nographic`. This degrades performance, but is
+                        probably more convenient while developing
+                        memory_tracer on your machine. See the official
+                        documentation (https://qemu.weilnetz.de/doc/qemu-
+                        doc.html) for more about `-nographic` and `-monitor
+                        stdio`.
   --dont_exit_qemu_when_done
                         If specified, qemu won't be terminated after running
                         the workload, and you would be able to use the
@@ -222,6 +237,7 @@ optional arguments:
                         the workload, which is probably a quite uncommon
                         state, e.g. /dev/tty is overwritten by /dev/ttyS0.
   --verbose, -v         If specified, debug messages are printed.
+
 
 
 
