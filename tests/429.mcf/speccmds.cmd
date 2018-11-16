@@ -1,0 +1,2 @@
+-C /home/idanyani/repos/mosalloc/software/spec_cpu2006/installed/benchspec/CPU2006/429.mcf/run/run_base_ref_none.0000
+-o inp.out -e inp.err ../run_base_ref_none.0000/mcf_base.none inp.in

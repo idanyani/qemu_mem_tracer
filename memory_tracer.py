@@ -74,9 +74,10 @@ def parse_cmd_args():
                     'tracing in upstream QEMU, see '
                     'qemu/docs/devel/tracing.txt.)\n\n'
                     'We optimized QEMU\'s tracing code for the case in which only '
-                    'trace records of GMBE are gathered (we call it GMBE only '
+                    'trace records of GMBE are gathered. (We call it GMBE only '
                     'optimization - GMBEOO, and so we gave our fork of QEMU the '
-                    'name qemu_with_GMBEOO).\n'
+                    'name qemu_with_GMBEOO. Note that in our documentation and '
+                    'comments, we often refer to qemu_with_GMBEOO as `qemu`.)\n'
                     'When GMBEOO is enabled (in qemu_with_GMBEOO), a trace record '
                     'is structured as follows:\n\n'
                     'struct GMBEOO_TraceRecord {\n'
@@ -238,6 +239,15 @@ def parse_cmd_args():
                              'qemu_with_GMBEOO tried to write them to the '
                              'trace_buf, it was full, so they were discarded. '
                              'This shouldn\'t happen normally.')
+    parser.add_argument('--dont_use_nographic', action='store_true',
+                        help='If specified, qemu_with_GMBEOO will be started '
+                             'with the cmd argument `-monitor stdio` instead '
+                             'of `-nographic`. This degrades performance, but '
+                             'is probably more convenient while developing '
+                             'memory_tracer on your machine. See the official '
+                             'documentation '
+                             '(https://qemu.weilnetz.de/doc/qemu-doc.html) for '
+                             'more about `-nographic` and `-monitor stdio`.')
     parser.add_argument('--dont_exit_qemu_when_done', action='store_true',
                         help='If specified, qemu won\'t be terminated after running '
                              'the workload, and you would be able to use the '
@@ -370,7 +380,6 @@ def get_trace_fifo_path(trace_fifo_path_cmd_arg):
 
     return trace_fifo_path
 
-
 if __name__ == '__main__':
     args = parse_cmd_args()
 
@@ -397,7 +406,6 @@ if __name__ == '__main__':
             args.dont_add_communications_with_host_to_workload,
             temp_dir_path)
         if not args.dont_use_qemu:
-
             trace_fifo_path = get_trace_fifo_path(args.trace_fifo_path)
 
             write_executables_to_serial_path = os.path.join(
@@ -405,6 +413,7 @@ if __name__ == '__main__':
             qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
             run_qemu_and_workload_expect_script_path = os.path.join(
                 this_script_location, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH)
+
             run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
                                          f'"{guest_image_path}" '
                                          f'"{args.snapshot_name}" '
@@ -422,6 +431,7 @@ if __name__ == '__main__':
                                          f'{args.print_trace_info} '
                                          f'{args.dont_trace} '
                                          f'{args.dont_add_communications_with_host_to_workload} '
+                                         f'{args.dont_use_nographic} '
                                          )
 
             execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)

@@ -1,5 +1,4 @@
 import subprocess
-import shutil
 import os
 import os.path
 import time
@@ -89,7 +88,7 @@ def check_mem_tracer_output_attention(mem_tracer_output):
         print('\n\n---mem_tracer_output contains an ATTENTION message. '
               'You should probably take a look.---\n\n')
 
-def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
+def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name):
     simple_analysis_path = get_toy_elf_path(this_script_location,
@@ -109,7 +108,7 @@ def _test_workload_without_info(this_script_location, qemu_mem_tracer_script_pat
         '^tracing_duration_in_milliseconds:.*analysis output:.*analysis cmd args:.*',
         mem_tracer_output, re.DOTALL) is not None)
 
-def _test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
+def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
     simple_analysis_path = get_toy_elf_path(this_script_location,
@@ -177,7 +176,7 @@ def check_mem_accesses(mem_tracer_output, our_arr_len, num_of_iters_over_our_arr
     #     if counter > min_num_of_expected_accesses_for_elem:
     #         print(hex(i), hex(our_buf_addr_in_workload_info + i * 4), counter)
 
-def _test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
+def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
                             qemu_with_GMBEOO_path, guest_image_path,
                             snapshot_name):
     simple_analysis_path = get_toy_elf_path(this_script_location,
@@ -219,7 +218,7 @@ def _____test_kernel_mem_accesses(this_script_location,
     raise NotImplementedError
 
 
-def _test_trace_only_CPL3_code_GMBE(this_script_location,
+def test_trace_only_CPL3_code_GMBE(this_script_location,
                                    qemu_mem_tracer_script_path,
                                    qemu_with_GMBEOO_path, guest_image_path,
                                    snapshot_name):
@@ -251,7 +250,7 @@ def _test_trace_only_CPL3_code_GMBE(this_script_location,
         num_of_mem_accesses_by_non_CPL3_code_as_str.strip())
     assert(num_of_mem_accesses_by_non_CPL3_code == 0)
 
-def _test_invalid_log_of_cmd_args(this_script_location,
+def test_invalid_log_of_cmd_args(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):
@@ -345,7 +344,7 @@ def _test_invalid_log_of_cmd_args(this_script_location,
     else:
         assert(False)
 
-def _test_sampling(this_script_location,
+def test_sampling(this_script_location,
                   qemu_mem_tracer_script_path,
                   qemu_with_GMBEOO_path, guest_image_path,
                   snapshot_name):
@@ -394,7 +393,7 @@ def _test_sampling(this_script_location,
     assert(mask_of_GMBE_block_idx.strip() == '70'.zfill(16))
     assert(2 ** 3 - 1 <= float(actual_tracing_ratio.strip()) <= 2 ** 3 + 1)
 
-def _test_trace_fifo_path_cmd_arg(this_script_location,
+def test_trace_fifo_path_cmd_arg(this_script_location,
                                  qemu_mem_tracer_script_path,
                                  qemu_with_GMBEOO_path, guest_image_path,
                                  snapshot_name):
@@ -457,7 +456,7 @@ def _test_trace_fifo_path_cmd_arg(this_script_location,
             except ProcessLookupError:
                 pass
 
-def _test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
+def test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
         this_script_location, qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
     try:
@@ -490,7 +489,7 @@ def _test_invalid_combination_of_trace_fifo_and_analysis_tool_cmd_args(
     else:
         assert(False)
 
-def _test_invalid_file_or_dir_cmd_arg(
+def test_invalid_file_or_dir_cmd_arg(
         this_script_location, qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path, snapshot_name):
     simple_analysis_path = get_toy_elf_path(this_script_location,
@@ -744,7 +743,7 @@ def print_workload_durations(this_script_location,
                   f'{avg_with_trace_duration / avg_no_trace_duration} ')
 
 
-def _test_timeout(this_script_location,
+def test_timeout(this_script_location,
                  qemu_mem_tracer_script_path,
                  qemu_with_GMBEOO_path, guest_image_path,
                  snapshot_name):
@@ -767,7 +766,7 @@ def _test_timeout(this_script_location,
     # print(duration)
     assert(6.7 <= duration <= 25)
 
-def _test_workload_path_on_guest(this_script_location,
+def test_workload_path_on_guest(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):
@@ -801,8 +800,32 @@ def _test_workload_path_on_guest(this_script_location,
         f'--workload_path_on_guest /bin/date '
         f'--print_trace_info ')
 
+def test_dont_use_nographic(this_script_location,
+                            qemu_mem_tracer_script_path,
+                            qemu_with_GMBEOO_path, guest_image_path,
+                            snapshot_name):
+    simple_analysis_path = get_toy_elf_path(this_script_location,
+                                            'simple_analysis')
+    workload_path = get_toy_elf_path(
+        this_script_location, 'simple_user_memory_intensive_workload')
 
-def test_toy_workload_durations(this_script_location,
+    mem_tracer_output = get_mem_tracer_output(
+        this_script_location,
+        qemu_mem_tracer_script_path,
+        qemu_with_GMBEOO_path,
+        guest_image_path,
+        snapshot_name,
+        f'--analysis_tool_path "{simple_analysis_path}" '
+        f'--dont_add_communications_with_host_to_workload '
+        f'--workload_path_on_host {workload_path} --dont_use_nographic'
+        )
+    
+    # print(mem_tracer_output)
+    check_mem_accesses(mem_tracer_output,
+                       OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
+
+
+def _test_toy_workload_durations(this_script_location,
                                 qemu_mem_tracer_script_path,
                                 qemu_with_GMBEOO_path, guest_image_path,
                                 snapshot_name):

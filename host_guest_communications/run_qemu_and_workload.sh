@@ -83,6 +83,7 @@ set dont_exit_qemu_when_done [lindex $argv 12]
 set print_trace_info [lindex $argv 13]
 set dont_trace [lindex $argv 14]
 set dont_add_communications [lindex $argv 15]
+set dont_use_nographic [lindex $argv 16]
 
 proc debug_print {msg} {
     if {$::verbose == "True"} {
@@ -111,9 +112,16 @@ debug_print "---start run_qemu_and_workload.sh---\n"
 #   terminals that qemu creates.
 #   The guest doesn't start running (-S), as we load a snapshot anyway.
 debug_print "---starting qemu---\n"
-spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
-    -hda $guest_image_path -monitor stdio \
-    -serial pty -loadvm $snapshot_name
+
+if {$dont_use_nographic == "True"} {
+    spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
+        -hda $guest_image_path -monitor stdio \
+        -serial pty -loadvm $snapshot_name
+} else {
+    spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
+        -hda $guest_image_path -nographic \
+        -serial pty -loadvm $snapshot_name
+}
 set monitor_id $spawn_id
 
 debug_print "---parsing qemu's message about pseudo-terminals that it opened---\n"
@@ -125,11 +133,6 @@ expect -i $monitor_id "serial pty: char device redirected to " {
 
 spawn cat $pseudo_terminal_path
 set pseudo_terminal_reader_id $spawn_id
-
-# (required if -nographic was used)
-# Switch to monitor interface 
-# send "\x01"
-# send "c"
 
 sleep 1
 debug_print "\n---writing $file1_to_write_to_serial_path and $file2_to_write_to_serial_path to $pseudo_terminal_path---\n"
