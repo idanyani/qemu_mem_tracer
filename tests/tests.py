@@ -859,9 +859,10 @@ def _test_mcf_workload(this_script_location,
         qemu_mem_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path,
         snapshot_name,
-        2,
+        1,
         workload_path_on_guest=mcf_path_on_guest,
         workload_path_on_host=mcf_path_on_host,
         log_of_GMBE_tracing_ratio=10,
-        timeout=10)
+        # timeout=10
+        )
 
