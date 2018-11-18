@@ -6,7 +6,8 @@ usage: memory_tracer.py [-h]
                         [--log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO]
                         [--timeout TIMEOUT | --dont_add_communications_with_host_to_workload]
                         [--print_trace_info] [--dont_use_nographic]
-                        [--dont_exit_qemu_when_done] [--verbose]
+                        [--dont_exit_qemu_when_done]
+                        [--guest_RAM_in_MBs GUEST_RAM_IN_MBS] [--verbose]
                         guest_image_path snapshot_name qemu_with_GMBEOO_path
 
 Run a workload on the QEMU guest while writing optimized GMBE trace records to a FIFO or to an analysis tool.
@@ -112,7 +113,9 @@ optional arguments:
                         Log of the ratio between the number of blocks of GMBE
                         events we trace to the total number of blocks. E.g. if
                         GMBE_tracing_ratio is 16, we trace 1 block, then skip
-                        15 blocks, then trace 1, then skip 15, and so on...
+                        15 blocks, then trace 1, then skip 15, and so on. The
+                        default is 0, which means that the tracing ratio is 1,
+                        and all of the blocks are traced.
   --timeout TIMEOUT     If specified, the workload would be stopped when the
                         specified timeout elapses. Note that if you use
                         --dont_add_communications_with_host_to_workload, then
@@ -177,6 +180,12 @@ optional arguments:
                         would probably be in the state it was before running
                         the workload, which is probably a quite uncommon
                         state, e.g. /dev/tty is overwritten by /dev/ttyS0.
+  --guest_RAM_in_MBs GUEST_RAM_IN_MBS
+                        The startup RAM size (in mega bytes) of the qemu
+                        guest. This is simply passed to qemu_with_GMBEOO as
+                        the -m argument. See the official documentation
+                        (https://qemu.weilnetz.de/doc/qemu-doc.html). The
+                        default is 2560.
   --verbose, -v         If specified, debug messages are printed.
 
 

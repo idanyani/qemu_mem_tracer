@@ -226,7 +226,9 @@ def parse_cmd_args():
                              'of GMBE events we trace to the '
                              'total number of blocks. E.g. if GMBE_tracing_ratio '
                              'is 16, we trace 1 block, then skip 15 blocks, then '
-                             'trace 1, then skip 15, and so on...')
+                             'trace 1, then skip 15, and so on.\n'
+                             'The default is 0, which means that the tracing '
+                             'ratio is 1, and all of the blocks are traced.')
     dont_add_communications_or_timeout = parser.add_mutually_exclusive_group()
     dont_add_communications_or_timeout.add_argument(
         '--timeout', type=float,
@@ -303,6 +305,17 @@ def parse_cmd_args():
                              'state it was before running the workload, which is '
                              'probably a quite uncommon state, e.g. /dev/tty is '
                              'overwritten by /dev/ttyS0.')
+    parser.add_argument('--guest_RAM_in_MBs', type=int, default=2560,
+                        help='The startup RAM size (in mega bytes) of the qemu '
+                             'guest. This is simply passed to qemu_with_GMBEOO '
+                             'as the -m argument. See the official '
+                             'documentation '
+                             '(https://qemu.weilnetz.de/doc/qemu-doc.html).\n'
+                             'The default is 2560.\n'
+                             'Note that qemu would terminate immediately if '
+                             'you specify a different RAM size than the one '
+                             'that was specified when the internal snapshot '
+                             'was created.')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='If specified, debug messages are printed.')
     args = parser.parse_args()
@@ -474,6 +487,7 @@ if __name__ == '__main__':
                                          f'{args.dont_trace} '
                                          f'{args.dont_add_communications_with_host_to_workload} '
                                          f'{args.dont_use_nographic} '
+                                         f'{args.guest_RAM_in_MBs} '
                                          )
 
             execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)

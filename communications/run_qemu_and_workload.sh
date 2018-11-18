@@ -84,6 +84,7 @@ set print_trace_info [lindex $argv 13]
 set dont_trace [lindex $argv 14]
 set dont_add_communications [lindex $argv 15]
 set dont_use_nographic [lindex $argv 16]
+set guest_RAM_in_MBs [lindex $argv 17]
 
 proc debug_print {msg} {
     if {$::verbose == "True"} {
@@ -113,11 +114,11 @@ debug_print "---start run_qemu_and_workload.sh---\n"
 debug_print "---starting qemu---\n"
 
 if {$dont_use_nographic == "True"} {
-    spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
+    spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m $guest_RAM_in_MBs \
         -hda $guest_image_path -monitor stdio \
         -serial pty -loadvm $snapshot_name
 } else {
-    spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m 2560 \
+    spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m $guest_RAM_in_MBs \
         -hda $guest_image_path -nographic \
         -serial pty -loadvm $snapshot_name
 }

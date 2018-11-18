@@ -123,7 +123,8 @@ def test_analysis_tool_cmd_args(this_script_location, qemu_mem_tracer_script_pat
         snapshot_name,
         f'--analysis_tool_path "{simple_analysis_path}" '
         f'--dont_add_communications_with_host_to_workload '
-        f'--workload_path_on_host {workload_path} ')
+        f'--workload_path_on_host {workload_path} '
+        )
     analysis_cmd_args_as_str = re.match(
         r'^workload info:.*analysis output:.*analysis cmd args:(.*)',
         mem_tracer_output, re.DOTALL).group(1)
@@ -195,7 +196,6 @@ def test_user_mem_accesses(this_script_location, qemu_mem_tracer_script_path,
         f'--workload_path_on_host {workload_path} '
         )
     
-    # print(mem_tracer_output)
     check_mem_accesses(mem_tracer_output,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
     
@@ -450,7 +450,6 @@ def test_trace_fifo_path_cmd_arg(this_script_location,
         except:
             raise
         finally:
-            # print(read_file(simple_analysis_output_path))
             try:
                 os.kill(simple_analysis_pid, SIGKILL)
             except ProcessLookupError:
@@ -681,7 +680,6 @@ def print_workload_durations(this_script_location,
 
 
 
-            # print(with_trace_mem_tracer_output)
             (num_of_traced_mem_accesses_by_non_CPL3_code_as_str,
              num_of_traced_mem_accesses_as_str) = (
                 re.search(r'num_of_mem_accesses_by_non_CPL3_code:\s+(\d+).*'
@@ -699,14 +697,12 @@ def print_workload_durations(this_script_location,
             print(f'with_trace_mem_accesses_per_second: {mem_accesses_per_second}')
             with_trace_MAPS.append(mem_accesses_per_second)
 
-            # print(f'num_of_traced_mem_accesses: {num_of_traced_mem_accesses} ')
             assert(num_of_traced_mem_accesses > 0)
             mem_accesses_by_non_CPL3_code_ratios.append(
                 num_of_traced_mem_accesses_by_non_CPL3_code / 
                 num_of_traced_mem_accesses)
 
 
-            # print(with_trace_mem_tracer_output)
 
 
     avg_native_duration = get_avg(native_durations)
@@ -769,7 +765,6 @@ def test_timeout(this_script_location,
     duration = (int(re.search(r'tracing_duration_in_milliseconds: (\d+)',
                               mem_tracer_output).group(1)) /
                 NUM_OF_MILLISECONDS_IN_SECOND)
-    # print(duration)
     assert(6.7 <= duration <= 25)
 
 def test_workload_path_on_guest(this_script_location,
@@ -778,21 +773,23 @@ def test_workload_path_on_guest(this_script_location,
                                 snapshot_name):
     simple_analysis_path = get_toy_elf_path(this_script_location,
                                             'simple_analysis')
-    workload_path_on_guest = os.path.join('\~', 'toy_workloads',
-                                          'simple_user_memory_intensive_workload')
-    mem_tracer_output = get_mem_tracer_output(
-        this_script_location,
-        qemu_mem_tracer_script_path,
-        qemu_with_GMBEOO_path,
-        guest_image_path,
-        snapshot_name,
-        f'--analysis_tool_path "{simple_analysis_path}" '
-        f'--workload_path_on_guest {workload_path_on_guest} '
-        f'--dont_add_communications_with_host_to_workload '
-        f'--print_trace_info ')
-    # print(mem_tracer_output)
-    check_mem_accesses(mem_tracer_output,
-                       OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
+    
+    # Commented out because the setup doesn't require downloading this workload
+    # to the guest.
+    # workload_path_on_guest = os.path.join('\~', 'toy_workloads',
+    #                                       'simple_user_memory_intensive_workload')
+    # mem_tracer_output = get_mem_tracer_output(
+    #     this_script_location,
+    #     qemu_mem_tracer_script_path,
+    #     qemu_with_GMBEOO_path,
+    #     guest_image_path,
+    #     snapshot_name,
+    #     f'--analysis_tool_path "{simple_analysis_path}" '
+    #     f'--workload_path_on_guest {workload_path_on_guest} '
+    #     f'--dont_add_communications_with_host_to_workload '
+    #     f'--print_trace_info ')
+    # check_mem_accesses(mem_tracer_output,
+    #                    OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
     # Just verify that no error is raised when using workload_path_on_guest and
     # also not specifying --dont_add_communications_with_host_to_workload.
@@ -826,7 +823,6 @@ def test_dont_use_nographic(this_script_location,
         f'--workload_path_on_host {workload_path} --dont_use_nographic'
         )
     
-    # print(mem_tracer_output)
     check_mem_accesses(mem_tracer_output,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
