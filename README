@@ -11,7 +11,7 @@ usage: memory_tracer.py [-h]
 
 Run a workload on the QEMU guest while writing optimized GMBE trace records to a FIFO or to an analysis tool.
 
-(memory_tracer.py assumes you have already run build.py successfully.)
+(memory_tracer.py assumes you have already run build.py successfully. See SETUP_README for setup instructions.)
 
 GMBE is short for guest_mem_before_exec. This is an event in upstream QEMU 3.0.0 that occurs on every attempt of the QEMU guest to access a virtual memory address. (For more about tracing in upstream QEMU, see qemu/docs/devel/tracing.txt.)
 

@@ -38,21 +38,22 @@ setup:
       I didn’t do that at first, and used snapshots that were created right
       after startup. When I started using snapshots that were taken only
       after startup really completed, the speedup was significant.
-    * Copy run_executables_from_serial from the host into the guest, and make
-      it executable.
-      E.g. (inside the guest, 10.0.2.2 is the host):
-        ~ scp orenmn@10.0.2.2:qemu_mem_tracer/to_run_on_guest/run_executables_from_serial run_executables_from_serial
-        ~ chmod 777 run_executables_from_serial
-    * sudo chmod 666 /dev/ttyS0
-    * ./run_executables_from_serial
-        ~ run_executables_from_serial is waiting for input through the serial.
-          If it printed "Opened /dev/ttyS0.", proceed to the next step
-          without terminating run_executables_from_serial.
-    * Save an internal snapshot of the guest by executing the `savevm` qemu
-      monitor command (monitor commands can be executed through the terminal
-      you used to start qemu_with_GMBEOO). E.g.:
-        ~ savevm ready_for_memory_tracer
-    * Close qemu_with_GMBEOO.
+    * Inside the qemu guest:
+        ~ Copy run_executables_from_serial from the host into the guest, and make
+          it executable.
+          E.g. (inside the guest, 10.0.2.2 is the host):
+            + scp orenmn@10.0.2.2:qemu_mem_tracer/to_run_on_guest/run_executables_from_serial run_executables_from_serial
+            + chmod 777 run_executables_from_serial
+        ~ sudo chmod 666 /dev/ttyS0
+        ~ ./run_executables_from_serial
+            + run_executables_from_serial is waiting for input through the serial.
+              If it printed "Opened /dev/ttyS0.", proceed to the next step
+              without terminating run_executables_from_serial.
+        ~ Save an internal snapshot of the guest by executing the `savevm` qemu
+          monitor command (monitor commands can be executed through the terminal
+          you used to start qemu_with_GMBEOO). E.g.:
+            + savevm ready_for_memory_tracer
+        ~ Close qemu_with_GMBEOO.
 - Run qemu_mem_tracer/build.py qemu_with_GMBEOO_path --dont_compile_qemu --run_tests --guest_image_path GUEST_IMAGE_PATH --snapshot_name SNAPSHOT_NAME
 
 
