@@ -108,9 +108,8 @@ debug_print "---start run_qemu_and_workload.sh---\n"
 
 # Start qemu while:
 #   The monitor is redirected to our process' stdin and stdout.
-#   Both /dev/ttyS0 and /dev/ttyS1 of the guest are redirected to pseudo
-#   terminals that qemu creates.
-#   The guest doesn't start running (-S), as we load a snapshot anyway.
+#   /dev/ttyS0 of the guest is redirected to pseudo-terminal that qemu creates.
+#   The snapshot $snapshot_name is loaded immediately.
 debug_print "---starting qemu---\n"
 
 if {$dont_use_nographic == "True"} {

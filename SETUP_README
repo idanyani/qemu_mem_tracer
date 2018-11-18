@@ -1,0 +1,60 @@
+setup:
+- git clone https://github.com/orenmn/qemu_with_GMBEOO
+- git clone https://github.com/orenmn/qemu_mem_tracer
+- Install python3.7 (according to
+  https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get/865569#865569):
+    * sudo add-apt-repository ppa:deadsnakes/ppa
+    * sudo apt-get update
+    * sudo apt-get install python3.7
+- sudo apt-get install expect
+- python3.7 qemu_mem_tracer/build.py qemu_with_GMBEOO_path
+- Either ask orenmn@gmail.com for a qemu image for memory_tracer, or create
+  one yourself:
+    * Download ubuntu-18.04.1-live-server-amd64.iso
+       (https://www.ubuntu.com/download/server).
+    * Create an "empty" image. E.g.:
+        ~ ./qemu-img create -f qcow2 oren_vm_disk.qcow2 25G
+          (See https://en.wikibooks.org/wiki/QEMU/Images#Creating_an_image and
+          https://wiki.qemu.org/Hosts/Linux#Getting_the_source_code)
+    * Install the Ubuntu Server on it:
+        ~ ./x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda ../oren_vm_disk2.qcow2 -cdrom ../ubuntu-18.04.1-desktop-amd64.iso -monitor stdio
+            + If you get "cannot set up guest memory 'pc.ram': Cannot
+              allocate memory", then 2560MB is too much for your machine to
+              give qemu, so specify a smaller amount.
+            + Don’t worry about a "spectre v2 mitigation" message at the
+              beginning (it didn’t seem to ruin anything for me. The
+              startup just moves on).
+            + It would probably take some time. An easy way to check
+              whether the guest is actually dead (and not just working
+              diligently but silently): use the qemu’s monitor command
+              `info registers` several times. If the registers change, then
+              you should probably just wait.
+            + When the installation finishes, close qemu_with_GMBEOO.
+    * Start qemu_with_GMBEOO. E.g.:
+        ~ ./x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda ../oren_vm_disk2.qcow2 -monitor stdio -serial pty
+    * I highly recommend giving your qemu guest some time to completely
+      finish the startup process (even after logging in, i guess many
+      startup scripts are still running). Sounds obvious in retrospect, but
+      I didn’t do that at first, and used snapshots that were created right
+      after startup. When I started using snapshots that were taken only
+      after startup really completed, the speedup was significant.
+    * Copy run_executables_from_serial from the host into the guest, and make
+      it executable.
+      E.g. (inside the guest, 10.0.2.2 is the host):
+        ~ scp orenmn@10.0.2.2:qemu_mem_tracer/to_run_on_guest/run_executables_from_serial run_executables_from_serial
+        ~ chmod 777 run_executables_from_serial
+    * sudo chmod 666 /dev/ttyS0
+    * ./run_executables_from_serial
+        ~ run_executables_from_serial is waiting for input through the serial.
+          If it printed "Opened /dev/ttyS0.", proceed to the next step
+          without terminating run_executables_from_serial.
+    * Save an internal snapshot of the guest by executing the `savevm` qemu
+      monitor command (monitor commands can be executed through the terminal
+      you used to start qemu_with_GMBEOO). E.g.:
+        ~ savevm ready_for_memory_tracer
+    * Close qemu_with_GMBEOO.
+- Run qemu_mem_tracer/build.py qemu_with_GMBEOO_path --dont_compile_qemu --run_tests --guest_image_path GUEST_IMAGE_PATH --snapshot_name SNAPSHOT_NAME
+
+
+
+

@@ -4,8 +4,6 @@ import os
 import os.path
 import time
 import argparse
-import shutil
-import pathlib
 import tempfile
 import fcntl
 import stat
@@ -67,7 +65,7 @@ def parse_cmd_args():
         description='Run a workload on the QEMU guest while writing optimized GMBE '
                     'trace records to a FIFO or to an analysis tool.\n\n'
                     '(memory_tracer.py assumes you have already run build.py '
-                    'successfully.)\n\n'
+                    'successfully. See SETUP_README for setup instructions.)\n\n'
                     'GMBE is short for guest_mem_before_exec. This is an event in '
                     'upstream QEMU 3.0.0 that occurs on every attempt of the QEMU '
                     'guest to access a virtual memory address. (For more about '
