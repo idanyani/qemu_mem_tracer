@@ -101,7 +101,8 @@ def test_workload_without_info(this_script_location, qemu_mem_tracer_script_path
         guest_image_path,
         snapshot_name,
         f'--analysis_tool_path "{simple_analysis_path}" '
-        f'--workload_path_on_host {workload_path} ')
+        f'--workload_path_on_host {workload_path} '
+        )
     
     # match succeeding means that the workload info isn't printed.
     assert(re.match(

@@ -97,7 +97,7 @@ proc expect_and_check_eof {spawn_to_expect_from_id spawn_to_expect_from_name exp
         -i $spawn_to_expect_from_id
         $expected_str {}
         eof {
-            debug_print "it seems that $spawn_to_expect_from_name terminated unexpectedly."
+            debug_print "it seems that $spawn_to_expect_from_name terminated unexpectedly.\n"
             exit 1
         }
     }
@@ -125,11 +125,19 @@ if {$dont_use_nographic == "True"} {
 set monitor_id $spawn_id
 
 debug_print "---parsing qemu's message about pseudo-terminals that it opened---\n"
-expect -i $monitor_id "serial pty: char device redirected to " {
-    expect -i $monitor_id -re {^/dev/pts/\d+} {
-         set pseudo_terminal_path $expect_out(0,string)
+expect {
+    -i $monitor_id
+    "serial pty: char device redirected to " {
+        expect -i $monitor_id -re {^/dev/pts/\d+} {
+             set pseudo_terminal_path $expect_out(0,string)
+        }
+    }
+    eof {
+        debug_print "it seems that qemu terminated unexpectedly.\n"
+        exit 1
     }
 }
+
 
 spawn cat $pseudo_terminal_path
 set pseudo_terminal_reader_id $spawn_id
@@ -222,10 +230,16 @@ if {$analysis_tool_path != "/dev/null"} {
     exec kill -SIGUSR1 $analysis_tool_pid
     sleep 1
     debug_print "\n---expecting analysis output---\n"
-    expect -i $analysis_tool_id -indices -re \
-            "-----begin analysis output-----(.*)-----end analysis output-----" {
-        set analysis_output [string trim $expect_out(1,string)]
-    }
+    expect {
+        -i $analysis_tool_id
+        -indices -re "-----begin analysis output-----(.*)-----end analysis output-----" {
+            set analysis_output [string trim $expect_out(1,string)]
+        }
+        eof {
+            debug_print "it seems that $analysis_tool_path terminated unexpectedly.\n"
+            exit 1
+        }
+    } 
     debug_print "\n---received analysis output---\n"
 
     send_user "analysis output:\n"

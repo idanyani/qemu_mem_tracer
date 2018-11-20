@@ -1,5 +1,4 @@
 import subprocess
-import shutil
 import os
 import os.path
 import argparse
@@ -9,10 +8,10 @@ QEMU_MEM_TRACER_SCRIPT_NAME = 'memory_tracer.py'
 TESTS_DIR_NAME = 'tests'
 BUILD_AND_RUN_TESTS_SCRIPT_NAME = 'build_and_run_tests.py'
 TO_RUN_ON_GUEST_DIR_NAME = 'to_run_on_guest'
+COMMUNICATIONS_DIR_NAME = 'communications'
 RUN_SCRIPT_FROM_SERIAL_ELF_NAME = 'run_executables_from_serial'
 RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH = os.path.join(
     TO_RUN_ON_GUEST_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_ELF_NAME)
-COMMUNICATIONS_DIR_NAME = 'communications'
 RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME = f'{RUN_SCRIPT_FROM_SERIAL_ELF_NAME}.c'
 RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH = os.path.join(
     COMMUNICATIONS_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME)

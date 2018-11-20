@@ -31,16 +31,27 @@
 #define CPU_ENTRY_AREA_START_ADDR       (0xfffffe0000000000)
 #define CPU_ENTRY_AREA_END_ADDR         (0xfffffe7fffffffff)
 
+#pragma pack(push, 1) // exact fit - no padding
 typedef struct {
-    uint8_t size_shift : 3; /* interpreted as "1 << size_shift" bytes */
-    bool    sign_extend: 1; /* whether it is a sign-extended operation */
-    uint8_t endianness : 1; /* 0: little, 1: big */
-    bool    store      : 1; /* whether it is a store operation */
-    uint8_t cpl        : 2;
-    uint64_t unused2   : 56;
-    uint64_t virt_addr : 64;
+    uint8_t     size_shift  : 3; /* interpreted as "1 << size_shift" bytes */
+    bool        sign_extend : 1; /* whether it is a sign-extended operation */
+    uint8_t     endianness  : 1; /* 0: little, 1: big */
+    bool        store       : 1; /* whether it is a store operation */
+    uint8_t     cpl         : 2; /* probably the CPL while the access was performed.
+                                    "probably" because we consistently see few trace
+                                    records according to which CPL3 code tries to
+                                    access cpu_entry_area, which shouldn't be
+                                    accessible by CPL3 code. For more, see
+                                    https://unix.stackexchange.com/questions/476768/what-is-cpu-entry-area,
+                                    including the comments to the answer. */
+    uint64_t    unused2     : 55;
+    bool        is_valid    : 1;  /* whether the trace record is ready to be written
+                                     to the trace file. This field is for internal
+                                     use by qemu_with_GMBEOO, and is useless for the
+                                     analysis tool, as it would always be 1. */
+    uint64_t    virt_addr   : 64; /* the virtual address */
 } GMBEOO_TraceRecord;
-
+#pragma pack(pop) // back to whatever the previous packing mode was
 
 bool end_analysis = false;
 uint64_t num_of_mem_accesses_by_CPL3_after_another_by_CPL3 = 0; 
@@ -133,24 +144,17 @@ int main(int argc, char **argv) {
         size_t num_of_trace_records_read = fread(&trace_record,
                                                  sizeof(trace_record),
                                                  1, qemu_trace_fifo);
+
         // size_t num_of_trace_records_written_to_file = 
         //     fwrite(&trace_record, sizeof(trace_record), 1, trace_file);
         // if (num_of_trace_records_written_to_file != 1) {
         //     printf("fwrite failed.\n");
         // }
+        
         if (num_of_trace_records_read == 1) {
-            
-            // continue;
-
-
-
             uint8_t cpl = trace_record.cpl;
             uint64_t virt_addr = trace_record.virt_addr;
             
-            // if (was_last_access_by_CPL3_code) {
-            //     fprintf(trace_file, "%lx\n", virt_addr);
-            // }
-
             if (virt_addr >= our_buf_addr && virt_addr < our_buf_end_addr) {
                 ++num_of_mem_accesses_to_our_buf;
                 assert((virt_addr - our_buf_addr) % sizeof(int) == 0);
