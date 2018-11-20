@@ -20,13 +20,23 @@ We optimized QEMU's tracing code for the case in which only trace records of GMB
 When GMBEOO is enabled (in qemu_with_GMBEOO), a trace record is structured as follows:
 
 struct GMBEOO_TraceRecord {
-    uint8_t size_shift : 3; /* interpreted as "1 << size_shift" bytes */
-    bool    sign_extend: 1; /* whether it is a sign-extended operation */
-    uint8_t endianness : 1; /* 0: little, 1: big */
-    bool    store      : 1; /* whether it is a store operation */
-    uint8_t cpl        : 2;
-    uint64_t unused2   : 56;
-    uint64_t virt_addr : 64;
+    uint8_t     size_shift  : 3; /* interpreted as "1 << size_shift" bytes */
+    bool        sign_extend : 1; /* whether it is a sign-extended operation */
+    uint8_t     endianness  : 1; /* 0: little, 1: big */
+    bool        store       : 1; /* whether it is a store operation */
+    uint8_t     cpl         : 2; /* probably the CPL while the access was performed.
+                                    "probably" because we consistently see few trace
+                                    records according to which CPL3 code tries to
+                                    access cpu_entry_area, which shouldn't be
+                                    accessible by CPL3 code. For more, see
+                                    https://unix.stackexchange.com/questions/476768/what-is-cpu-entry-area,
+                                    including the comments to the answer. */
+    uint64_t    unused2     : 55;
+    bool        is_valid    : 1;  /* whether the trace record is ready to be written
+                                     to the trace file. This field is for internal
+                                     use by qemu_with_GMBEOO, and is useless for the
+                                     analysis tool, as it would always be 1. */
+    uint64_t    virt_addr   : 64; /* the virtual address */
 };
 
 memory_tracer.py also prints the workload info (in case it isn't the empty string), and the tracing duration in miliseconds.
@@ -185,7 +195,10 @@ optional arguments:
                         guest. This is simply passed to qemu_with_GMBEOO as
                         the -m argument. See the official documentation
                         (https://qemu.weilnetz.de/doc/qemu-doc.html). The
-                        default is 2560.
+                        default is 2560. Note that qemu would terminate
+                        immediately if you specify a different RAM size than
+                        the one that was specified when the internal snapshot
+                        was created.
   --verbose, -v         If specified, debug messages are printed.
 
 

@@ -367,13 +367,9 @@ def test_sampling(this_script_location,
     check_mem_tracer_output_attention(mem_tracer_output)
 
     regex = (
-        r'GMBEOO_mask_of_GMBE_block_idx: (\w+)\s*'
-        r'---storing start timestamp and starting to trace---.*'
         r'actual_tracing_ratio \(i\.e\. num_of_GMBE_events_since_enabling_GMBEOO / '
         r'num_of_events_written_to_trace_buf\): (\d+)')
-    mask_of_GMBE_block_idx, actual_tracing_ratio = re.search(
-        regex, mem_tracer_output, re.DOTALL).group(1, 2)
-    assert(mask_of_GMBE_block_idx == '78'.zfill(16))
+    actual_tracing_ratio = re.search(regex, mem_tracer_output, re.DOTALL).group(1)
     assert(2 ** 4 - 2 <= int(actual_tracing_ratio) <= 2 ** 4 + 2)
 
     mem_tracer_output = get_mem_tracer_error_and_output(
@@ -389,9 +385,7 @@ def test_sampling(this_script_location,
         f'--workload_path_on_host {workload_path} ')
     check_mem_tracer_output_attention(mem_tracer_output)
     
-    mask_of_GMBE_block_idx, actual_tracing_ratio = re.search(
-        regex, mem_tracer_output, re.DOTALL).group(1, 2)
-    assert(mask_of_GMBE_block_idx == '70'.zfill(16))
+    actual_tracing_ratio = re.search(regex, mem_tracer_output, re.DOTALL).group(1)
     assert(2 ** 3 - 1 <= int(actual_tracing_ratio) <= 2 ** 3 + 1)
 
 def test_trace_fifo_path_cmd_arg(this_script_location,
