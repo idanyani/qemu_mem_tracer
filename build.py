@@ -39,8 +39,7 @@ parser.add_argument('--dont_compile_qemu', action='store_true',
                          'qemu_with_GMBEOO.')
 parser.add_argument('--run_tests', action='store_true',
                     help='If specified, this script runs tests (that '
-                         'check whether qemu_mem_tracer works as '
-                         'expected).')
+                         'check whether qemu_mem_tracer works as expected).')
 parser.add_argument('--verbosity_level', '-v', type=int, default=0)
 parser.add_argument('--guest_image_path', type=str)
 parser.add_argument('--snapshot_name', type=str)
@@ -73,7 +72,7 @@ execute_cmd_in_dir(compile_cmd, this_script_location)
 if not args.dont_compile_qemu:
     build_qemu_script_path = os.path.join(this_script_location,
                                           BUILD_QEMU_SCRIPT_NAME)
-    build_qemu_cmd = (f'python3.7 {BUILD_QEMU_SCRIPT_NAME} '
+    build_qemu_cmd = (f'python3.7 {build_qemu_script_path} '
                       f'{args.qemu_with_GMBEOO_path} {args.enable_debug}')
     execute_cmd_in_dir(build_qemu_cmd, this_script_location)
 
@@ -94,7 +93,6 @@ if args.run_tests:
                        f'{args.qemu_with_GMBEOO_path} '
                        f'{args.guest_image_path} '
                        f'{args.snapshot_name} '
-                       f'--verbosity_level {args.verbosity_level} '
-                       ,
+                       f'--verbosity_level {args.verbosity_level} ',
                        tests_dir_path)
 

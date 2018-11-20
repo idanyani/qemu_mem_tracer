@@ -1,10 +1,10 @@
 /* 
 sane people:
-    Why did you write all of this code, when we simply have to copy files
+    Why did you write all of this code, when we simply wish to copy two files
     from the host to the qemu guest, and then make the guest run the first one?
 orenmn:
     At first, I tried using scp and ssh from the host to do that, but for some
-    reason ssh from the host to the guest took a really long time on my laptop
+    reason, ssh from the host to the guest took a really long time on my laptop
     (several minutes).
     scp from the guest to the host was actually pretty fast, and I used that at
     first. But I think that was quite ugly, as you can see if you look at
@@ -16,7 +16,8 @@ orenmn:
     (https://patchwork.kernel.org/patch/9018051/).
 
     By the way, I used only printable characters in the communication over the
-    serial port in order to avoid using serial control characters.
+    serial port in order to avoid using serial control characters (which would
+    mess things up).
 */
 
 #include <stdio.h>
@@ -29,15 +30,8 @@ orenmn:
 #include <stdlib.h>
 #include <errno.h>
 #include <stdbool.h>
-#include <signal.h>
 #include <assert.h>
 #include <ctype.h>
-
-#define PRINT_TO_TTYS0(str) {           \
-    printf(str);                        \
-    fprintf(serial_port_ttyS0, str);    \
-    fflush(serial_port_ttyS0);          \
-}
 
 #define TTYS0_PATH                      "/dev/ttyS0"
 #define EXECUTABLE1_LOCAL_COPY_PATH     "/tmp/executable1"
@@ -47,16 +41,16 @@ orenmn:
 #define CHMOD_777                       "chmod 777 "
 #define SYNC_BYTES                      "serial sync\n"
 #define NUM_OF_SYNC_BYTES               (strlen(SYNC_BYTES))
-#define EXECUTABLE_SIZE_STR_LEN         (30)
+#define UINT_DECIMAL_REPR_STR_LEN       (30)
 #define DECIMAL_BASE                    (10)
 #define HEXADECIMAL_BASE                (16)
 #define BYTE_HEX_REPR_SIZE_INCLUDING_LF (3)
 
 
+// Assumes that sync_cyclic_buf is a buffer of size NUM_OF_SYNC_BYTES.
 static bool were_sync_bytes_received(char *sync_cyclic_buf,
                                      int cyclic_buf_start_idx) {
     assert(cyclic_buf_start_idx == cyclic_buf_start_idx % NUM_OF_SYNC_BYTES);
-    // Assumes that sync_cyclic_buf is a buffer of size NUM_OF_SYNC_BYTES.
     char *sync_bytes = SYNC_BYTES;
     for (int i = 0; i < NUM_OF_SYNC_BYTES; ++i) {
         if (sync_cyclic_buf[(cyclic_buf_start_idx + i) % NUM_OF_SYNC_BYTES] !=
@@ -74,7 +68,6 @@ static bool wait_for_sync_bytes(FILE *serial_port_ttyS0) {
     while (!were_sync_bytes_received(sync_cyclic_buf, i)) {
         size_t num_of_bytes_read = fread(
             &sync_cyclic_buf[i], 1, 1, serial_port_ttyS0);
-        // printf("received: %c\n", sync_cyclic_buf[i]);
         if (num_of_bytes_read != 1) {
             printf("failed to read while waiting for sync bytes. "
                    "ferror: %d, feof: %d, errno: %d\n, fread_return_value: %zu",
@@ -89,11 +82,11 @@ static bool wait_for_sync_bytes(FILE *serial_port_ttyS0) {
 }
 
 static int receive_uint_decimal_repr(FILE *serial_port_ttyS0) {
-    char executable_size_str[EXECUTABLE_SIZE_STR_LEN];
-    memset(executable_size_str, 0, EXECUTABLE_SIZE_STR_LEN);
-    for (int i = 0; i < EXECUTABLE_SIZE_STR_LEN; ++i) {
+    char uint_decimal_repr_str[UINT_DECIMAL_REPR_STR_LEN];
+    memset(uint_decimal_repr_str, 0, UINT_DECIMAL_REPR_STR_LEN);
+    for (int i = 0; i < UINT_DECIMAL_REPR_STR_LEN; ++i) {
         size_t num_of_bytes_read = fread(
-            &executable_size_str[i], 1, 1, serial_port_ttyS0);
+            &uint_decimal_repr_str[i], 1, 1, serial_port_ttyS0);
         if (num_of_bytes_read != 1) {
             printf("failed to read while receiving decimal repr of a uint. "
                    "ferror: %d, feof: %d, errno: %d\n, fread_return_value: %zu",
@@ -102,18 +95,18 @@ static int receive_uint_decimal_repr(FILE *serial_port_ttyS0) {
             return -1;
         }
 
-        if (!isdigit(executable_size_str[i])) {
-            executable_size_str[i] = 0;
-            return strtol(executable_size_str, NULL, DECIMAL_BASE);
+        if (!isdigit(uint_decimal_repr_str[i])) {
+            uint_decimal_repr_str[i] = 0;
+            return strtol(uint_decimal_repr_str, NULL, DECIMAL_BASE);
         }
     }
-    printf("received executable size string is too long.\n");
+    printf("received uint decimal representation is too long.\n");
     return -1;
 }
 
 static bool receive_executable_contents_and_write_to_file(
-    FILE *serial_port_ttyS0, int executable_size, char *executable_local_path,
-    uint16_t expected_16_bit_checksum)
+    FILE *serial_port_ttyS0, size_t executable_size,
+    char *executable_local_path, uint16_t expected_16_bit_checksum)
 {
     assert(executable_size > 0);
     bool result = true;
@@ -126,7 +119,6 @@ static bool receive_executable_contents_and_write_to_file(
 
     uint16_t actual_16_bit_checksum = 0;
     for (int i = 0; i < executable_size; ++i) {
-        // printf("i: %d\n", i);
         char hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LF];
         
         size_t num_of_hex_reprs_read = fread(
@@ -141,7 +133,6 @@ static bool receive_executable_contents_and_write_to_file(
         }
         assert(hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LF - 1] == '\n');
         hex_repr[BYTE_HEX_REPR_SIZE_INCLUDING_LF - 1] = 0;
-        // printf("hex_repr: %s\n", hex_repr);
         uint8_t byte_value = strtol(hex_repr, NULL, HEXADECIMAL_BASE);
         actual_16_bit_checksum += byte_value;
         executable_contents[i] = byte_value;
@@ -183,22 +174,14 @@ static bool receive_executable_contents_and_write_to_file(
         goto cleanup1;
     }
 
-    char cmd_str[300];
-    assert(strlen(CHMOD_777) + strlen(executable_local_path) < sizeof(cmd_str));
-    if (cmd_str != strcpy(cmd_str, CHMOD_777)) {
-        printf("`strcpy()` failed.\n");
-        result = false;
-        goto cleanup1;
-    }
-    if (cmd_str != strcat(cmd_str, executable_local_path)) {
-        printf("`strcat()` failed.\n");
-        result = false;
-        goto cleanup1;
-    }
-    int system_result = system(cmd_str);
+    char chmod_cmd_str[300];
+    assert(strlen(CHMOD_777) + strlen(executable_local_path) < sizeof(chmod_cmd_str));
+    strcpy(chmod_cmd_str, CHMOD_777);
+    strcat(chmod_cmd_str, executable_local_path);
+    int system_result = system(chmod_cmd_str);
     if (system_result != 0) {
         printf("`system(\"%s\")` failed. result code: %d errno: %d\n",
-               cmd_str, system_result, errno);
+               chmod_cmd_str, system_result, errno);
         result = false;
         goto cleanup1;
     }
@@ -226,7 +209,7 @@ static bool receive_executable(FILE *serial_port_ttyS0,
     printf("Received expected_16_bit_checksum: %d\n", expected_16_bit_checksum);
 
     if (!receive_executable_contents_and_write_to_file(
-            serial_port_ttyS0, executable_size, executable_local_path,
+            serial_port_ttyS0, (size_t)executable_size, executable_local_path,
             (uint16_t)expected_16_bit_checksum)) {
         return false;
     }
