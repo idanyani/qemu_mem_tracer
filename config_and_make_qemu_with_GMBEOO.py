@@ -1,3 +1,5 @@
+#!/usr/bin/python3.7
+
 import subprocess
 import os
 import os.path

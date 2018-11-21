@@ -1,3 +1,5 @@
+#!/usr/bin/python3.7
+
 import subprocess
 import os
 import os.path
@@ -23,7 +25,7 @@ def execute_cmd_in_dir(cmd, dir_path='.'):
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description='Build qemu_mem_tracer.\n\n'
+    description='Build memory_tracer.\n\n'
                 'Run `python3.7 memory_tracer.py -h` for help about arguments '
                 'that both memory_tracer.py and this script receive.')
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
@@ -39,7 +41,7 @@ parser.add_argument('--dont_compile_qemu', action='store_true',
                          'qemu_with_GMBEOO.')
 parser.add_argument('--run_tests', action='store_true',
                     help='If specified, this script runs tests (that '
-                         'check whether qemu_mem_tracer works as expected).')
+                         'check whether memory_tracer works as expected).')
 parser.add_argument('--verbosity_level', '-v', type=int, default=0)
 parser.add_argument('--guest_image_path', type=str)
 parser.add_argument('--snapshot_name', type=str)
@@ -50,10 +52,10 @@ this_script_location = os.path.split(this_script_path)[0]
 this_script_location_dir_name = os.path.split(this_script_location)[-1]
 if this_script_location_dir_name != 'qemu_mem_tracer':
     print(f'Attention:\n'
-          f'This script assumes that other scripts in qemu_mem_tracer '
+          f'This script assumes that other scripts in memory_tracer '
           f'are in the same folder as this script (i.e. in the folder '
           f'"{this_script_location}").\n'
-          f'However, "{this_script_location_dir_name}" != "qemu_mem_tracer".\n'
+          f'However, "{this_script_location_dir_name}" != "memory_tracer".\n'
           f'Enter "y" if you wish to proceed anyway.')
     while True:
         user_input = input()
@@ -85,11 +87,11 @@ if args.run_tests:
     tests_dir_path = os.path.join(this_script_location, TESTS_DIR_NAME)
     build_and_run_tests_script_path = os.path.join(
         tests_dir_path, BUILD_AND_RUN_TESTS_SCRIPT_NAME)
-    qemu_mem_tracer_script_path = os.path.join(
+    memory_tracer_script_path = os.path.join(
         this_script_location, QEMU_MEM_TRACER_SCRIPT_NAME)
     
     execute_cmd_in_dir(f'python3.7 {build_and_run_tests_script_path} '
-                       f'{qemu_mem_tracer_script_path} '
+                       f'{memory_tracer_script_path} '
                        f'{args.qemu_with_GMBEOO_path} '
                        f'{args.guest_image_path} '
                        f'{args.snapshot_name} '

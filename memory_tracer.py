@@ -1,12 +1,16 @@
+#!/usr/bin/python3.7
+
 import sys
 import subprocess
 import os
 import os.path
-import time
 import argparse
 import tempfile
 import fcntl
 import stat
+
+if not sys.version.startswith('3.7.'):
+    raise RuntimeError('Please use python3.7 to run this script.')
 
 F_SETPIPE_SZ = 1031  # Linux 2.6.35+
 F_GETPIPE_SZ = 1032  # Linux 2.6.35+

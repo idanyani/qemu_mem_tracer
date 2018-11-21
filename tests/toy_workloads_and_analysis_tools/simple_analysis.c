@@ -1,5 +1,5 @@
 /* - - - - - - - - - - - - - - - - ATTENTION - - - - - - - - - - - - - - - - */
-/*                 assumes single_event_optimization is on.                  */
+/*                          assumes GMBEOO is enabled.                       */
 /* - - - - - - - - - - - - - - - - ATTENTION - - - - - - - - - - - - - - - - */
 
 #include <stdio.h>
@@ -126,6 +126,7 @@ int main(int argc, char **argv) {
     
     signal(SIGUSR1, handle_end_analysis_signal);
 
+    // For debug purposes.
     // FILE *trace_file = fopen("/home/orenmn/my_trace_file", "wb");
     // if (trace_file == NULL) {
     //     printf("failed to open my_trace_file. errno: %d\n", errno);
