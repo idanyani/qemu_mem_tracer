@@ -233,7 +233,7 @@ def parse_cmd_args():
              'qemu_with_GMBEOO with and without tracing. '
              'Note that code that does such a comparison has already been '
              'implemented in tests/tests.py. See the function '
-             '`_test_toy_workload_durations`.')
+             '`_test_toy_workload_duration_and_MAPS`.')
     analysis_or_fifo.add_argument(
         '--dont_use_qemu', action='store_true',
         help='If specified, memory_tracer.py will run the '
@@ -247,7 +247,7 @@ def parse_cmd_args():
              'qemu_with_GMBEOO to running the code natively. '
              'Note that code that does such a comparison has already been '
              'implemented in tests/tests.py. See the function '
-             '`_test_toy_workload_durations`.')
+             '`_test_toy_workload_duration_and_MAPS`.')
     parser.add_argument('--trace_only_CPL3_code_GMBE',
                         action='store_const',
                         const='on', default='off',
