@@ -17,7 +17,7 @@ F_GETPIPE_SZ = 1032  # Linux 2.6.35+
 
 EXECUTABLE1_FOR_SERIAL_NAME = 'executable1'
 EXECUTABLE2_FOR_SERIAL_NAME = 'executable2'
-EMPTY_FILE_NAME = 'empty'
+EMPTY_FILE_NAME = 'empty_file.empty'
 EXECUTABLE1_PATH_ON_GUEST = os.path.join('/tmp', EXECUTABLE1_FOR_SERIAL_NAME)
 EXECUTABLE2_PATH_ON_GUEST = os.path.join('/tmp', EXECUTABLE2_FOR_SERIAL_NAME)
 COMMUNICATIONS_DIR_NAME = 'communications'
@@ -33,11 +33,7 @@ WRITE_EXECUTABLES_TO_SERIAL_REL_PATH = os.path.join(
 BASH_SCRIPT_FIRST_LINE = '#!/bin/bash'
 
 
-def read_file_bytes(file_path):
-    with open(file_path, 'r') as f:
-        return f.read()
-
-def write_file(file_path, contents):
+def write_text_file(file_path, contents):
     with open(file_path, 'w') as f:
         return f.write(contents)
 
@@ -66,22 +62,28 @@ def verify_arg_is_in_range(arg, arg_name, low, high):
 def parse_cmd_args():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description='Run a workload on the QEMU guest while writing optimized GMBE '
-                    'trace records to a FIFO or to an analysis tool.\n\n'
+        description='Run a workload on a QEMU guest while writing optimized GMBE '
+                    'trace records to a FIFO or to an analysis tool.'
+                    '\n\n'
                     '(memory_tracer.py assumes you have already run build.py '
-                    'successfully. See SETUP_README for setup instructions.)\n\n'
+                    'successfully. See SETUP_README for setup instructions.)'
+                    '\n\n'
                     'GMBE is short for guest_mem_before_exec. This is an event in '
                     'upstream QEMU 3.0.0 that occurs on every attempt of the QEMU '
                     'guest to access a virtual memory address. (For more about '
                     'tracing in upstream QEMU, see '
-                    'qemu/docs/devel/tracing.txt.)\n\n'
+                    'qemu/docs/devel/tracing.txt in upstream QEMU\'s sources.)'
+                    '\n\n'
                     'We optimized QEMU\'s tracing code for the case in which only '
                     'trace records of GMBE are gathered. (We call it GMBE only '
                     'optimization - GMBEOO, and so we gave our fork of QEMU the '
                     'name qemu_with_GMBEOO. Note that in our documentation and '
-                    'comments, we often refer to qemu_with_GMBEOO as `qemu`.)\n'
+                    'comments, we often refer to qemu_with_GMBEOO as `qemu`.)'
+                    '\n'
                     'When GMBEOO is enabled (in qemu_with_GMBEOO), a trace record '
-                    'is structured as follows:\n\n'
+                    'is structured as follows:'
+                    '\n\n'
+                    '#pragma pack(push, 1) // exact fit - no padding\n'
                     'struct GMBEOO_TraceRecord {\n'
                     '    uint8_t     size_shift  : 3; /* interpreted as "1 << size_shift" bytes */\n'
                     '    bool        sign_extend : 1; /* whether it is a sign-extended operation */\n'
@@ -101,33 +103,42 @@ def parse_cmd_args():
                     '                                     analysis tool, as it would always be 1. */\n'
                     '    uint64_t    virt_addr   : 64; /* the virtual address */\n'
                     '};\n'
+                    '#pragma pack(pop) // back to whatever the previous packing mode was\n'
                     '\n'
                     'memory_tracer.py also prints the workload info (in case it '
                     'isn\'t the empty string), and the tracing duration in '
-                    'miliseconds.\n'
+                    'milliseconds.\n'
+                    '(See the documentation of '
+                    '--dont_add_communications_with_host_to_workload below for '
+                    'how to use "workload info".)'
                     'In case --analysis_tool_path is specified, memory_tracer.py '
-                    'also prints the output of the analysis tool.\n\n'
+                    'also prints the output of the analysis tool.'
+                    '\n\n'
                     'Note that the given workload can be any executable (e.g. '
-                    'ELF, bash script).\n\n'
+                    'ELF, bash script).'
+                    '\n\n'
                     'If --analysis_tool_path is specified, the provided analysis '
                     'tool must do the following:\n'
                     '1. Receive in argv[1] the path of the trace FIFO, but not '
                     'open it for reading yet.\n'
-                    '2. Register a handler for the signal SIGUSR1 (e.g. '
+                    '2. Receive in argv[2:] the workload info. (This isn\'t a '
+                    'requirement, but an optional feature.)\n'
+                    '3. Register a handler for the signal SIGUSR1 (e.g. '
                     'by calling the `signal` syscall). The handler must:\n'
                     '    a. Print "-----begin analysis output-----".\n'
                     '    b. Print the output of the analysis tool.\n'
                     '    c. Print "-----end analysis output-----".\n'
-                    '3. Print "Ready to analyze" when you wish the '
+                    '4. Print "Ready to analyze" when you wish the '
                     'tracing to start.\n'
-                    '4. Open the trace FIFO for read, and start reading trace '
+                    '5. Open the trace FIFO for read, and start reading trace '
                     'records from it. Note that the reading from the FIFO should be '
                     'as fast as possible. Otherwise, the FIFO\'s buffer would get '
                     'full, and qemu_with_GMBEOO would start blocking when it '
-                    'tries to write to the FIFO. Soon, trace_buf would get full, '
+                    'tries to write to the FIFO. Soon, trace_buf (the internal '
+                    'trace records buffer in qemu_with_GMBEOO) would get full, '
                     'and trace records of new GMBE events would be dropped.\n'
                     '(If any of the messages isn\'t printed, it will '
-                    'probably seem like memory_tracer.py is stuck.)\n'
+                    'probably seem like memory_tracer.py is stuck.)'
                     '\n\n'
                     'Note that some of the command line arguments might be '
                     'irrelevant to you as a user of memory_tracer, but they '
@@ -179,12 +190,12 @@ def parse_cmd_args():
                     'sending trace records to the FIFO ~/tmp_example_fifo.\n\n'
                     )
     parser.add_argument('guest_image_path', type=str,
-                        help='The path of the qcow2 file which is the image of the'
-                             ' guest.')
+                        help='The path of the qcow2 file which is the image of '
+                             'the guest.')
     parser.add_argument('snapshot_name', type=str,
                         help='The name of the snapshot saved by the monitor '
                              'command `savevm`, which was specially constructed '
-                             'for running a workload with GMBE tracing.')
+                             'for memory_tracer, according to SETUP_README.')
     parser.add_argument('qemu_with_GMBEOO_path', type=str,
                         help='The path of qemu_with_GMBEOO.')
     workload_path = parser.add_mutually_exclusive_group(required=True)
@@ -193,12 +204,18 @@ def parse_cmd_args():
     workload_path.add_argument('--workload_path_on_host', type=str,
                                help='The path of the workload on the host. The '
                                     'file in that path would be sent to the '
-                                    'guest to run as the workload.')
+                                    'guest to run as the workload. '
+                                    'In other words, if this file isn\'t quite '
+                                    'small, you would be better off copying '
+                                    'it into the qemu guest (e.g. by using '
+                                    'scp) and saving a snapshot, and then '
+                                    'using --workload_path_on_guest.')
     analysis_or_fifo = parser.add_mutually_exclusive_group(required=True)
     analysis_or_fifo.add_argument(
         '--analysis_tool_path', type=str, default='/dev/null',
         help='Path of an analysis tool that would start executing '
-             'before the tracing starts.\n')
+             'before the tracing starts. See more requirements for it in the '
+             'general description of memory_tracer.py above.\n')
     analysis_or_fifo.add_argument(
         '--trace_fifo_path', type=str,
         help='Path of the FIFO into which trace records will be '
@@ -213,7 +230,10 @@ def parse_cmd_args():
              'Therefore, it will not print the trace info (even '
              'if --print_trace_info is specified). '
              'This is useful for comparing the speed of '
-             'qemu_with_GMBEOO with and without tracing.')
+             'qemu_with_GMBEOO with and without tracing. '
+             'Note that code that does such a comparison has already been '
+             'implemented in tests/tests.py. See the function '
+             '`_test_toy_workload_durations`.')
     analysis_or_fifo.add_argument(
         '--dont_use_qemu', action='store_true',
         help='If specified, memory_tracer.py will run the '
@@ -224,7 +244,10 @@ def parse_cmd_args():
              'As expected, no trace info will be printed (even if '
              '--print_trace_info is specified).'
              'This is useful for comparing the speed of '
-             'qemu_with_GMBEOO to running the code natively. ')
+             'qemu_with_GMBEOO to running the code natively. '
+             'Note that code that does such a comparison has already been '
+             'implemented in tests/tests.py. See the function '
+             '`_test_toy_workload_durations`.')
     parser.add_argument('--trace_only_CPL3_code_GMBE',
                         action='store_const',
                         const='on', default='off',
@@ -238,21 +261,19 @@ def parse_cmd_args():
     parser.add_argument('--log_of_GMBE_tracing_ratio', type=int, default=0,
                         help='Log of the ratio between the number of blocks '
                              'of GMBE events we trace to the '
-                             'total number of blocks. E.g. if GMBE_tracing_ratio '
-                             'is 16, we trace 1 block, then skip 15 blocks, then '
-                             'trace 1, then skip 15, and so on.\n'
-                             'The default is 0, which means that the tracing '
-                             'ratio is 1, and all of the blocks are traced.')
+                             'total number of blocks. E.g. if '
+                             'log_of_GMBE_tracing_ratio is 4, then '
+                             'GMBE_tracing_ratio is 16. Thus, we trace 1 block, '
+                             'then discard 15 blocks, then trace 1, then '
+                             'discard 15, and so on.\n'
+                             'The default is 0, which means that the default '
+                             'tracing ratio is 1, i.e. all of the blocks are '
+                             'traced.')
     dont_add_communications_or_timeout = parser.add_mutually_exclusive_group()
     dont_add_communications_or_timeout.add_argument(
         '--timeout', type=float,
         help='If specified, the workload would be stopped '
-             'when the specified timeout elapses. '
-             'Note that if you use '
-             '--dont_add_communications_with_host_to_workload, '
-             'then the timeout includes the communications '
-             'with the host. Otherwise, the timeout doesn\'t '
-             'include the communications.')
+             'when the specified timeout elapses. ')
     dont_add_communications_or_timeout.add_argument(
         '--dont_add_communications_with_host_to_workload', action='store_true',
         help='If specified, the workload would not be wrapped with code '
@@ -261,8 +282,8 @@ def parse_cmd_args():
              'workload_path_on_guest) must do the following:\n'
              '(1) Print "-----begin workload info-----".\n'
              '(2) Print runtime info of the workload. This info '
-             'will be written to stdout, as well as passed as cmd '
-             'arguments to the analysis tool in case of '
+             'will be written to the stdout of memory_tracer, as well as '
+             'passed as cmd arguments to the analysis tool in case '
              '--analysis_tool_path was specified. (Print nothing '
              'if you don\'t need any runtime info.)\n'
              '(3) Print "-----end workload info-----".\n'
@@ -270,10 +291,9 @@ def parse_cmd_args():
              'when you wish the tracing to start.\n'
              '(5) Wait until enter is pressed, and only then '
              'start executing the code you wish to run while '
-             'tracing.\n'
-             '(6) Print "Stop tracing" when you wish the tracing '
-             'to stop.\n'
-             '(If any of the messages isn\'t printed, it will '
+             'tracing. (`getchar();` in C or `read -n1` in bash would do.)\n'
+             '(6) Print "Stop tracing" when you wish the tracing to stop.\n'
+             '(If any of these messages isn\'t printed, it will '
              'probably seem like memory_tracer.py is stuck.)\n\n')
     parser.add_argument('--print_trace_info', action='store_true',
                         help='If specified, memory_tracer.py would also print some '
@@ -293,10 +313,12 @@ def parse_cmd_args():
                              'actual_tracing_ratio (i.e. '
                              'num_of_GMBE_events_since_enabling_GMBEOO / '
                              'num_of_events_written_to_trace_buf); '
-                             'num_of_dropped_events (i.e. events such that when '
+                             'num_of_dropped_events (only if it isn\'t 0 - '
+                             'this is the number of events such that when '
                              'qemu_with_GMBEOO tried to write them to the '
-                             'trace_buf, it was full, so they were discarded. '
-                             'This shouldn\'t happen normally.')
+                             'trace_buf (its internal trace records buffer), '
+                             'it was full, so they were discarded, '
+                             'which shouldn\'t happen normally.')
     parser.add_argument('--dont_use_nographic', action='store_true',
                         help='If specified, qemu_with_GMBEOO will be started '
                              'with the cmd argument `-monitor stdio` instead '
@@ -305,22 +327,20 @@ def parse_cmd_args():
                              'memory_tracer on your machine. See the official '
                              'documentation '
                              '(https://qemu.weilnetz.de/doc/qemu-doc.html) for '
-                             'more about `-nographic` and `-monitor stdio`.')
+                             'more about `-nographic` and `-monitor stdio`.'
+                             '(Note that this option probably makes no sense '
+                             'in case you are running '
+                             'memory_tracer.py on a remote server using ssh.)')
     parser.add_argument('--dont_exit_qemu_when_done', action='store_true',
-                        help='If specified, qemu won\'t be terminated after running '
-                             'the workload, and you would be able to use the '
-                             'terminal to send monitor commands, as well as use '
-                             'the qemu guest directly, in case you have a graphic '
-                             'interface (which isn\'t the case if you are running '
-                             'memory_tracer.py on a remote server using ssh). '
-                             'Still, you would be able to use the qemu guest, e.g. '
-                             'by connecting to it using ssh.\n\n'
-                             'Remember that the guest would probably be in the '
-                             'state it was before running the workload, which is '
-                             'probably a quite uncommon state, e.g. /dev/tty is '
-                             'overwritten by /dev/ttyS0.')
+                        help='If specified, qemu won\'t be terminated after '
+                             'running the workload, and you would be able to '
+                             'use the terminal to send monitor commands, as '
+                             'well as use the qemu guest directly, in case '
+                             '--dont_use_nographic was specified.'
+                             'Anyway, you would be able to use the qemu guest, '
+                             'e.g. by connecting to it using ssh.')
     parser.add_argument('--guest_RAM_in_MBs', type=int, default=2560,
-                        help='The startup RAM size (in mega bytes) of the qemu '
+                        help='The startup RAM size (in mega-bytes) of the qemu '
                              'guest. This is simply passed to qemu_with_GMBEOO '
                              'as the -m argument. See the official '
                              'documentation '
@@ -331,7 +351,8 @@ def parse_cmd_args():
                              'that was specified when the internal snapshot '
                              'was created.')
     parser.add_argument('--verbose', '-v', action='store_true',
-                        help='If specified, debug messages are printed.')
+                        help='If specified, memory_tracer\'s debug messages '
+                             'are printed.')
     args = parser.parse_args()
 
     if args.workload_path_on_host:
@@ -371,13 +392,21 @@ def verify_this_script_location(this_script_location):
             if user_input == 'y':
                 break
 
-def create_empty_file(file_path):
-    with open(file_path, 'w'):
+def create_empty_file(dir_path):
+    empty_file_path = os.path.join(dir_path, EMPTY_FILE_NAME)
+    with open(empty_file_path, 'w'):
         pass
+    return empty_file_path
 
 def get_executables_paths(workload_path_on_guest, workload_path_on_host,
                           timeout, dont_use_qemu, dont_add_communications,
                           temp_dir_path):
+    # Using both --timeout and --dont_add_communications_with_host_to_workload
+    # isn't allowed because --timeout is implemented using the bash command
+    # `timeout`, which opens a sub-shell. Thus, using the monitor command
+    # `sendkey` wouldn't send a key press to the workload, and so the workload
+    # would wait forever.
+    assert(not (timeout and dont_add_communications))
 
     if timeout:
         timeout_cmd_prefix = f'timeout {timeout} '
@@ -397,9 +426,7 @@ def get_executables_paths(workload_path_on_guest, workload_path_on_host,
                             f'{executable2_path_when_running_executable1}')
 
     if dont_use_qemu or workload_path_on_guest:
-        empty_file_path = os.path.join(temp_dir_path, EMPTY_FILE_NAME)
-        create_empty_file(empty_file_path)
-        executable2_path = empty_file_path
+        executable2_path = create_empty_file(temp_dir_path)
 
         executable2_dir_path_when_running_executable1 = os.path.split(
             executable2_path_when_running_executable1)[0]
@@ -421,9 +448,8 @@ def get_executables_paths(workload_path_on_guest, workload_path_on_host,
             f'echo "Stop tracing"\n'
             )
     executable1_path = os.path.join(temp_dir_path, EXECUTABLE1_FOR_SERIAL_NAME)
-    write_file(executable1_path, executable1_source)
-    os.chmod(executable1_path, 0o777)
-    # os.chmod(executable1_path, stat.S_IEXEC)
+    write_text_file(executable1_path, executable1_source)
+    os.chmod(executable1_path, stat.S_IXUSR | stat.S_IRUSR)
 
     return executable1_path, executable2_path    
 
@@ -455,8 +481,6 @@ if __name__ == '__main__':
     if args.verbose:
         def debug_print(*args, **kwargs):
             print(*args, file=sys.stderr, **kwargs)
-            sys.stderr.flush()
-        # debug_print = print
     else:
         def debug_print(*args, **kwargs):
             return
@@ -476,33 +500,33 @@ if __name__ == '__main__':
             temp_dir_path)
         if not args.dont_use_qemu:
             trace_fifo_path = get_trace_fifo_path(args.trace_fifo_path)
-
             write_executables_to_serial_path = os.path.join(
                 this_script_location, WRITE_EXECUTABLES_TO_SERIAL_REL_PATH)
             qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
             run_qemu_and_workload_expect_script_path = os.path.join(
                 this_script_location, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH)
 
-            run_qemu_and_workload_cmd = (f'{run_qemu_and_workload_expect_script_path} '
-                                         f'"{guest_image_path}" '
-                                         f'"{args.snapshot_name}" '
-                                         f'"{executable1_path}" '
-                                         f'"{executable2_path}" '
-                                         f'"{write_executables_to_serial_path}" '
-                                         f'{args.trace_only_CPL3_code_GMBE} '
-                                         f'{args.log_of_GMBE_block_len} '
-                                         f'{args.log_of_GMBE_tracing_ratio} '
-                                         f'"{args.analysis_tool_path}" '
-                                         f'"{trace_fifo_path}" '
-                                         f'"{qemu_with_GMBEOO_path}" '
-                                         f'{args.verbose} '
-                                         f'{args.dont_exit_qemu_when_done} '
-                                         f'{args.print_trace_info} '
-                                         f'{args.dont_trace} '
-                                         f'{args.dont_add_communications_with_host_to_workload} '
-                                         f'{args.dont_use_nographic} '
-                                         f'{args.guest_RAM_in_MBs} '
-                                         )
+            run_qemu_and_workload_cmd = (
+                f'{run_qemu_and_workload_expect_script_path} '
+                f'"{guest_image_path}" '
+                f'"{args.snapshot_name}" '
+                f'"{executable1_path}" '
+                f'"{executable2_path}" '
+                f'"{write_executables_to_serial_path}" '
+                f'{args.trace_only_CPL3_code_GMBE} '
+                f'{args.log_of_GMBE_block_len} '
+                f'{args.log_of_GMBE_tracing_ratio} '
+                f'"{args.analysis_tool_path}" '
+                f'"{trace_fifo_path}" '
+                f'"{qemu_with_GMBEOO_path}" '
+                f'{args.verbose} '
+                f'{args.dont_exit_qemu_when_done} '
+                f'{args.print_trace_info} '
+                f'{args.dont_trace} '
+                f'{args.dont_add_communications_with_host_to_workload} '
+                f'{args.dont_use_nographic} '
+                f'{args.guest_RAM_in_MBs} '
+                )
 
             execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)
 

@@ -255,6 +255,7 @@ if {$print_trace_info == "True" && $dont_trace == "False"} {
 debug_print "---end run_qemu_and_workload.sh---\n"
 
 if {$dont_exit_qemu_when_done == "True"} {
+    send -i $monitor_spawn_id "trace-event guest_mem_before_exec off\r"
     interact -i $monitor_spawn_id
 }
 

@@ -78,7 +78,7 @@ void handle_end_analysis_signal(int unused_signum) {
                "num_of_read_failures_with_feof_1: %lu\n",
                num_of_read_failures, num_of_read_failures_with_feof_1);
     }
-    printf("our_buf_addr:                                               %lu\n"
+    printf("our_buf_addr:                                               %lx\n"
            "num_of_mem_accesses_by_CPL3_code:                           %lu\n"
            "num_of_mem_accesses_by_non_CPL3_code:                       %lu\n"
            "num_of_mem_accesses_by_CPL3_code_to_cpu_entry_area:         %lu\n"
