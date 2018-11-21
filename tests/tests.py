@@ -906,7 +906,7 @@ def test_dont_use_nographic(this_script_location,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
 # Remove the prefix '_' if you wish build_and_run_tests.py run this test.
-def test_toy_workload_duration_and_MAPS(this_script_location,
+def _test_toy_workload_duration_and_MAPS(this_script_location,
                                         memory_tracer_script_path,
                                         qemu_with_GMBEOO_path, guest_image_path,
                                         snapshot_name):
@@ -918,13 +918,13 @@ def test_toy_workload_duration_and_MAPS(this_script_location,
         memory_tracer_script_path,
         qemu_with_GMBEOO_path, guest_image_path,
         snapshot_name,
-        1, # num_of_iterations
+        10, # num_of_iterations
         workload_path_on_host=workload_path,
         log_of_GMBE_tracing_ratio=10,
         dont_add_communications=True)
 
 # Remove the prefix '_' if you wish build_and_run_tests.py run this test.
-def test_mcf_duration_and_MAPS(this_script_location,
+def _test_mcf_duration_and_MAPS(this_script_location,
                                memory_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name):
