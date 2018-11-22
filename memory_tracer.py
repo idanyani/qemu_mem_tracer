@@ -356,13 +356,18 @@ def parse_cmd_args():
     args = parser.parse_args()
 
     if args.workload_path_on_host:
+        args.workload_path_on_host = os.path.realpath(args.workload_path_on_host)
         verify_arg_is_file(args.workload_path_on_host, 'workload_path_on_host')
     if not args.dont_use_qemu:
+        args.guest_image_path = os.path.realpath(args.guest_image_path)
         verify_arg_is_file(args.guest_image_path, 'guest_image_path')
+        args.qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
         verify_arg_is_dir(args.qemu_with_GMBEOO_path, 'qemu_with_GMBEOO_path')
         if args.analysis_tool_path != '/dev/null':
+            args.analysis_tool_path = os.path.realpath(args.analysis_tool_path)
             verify_arg_is_file(args.analysis_tool_path, 'analysis_tool_path')
         if args.trace_fifo_path:
+            args.trace_fifo_path = os.path.realpath(args.trace_fifo_path)
             verify_arg_is_fifo(args.trace_fifo_path, 'trace_fifo_path')
 
         verify_arg_is_in_range(args.log_of_GMBE_block_len,
@@ -485,8 +490,6 @@ if __name__ == '__main__':
         def debug_print(*args, **kwargs):
             return
 
-    guest_image_path = os.path.realpath(args.guest_image_path)
-
     this_script_path = os.path.realpath(__file__)
     this_script_location = os.path.split(this_script_path)[0]
 
@@ -508,7 +511,7 @@ if __name__ == '__main__':
 
             run_qemu_and_workload_cmd = (
                 f'{run_qemu_and_workload_expect_script_path} '
-                f'"{guest_image_path}" '
+                f'"{args.guest_image_path}" '
                 f'"{args.snapshot_name}" '
                 f'"{executable1_path}" '
                 f'"{executable2_path}" '

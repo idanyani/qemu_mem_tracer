@@ -62,7 +62,7 @@ setup:
           you used to start qemu_with_GMBEOO). E.g.:
             + savevm ready_for_memory_tracer
         ~ Close qemu_with_GMBEOO.
-- Run qemu_mem_tracer/build.py qemu_with_GMBEOO_path --dont_compile_qemu --run_tests --guest_image_path GUEST_IMAGE_PATH --snapshot_name SNAPSHOT_NAME
+- python3.7 qemu_mem_tracer/build.py <qemu_with_GMBEOO_path> --dont_compile_qemu --run_tests --guest_image_path <GUEST_IMAGE_PATH> --snapshot_name <SNAPSHOT_NAME>
 
 
 
