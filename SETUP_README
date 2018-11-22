@@ -1,6 +1,6 @@
 setup:
 - git clone https://github.com/orenmn/qemu_with_GMBEOO
-    * (cd qemu_with_GMBEOO && git submodule init && git submodule update --recursive && git checkout mem_tracer)
+- (cd qemu_with_GMBEOO && git submodule init && git submodule update --recursive && git checkout mem_tracer)
 - git clone https://github.com/orenmn/qemu_mem_tracer
 - Install python3.7 (according to
   https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get/865569#865569):
