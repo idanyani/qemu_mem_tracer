@@ -4,11 +4,14 @@ import subprocess
 import os
 import os.path
 import argparse
+import stat
 
 BUILD_QEMU_SCRIPT_NAME = 'config_and_make_qemu_with_GMBEOO.py'
 QEMU_MEM_TRACER_SCRIPT_NAME = 'memory_tracer.py'
 TESTS_DIR_NAME = 'tests'
 BUILD_AND_RUN_TESTS_SCRIPT_NAME = 'build_and_run_tests.py'
+RUN_QEMU_AND_WORKLOAD_SCRIPT_NAME = 'run_qemu_and_workload.sh'
+RUN_WORKLOAD_NATIVELY_SCRIPT_NAME = 'run_workload_natively.sh'
 TO_RUN_ON_GUEST_DIR_NAME = 'to_run_on_guest'
 COMMUNICATIONS_DIR_NAME = 'communications'
 RUN_SCRIPT_FROM_SERIAL_ELF_NAME = 'run_executables_from_serial'
@@ -17,6 +20,10 @@ RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH = os.path.join(
 RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME = f'{RUN_SCRIPT_FROM_SERIAL_ELF_NAME}.c'
 RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH = os.path.join(
     COMMUNICATIONS_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME)
+RUN_QEMU_AND_WORKLOAD_REL_PATH = os.path.join(
+    COMMUNICATIONS_DIR_NAME, RUN_QEMU_AND_WORKLOAD_SCRIPT_NAME)
+RUN_WORKLOAD_NATIVELY_REL_PATH = os.path.join(
+    COMMUNICATIONS_DIR_NAME, RUN_WORKLOAD_NATIVELY_SCRIPT_NAME)
 
 def execute_cmd_in_dir(cmd, dir_path='.'):
     if args.verbosity_level > 0:
@@ -68,6 +75,13 @@ to_run_on_guest_dir_path = os.path.join(this_script_location,
                                         TO_RUN_ON_GUEST_DIR_NAME)
 if not os.path.isdir(to_run_on_guest_dir_path):
     os.mkdir(to_run_on_guest_dir_path)
+
+run_qemu_and_workload_path = os.path.join(
+    this_script_location, RUN_QEMU_AND_WORKLOAD_REL_PATH)
+os.chmod(run_qemu_and_workload_path, stat.S_IXUSR)
+run_workload_natively_path = os.path.join(
+    this_script_location, RUN_WORKLOAD_NATIVELY_REL_PATH)
+os.chmod(run_workload_natively_path, stat.S_IXUSR)
 
 run_script_from_serial_source_path = os.path.join(
     this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH)
