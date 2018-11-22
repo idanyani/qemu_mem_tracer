@@ -78,10 +78,10 @@ if not os.path.isdir(to_run_on_guest_dir_path):
 
 run_qemu_and_workload_path = os.path.join(
     this_script_location, RUN_QEMU_AND_WORKLOAD_REL_PATH)
-os.chmod(run_qemu_and_workload_path, stat.S_IXUSR)
+os.chmod(run_qemu_and_workload_path, stat.S_IXUSR | stat.S_IRUSR)
 run_workload_natively_path = os.path.join(
     this_script_location, RUN_WORKLOAD_NATIVELY_REL_PATH)
-os.chmod(run_workload_natively_path, stat.S_IXUSR)
+os.chmod(run_workload_natively_path, stat.S_IXUSR | stat.S_IRUSR)
 
 run_script_from_serial_source_path = os.path.join(
     this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH)
