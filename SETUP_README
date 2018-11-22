@@ -1,5 +1,6 @@
 setup:
 - git clone https://github.com/orenmn/qemu_with_GMBEOO
+    * (cd qemu_with_GMBEOO && git submodule init && git submodule update --recursive && git checkout mem_tracer)
 - git clone https://github.com/orenmn/qemu_mem_tracer
 - Install python3.7 (according to
   https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get/865569#865569):
@@ -7,17 +8,23 @@ setup:
     * sudo apt-get update
     * sudo apt-get install python3.7
 - sudo apt-get install expect
-- python3.7 qemu_mem_tracer/build.py qemu_with_GMBEOO_path
+- sudo apt-get install pkg-config
+- sudo apt-get install libglib2.0-dev
+- sudo apt-get install libpixman-1-dev
+- python3.7 qemu_mem_tracer/build.py <qemu_with_GMBEOO_path>
 - Either ask orenmn@gmail.com for a qemu image for memory_tracer, or create
   one yourself:
     * Download ubuntu-18.04.1-live-server-amd64.iso
        (https://www.ubuntu.com/download/server).
     * Create an "empty" image. E.g.:
-        ~ ./qemu-img create -f qcow2 oren_vm_disk.qcow2 25G
+        ~ qemu_with_GMBEOO/qemu-img create -f qcow2 oren_vm_disk.qcow2 25G
           (See https://en.wikibooks.org/wiki/QEMU/Images#Creating_an_image and
           https://wiki.qemu.org/Hosts/Linux#Getting_the_source_code)
     * Install the Ubuntu Server on it:
-        ~ ./x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda ../oren_vm_disk2.qcow2 -cdrom ../ubuntu-18.04.1-desktop-amd64.iso -monitor stdio
+        ~ qemu_with_GMBEOO/x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda oren_vm_disk.qcow2 -cdrom ubuntu-18.04.1-live-server-amd64.iso -nographic
+            + You can switch between the guest console and qemu monitor using
+              Ctrl-a c, and terminate the emulator using Ctrl-a x. See
+              https://qemu.weilnetz.de/doc/qemu-doc.html#mux_005fkeys.
             + If you get "cannot set up guest memory 'pc.ram': Cannot
               allocate memory", then 2560MB is too much for your machine to
               give qemu, so specify a smaller amount.
@@ -29,7 +36,8 @@ setup:
               diligently but silently): use the qemu’s monitor command
               `info registers` several times. If the registers change, then
               you should probably just wait.
-            + When the installation finishes, close qemu_with_GMBEOO.
+            + When you are done installing the Ubuntu server,
+              close qemu_with_GMBEOO.
     * Start qemu_with_GMBEOO. E.g.:
         ~ ./x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda ../oren_vm_disk2.qcow2 -monitor stdio -serial pty
     * I highly recommend giving your qemu guest some time to completely
