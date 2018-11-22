@@ -47,6 +47,8 @@ parser.add_argument('--guest_image_path', type=str)
 parser.add_argument('--snapshot_name', type=str)
 args = parser.parse_args()
 
+args.qemu_with_GMBEOO_path = os.path.realpath(args.qemu_with_GMBEOO_path)
+
 this_script_path = os.path.realpath(__file__)
 this_script_location = os.path.split(this_script_path)[0]
 this_script_location_dir_name = os.path.split(this_script_location)[-1]
@@ -100,6 +102,5 @@ if args.run_tests:
                        f'{args.qemu_with_GMBEOO_path} '
                        f'{args.guest_image_path} '
                        f'{args.snapshot_name} '
-                       f'--verbosity_level {args.verbosity_level} ',
-                       tests_dir_path)
+                       f'--verbosity_level {args.verbosity_level} ')
 
