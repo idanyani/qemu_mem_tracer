@@ -9,6 +9,7 @@ import re
 import sys
 import fcntl
 import signal
+import stat
 
 F_SETPIPE_SZ = 1031  # Linux 2.6.35+
 F_GETPIPE_SZ = 1032  # Linux 2.6.35+
@@ -928,7 +929,12 @@ def test_mcf_duration_and_MAPS(this_script_location,
                                memory_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name):
-    mcf_path_on_host = os.path.join(this_script_location, '429.mcf', 'run.sh')
+    mcf_runner_path_on_host = os.path.join(this_script_location,
+                                           '429.mcf', 'run.sh')
+    os.chmod(mcf_runner_path_on_host, stat.S_IXUSR | stat.S_IRUSR)
+    mcf_path_on_host = os.path.join(this_script_location,
+                                    '429.mcf', 'mcf_base.none')
+    os.chmod(mcf_path_on_host, stat.S_IXUSR | stat.S_IRUSR)
     mcf_path_on_guest = os.path.join('\~', '429.mcf', 'run.sh')
     print_workload_durations_and_MAPS(
         this_script_location,
@@ -937,7 +943,7 @@ def test_mcf_duration_and_MAPS(this_script_location,
         snapshot_name,
         1, # num_of_iterations
         workload_path_on_guest=mcf_path_on_guest,
-        workload_path_on_host=mcf_path_on_host,
+        workload_path_on_host=mcf_runner_path_on_host,
         log_of_GMBE_tracing_ratio=10,
         timeout=6
         )
