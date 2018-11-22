@@ -114,7 +114,7 @@ optional arguments:
                         without tracing. Note that code that does such a
                         comparison has already been implemented in
                         tests/tests.py. See the function
-                        `_test_toy_workload_durations`.
+                        `_test_toy_workload_duration_and_MAPS`.
   --dont_use_qemu       If specified, memory_tracer.py will run the workload
                         on the host (i.e. natively). Please pass dummy non-
                         empty strings as the arguments guest_image_path,
@@ -125,7 +125,7 @@ optional arguments:
                         code natively. Note that code that does such a
                         comparison has already been implemented in
                         tests/tests.py. See the function
-                        `_test_toy_workload_durations`.
+                        `_test_toy_workload_duration_and_MAPS`.
   --trace_only_CPL3_code_GMBE
                         If specified, qemu would only trace memory accesses by
                         CPL3 code. Otherwise, qemu would trace all accesses.
