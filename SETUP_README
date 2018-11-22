@@ -1,27 +1,28 @@
 setup:
-- git clone https://github.com/orenmn/qemu_with_GMBEOO
-- (cd qemu_with_GMBEOO && git submodule init && git submodule update --recursive && git checkout mem_tracer)
-- git clone https://github.com/orenmn/qemu_mem_tracer
+(Backticks denote a command to run in a terminal)
+- `git clone https://github.com/orenmn/qemu_with_GMBEOO`
+- `(cd qemu_with_GMBEOO && git submodule init && git submodule update --recursive && git checkout mem_tracer)`
+- `git clone https://github.com/orenmn/qemu_mem_tracer`
 - Install python3.7 (according to
   https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get/865569#865569):
-    * sudo add-apt-repository ppa:deadsnakes/ppa
-    * sudo apt-get update
-    * sudo apt-get install python3.7
-- sudo apt-get install expect
-- sudo apt-get install pkg-config
-- sudo apt-get install libglib2.0-dev
-- sudo apt-get install libpixman-1-dev
-- python3.7 qemu_mem_tracer/build.py <qemu_with_GMBEOO_path>
+    * `sudo add-apt-repository ppa:deadsnakes/ppa`
+    * `sudo apt-get update`
+    * `sudo apt-get install python3.7`
+- `sudo apt-get install expect`
+- `sudo apt-get install pkg-config`
+- `sudo apt-get install libglib2.0-dev`
+- `sudo apt-get install libpixman-1-dev`
+- `python3.7 qemu_mem_tracer/build.py <qemu_with_GMBEOO_path>`
 - Either ask orenmn@gmail.com for a qemu image for memory_tracer, or create
   one yourself:
     * Download ubuntu-18.04.1-live-server-amd64.iso
        (https://www.ubuntu.com/download/server).
     * Create an "empty" image. E.g.:
-        ~ qemu_with_GMBEOO/qemu-img create -f qcow2 oren_vm_disk.qcow2 25G
+        ~ `qemu_with_GMBEOO/qemu-img create -f qcow2 oren_vm_disk.qcow2 25G`
           (See https://en.wikibooks.org/wiki/QEMU/Images#Creating_an_image and
           https://wiki.qemu.org/Hosts/Linux#Getting_the_source_code)
-    * Install the Ubuntu Server on it:
-        ~ qemu_with_GMBEOO/x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda oren_vm_disk.qcow2 -cdrom ubuntu-18.04.1-live-server-amd64.iso -nographic
+    * Install the Ubuntu Server on it. E.g.:
+        ~ `qemu_with_GMBEOO/x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda oren_vm_disk.qcow2 -cdrom ubuntu-18.04.1-live-server-amd64.iso -monitor stdio`
             + You can switch between the guest console and qemu monitor using
               Ctrl-a c, and terminate the emulator using Ctrl-a x. See
               https://qemu.weilnetz.de/doc/qemu-doc.html#mux_005fkeys.
@@ -39,7 +40,7 @@ setup:
             + When you are done installing the Ubuntu server,
               close qemu_with_GMBEOO.
     * Start qemu_with_GMBEOO. E.g.:
-        ~ ./x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda ../oren_vm_disk2.qcow2 -monitor stdio -serial pty
+        ~ `./x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda ../oren_vm_disk2.qcow2 -monitor stdio -serial pty`
     * I highly recommend giving your qemu guest some time to completely
       finish the startup process (even after logging in, i guess many
       startup scripts are still running). Sounds obvious in retrospect, but
@@ -50,19 +51,19 @@ setup:
         ~ Copy run_executables_from_serial from the host into the guest, and make
           it executable.
           E.g. (inside the guest, 10.0.2.2 is the host):
-            + scp orenmn@10.0.2.2:qemu_mem_tracer/to_run_on_guest/run_executables_from_serial run_executables_from_serial
-            + chmod 777 run_executables_from_serial
-        ~ sudo chmod 666 /dev/ttyS0
-        ~ ./run_executables_from_serial
+            + `scp orenmn@10.0.2.2:qemu_mem_tracer/to_run_on_guest/run_executables_from_serial run_executables_from_serial`
+            + `chmod 777 run_executables_from_serial`
+        ~ `sudo chmod 666 /dev/ttyS0`
+        ~ `./run_executables_from_serial`
             + run_executables_from_serial is waiting for input through the serial.
               If it printed "Opened /dev/ttyS0.", proceed to the next step
               without terminating run_executables_from_serial.
         ~ Save an internal snapshot of the guest by executing the `savevm` qemu
           monitor command (monitor commands can be executed through the terminal
           you used to start qemu_with_GMBEOO). E.g.:
-            + savevm ready_for_memory_tracer
+            + `savevm ready_for_memory_tracer`
         ~ Close qemu_with_GMBEOO.
-- python3.7 qemu_mem_tracer/build.py <qemu_with_GMBEOO_path> --dont_compile_qemu --run_tests --guest_image_path <GUEST_IMAGE_PATH> --snapshot_name <SNAPSHOT_NAME>
+- `python3.7 qemu_mem_tracer/build.py <qemu_with_GMBEOO_path> --dont_compile_qemu --run_tests --guest_image_path <GUEST_IMAGE_PATH> --snapshot_name <SNAPSHOT_NAME>`
 
 
 

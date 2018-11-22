@@ -924,7 +924,7 @@ def _test_toy_workload_duration_and_MAPS(this_script_location,
         dont_add_communications=True)
 
 # Remove the prefix '_' if you wish build_and_run_tests.py run this test.
-def _test_mcf_duration_and_MAPS(this_script_location,
+def test_mcf_duration_and_MAPS(this_script_location,
                                memory_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name):
