@@ -1,2 +1,0 @@
--C /home/idanyani/repos/mosalloc/software/spec_cpu2006/installed/benchspec/CPU2006/999.specrand/run/run_base_ref_none.0000
--o rand.234923.out -e rand.234923.err ../run_base_ref_none.0000/specrand_base.none 1255432124 234923
