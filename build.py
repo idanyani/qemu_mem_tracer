@@ -62,10 +62,15 @@ if this_script_location_dir_name != 'qemu_mem_tracer':
         if user_input == 'y':
             break
 
+to_run_on_guest_dir_path = os.path.join(this_script_location,
+                                        TO_RUN_ON_GUEST_DIR_NAME)
+if not os.path.isdir(to_run_on_guest_dir_path):
+    os.mkdir(to_run_on_guest_dir_path)
+
 run_script_from_serial_source_path = os.path.join(
-  this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH)
+    this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH)
 run_script_from_serial_elf_path = os.path.join(
-  this_script_location, RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH)
+    this_script_location, RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH)
 compile_cmd = (f'gcc -Werror -Wall -pedantic '
                f'{run_script_from_serial_source_path} '
                f'-o {run_script_from_serial_elf_path}')
