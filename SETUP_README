@@ -3,11 +3,13 @@ setup:
 - `git clone https://github.com/orenmn/qemu_with_GMBEOO`
 - `(cd qemu_with_GMBEOO && git submodule init && git submodule update --recursive && git checkout mem_tracer)`
 - `git clone https://github.com/orenmn/qemu_mem_tracer`
+- `sudo apt-get install python`
 - Install python3.7 (according to
   https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get/865569#865569):
     * `sudo add-apt-repository ppa:deadsnakes/ppa`
     * `sudo apt-get update`
     * `sudo apt-get install python3.7`
+- `sudo add-apt-repository universe`
 - `sudo apt-get install expect`
 - `sudo apt-get install pkg-config`
 - `sudo apt-get install libglib2.0-dev`
