@@ -37,7 +37,7 @@ setup:
             + It would probably take some time. An easy way to check
               whether the guest is actually dead (and not just working
               diligently but silently): use the qemu’s monitor command
-              >> info registers>>  several times. If the registers change, then
+              `info registers` several times. If the registers change, then
               you should probably just wait.
             + When you are done installing the Ubuntu server,
               close qemu_with_GMBEOO.
@@ -60,7 +60,7 @@ setup:
             + run_executables_from_serial is waiting for input through the serial.
               If it printed "Opened /dev/ttyS0.", proceed to the next step
               without terminating run_executables_from_serial.
-        ~ Save an internal snapshot of the guest by executing the >> savevm>>  qemu
+        ~ Save an internal snapshot of the guest by executing the `savevm` qemu
           monitor command (monitor commands can be executed through the terminal
           you used to start qemu_with_GMBEOO). E.g.:
             + >> savevm ready_for_memory_tracer
