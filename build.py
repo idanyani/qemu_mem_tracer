@@ -31,7 +31,7 @@ RUN_WORKLOAD_NATIVELY_REL_PATH = os.path.join(
 def execute_cmd_in_dir(cmd, dir_path='.'):
     if args.verbosity_level > 0:
         print(f'executing cmd (in {dir_path}): {cmd}')
-    subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
+    subprocess.run(cmd, check=True, cwd=dir_path)
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -92,9 +92,9 @@ run_script_from_serial_source_path = os.path.join(
     this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH)
 run_script_from_serial_elf_path = os.path.join(
     this_script_location, RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH)
-compile_cmd = (f'gcc -Werror -Wall -pedantic '
-               f'{run_script_from_serial_source_path} '
-               f'-o {run_script_from_serial_elf_path}')
+compile_cmd = ['gcc', '-Werror', '-Wall', '-pedantic',
+               run_script_from_serial_source_path,
+               '-o', run_script_from_serial_elf_path]
 execute_cmd_in_dir(compile_cmd, this_script_location)
 
 run_executables_to_serial_script_path = os.path.join(
@@ -108,8 +108,9 @@ if not args.dont_compile_qemu:
                                           BUILD_QEMU_SCRIPT_NAME)
     os.chmod(build_qemu_script_path,
              os.stat(build_qemu_script_path).st_mode | stat.S_IXUSR | stat.S_IRUSR)
-    build_qemu_cmd = (f'{build_qemu_script_path} '
-                      f'{args.qemu_with_GMBEOO_path} {args.enable_debug}')
+    build_qemu_cmd = (build_qemu_script_path,
+                      args.qemu_with_GMBEOO_path,
+                      args.enable_debug)
     execute_cmd_in_dir(build_qemu_cmd, this_script_location)
 
 
@@ -127,10 +128,11 @@ if args.run_tests:
         tests_dir_path, BUILD_AND_RUN_TESTS_SCRIPT_NAME)
     os.chmod(build_and_run_tests_script_path,
              os.stat(build_and_run_tests_script_path).st_mode | stat.S_IXUSR | stat.S_IRUSR)
-    execute_cmd_in_dir(f'{build_and_run_tests_script_path} '
-                       f'{memory_tracer_script_path} '
-                       f'{args.qemu_with_GMBEOO_path} '
-                       f'{args.guest_image_path} '
-                       f'{args.snapshot_name} '
-                       f'--verbosity_level {args.verbosity_level} ')
+    execute_cmd_in_dir([build_and_run_tests_script_path,
+                       memory_tracer_script_path,
+                       args.qemu_with_GMBEOO_path,
+                       args.guest_image_path,
+                       args.snapshot_name,
+                       '--verbosity_level',
+                       str(args.verbosity_level)])
 

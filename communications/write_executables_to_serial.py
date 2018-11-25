@@ -21,10 +21,6 @@ def parse_cmd_args():
     parser.add_argument('serial_port_path', type=str)
     return parser.parse_args()
 
-def execute_cmd(cmd):
-    print(f'executing cmd: {cmd}')
-    subprocess.run(cmd, shell=True, check=True)
-
 def get_16_bit_checksum(file_contents):
     return sum(file_contents) & 0xffff
 

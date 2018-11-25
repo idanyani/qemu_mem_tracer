@@ -7,10 +7,10 @@ import argparse
 
 def execute_cmd_in_dir(cmd, dir_path):
     print(f'executing cmd (in {dir_path}): {cmd}')
-    subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
+    subprocess.run(cmd, check=True, cwd=dir_path)
 
 def get_current_branch_name(repo_path):
-    return subprocess.run('git rev-parse --abbrev-ref HEAD', shell=True,
+    return subprocess.run(['git', 'rev-parse', '--abbrev-ref HEAD'],
                           check=True, cwd=repo_path,
                           capture_output=True).stdout.strip().decode()
 
@@ -39,8 +39,10 @@ if qemu_with_GMBEOO_branch_name != 'mem_tracer':
         if user_input == 'y':
             break
 
-configure_cmd = (f'./configure --target-list=x86_64-softmmu '
-                 f'--enable-trace-backends=simple {args.debug_flag}')
+configure_cmd = ['./configure',
+                 '--target-list=x86_64-softmmu',
+                 '--enable-trace-backends=simple',
+                 args.debug_flag]
 execute_cmd_in_dir(configure_cmd, qemu_with_GMBEOO_path)
 execute_cmd_in_dir('make', qemu_with_GMBEOO_path)
 

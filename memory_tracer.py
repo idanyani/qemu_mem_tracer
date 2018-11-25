@@ -36,7 +36,7 @@ def write_text_file(file_path, contents):
 
 def execute_cmd_in_dir(cmd, dir_path='.', stdout_dest=subprocess.DEVNULL):
     debug_print(f'executing cmd (in {dir_path}): {cmd}')
-    return subprocess.run(cmd, shell=True, check=True, cwd=dir_path,
+    return subprocess.run(cmd, check=True, cwd=dir_path,
                           stdout=stdout_dest)
 
 def verify_arg_is_file(arg, arg_name):
@@ -462,7 +462,7 @@ def get_trace_fifo_path(trace_fifo_path_cmd_arg):
 
     trace_fifo_path = os.path.join(temp_dir_path, 'trace_fifo')
     os.mkfifo(trace_fifo_path)
-    print_fifo_max_size_cmd = 'cat /proc/sys/fs/pipe-max-size'
+    print_fifo_max_size_cmd = ('cat', '/proc/sys/fs/pipe-max-size')
     fifo_max_size_as_str = execute_cmd_in_dir(
         print_fifo_max_size_cmd,
         stdout_dest=subprocess.PIPE).stdout.strip().decode()
@@ -506,38 +506,39 @@ if __name__ == '__main__':
             run_qemu_and_workload_expect_script_path = os.path.join(
                 this_script_location, RUN_QEMU_AND_WORKLOAD_EXPECT_SCRIPT_REL_PATH)
 
-            run_qemu_and_workload_cmd = (
-                f'{run_qemu_and_workload_expect_script_path} '
-                f'"{args.guest_image_path}" '
-                f'"{args.snapshot_name}" '
-                f'"{executable1_path}" '
-                f'"{executable2_path}" '
-                f'"{write_executables_to_serial_path}" '
-                f'{args.trace_only_CPL3_code_GMBE} '
-                f'{args.log_of_GMBE_block_len} '
-                f'{args.log_of_GMBE_tracing_ratio} '
-                f'"{args.analysis_tool_path}" '
-                f'"{trace_fifo_path}" '
-                f'"{qemu_with_GMBEOO_path}" '
-                f'{args.verbose} '
-                f'{args.dont_exit_qemu_when_done} '
-                f'{args.print_trace_info} '
-                f'{args.dont_trace} '
-                f'{args.dont_add_communications_with_host_to_workload} '
-                f'{args.dont_use_nographic} '
-                f'{args.guest_RAM_in_MBs} '
-                )
+            run_qemu_and_workload_cmd = [
+                run_qemu_and_workload_expect_script_path,
+                args.guest_image_path,
+                args.snapshot_name,
+                executable1_path,
+                executable2_path,
+                write_executables_to_serial_path,
+                str(args.trace_only_CPL3_code_GMBE),
+                str(args.log_of_GMBE_block_len),
+                str(args.log_of_GMBE_tracing_ratio),
+                args.analysis_tool_path,
+                trace_fifo_path,
+                qemu_with_GMBEOO_path,
+                str(args.verbose),
+                str(args.dont_exit_qemu_when_done),
+                str(args.print_trace_info),
+                str(args.dont_trace),
+                str(args.dont_add_communications_with_host_to_workload),
+                str(args.dont_use_nographic),
+                str(args.guest_RAM_in_MBs),
+                ]
 
-            execute_cmd_in_dir(run_qemu_and_workload_cmd, temp_dir_path, sys.stdout)
+            execute_cmd_in_dir(run_qemu_and_workload_cmd,
+                               temp_dir_path, sys.stdout)
 
         else:
             assert(args.dont_use_qemu)
             run_workload_natively_expect_script_path = os.path.join(
                 this_script_location, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_REL_PATH)
-            run_workload_cmd = (f'{run_workload_natively_expect_script_path} '
-                                f'"{executable1_path}" '
-                                f'{args.verbose} '
-                                )
+            run_workload_cmd = [run_workload_natively_expect_script_path,
+                                executable1_path,
+                                args.verbose
+                                ]
 
             execute_cmd_in_dir(run_workload_cmd, temp_dir_path, sys.stdout)
 

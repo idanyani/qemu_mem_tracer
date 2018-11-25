@@ -7,7 +7,6 @@ import os.path
 import argparse
 import tests
 
-
 SIMPLE_ANALYSIS_SOURCE_NAME = 'simple_analysis.c'
 SIMPLE_ANALYSIS_NAME = os.path.splitext(SIMPLE_ANALYSIS_SOURCE_NAME)[0]
 TEST_SCRIPT_PREFIX = 'test_'
@@ -20,10 +19,10 @@ OUTPUT_DIR_NAME = 'tests_bin'
 def execute_cmd_in_dir(cmd, dir_path):
     if args.verbosity_level > 0:
         print(f'executing cmd (in {dir_path}): {cmd}')
-    subprocess.run(cmd, shell=True, check=True, cwd=dir_path)
+    subprocess.run(cmd, check=True, cwd=dir_path)
 
 def does_dir_contain_c_files(dir_path):
-    return subprocess.run(f'ls {dir_path}/*.c {dir_path}/*.C', shell=True,
+    return subprocess.run(['ls', f'{dir_path}/*.c', f'{dir_path}/*.C'],
                           check=False, capture_output=True).stdout != b''
 
 def compile_c_files(dir_path):
@@ -38,8 +37,8 @@ def compile_c_files(dir_path):
                 name, ext = os.path.splitext(fullname)
                 if ext.lower() == '.c':
                     bin_rel_path = os.path.join(OUTPUT_DIR_NAME, name)
-                    compile_cmd = (f'gcc -Werror -Wall -pedantic {fullname} '
-                                   f'-o {bin_rel_path}')
+                    compile_cmd = ['gcc', '-Werror', '-Wall', '-pedantic',
+                                   fullname, '-o', bin_rel_path]
                     execute_cmd_in_dir(compile_cmd, root_dir_path)
 
 parser = argparse.ArgumentParser(
