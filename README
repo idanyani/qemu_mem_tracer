@@ -61,17 +61,17 @@ Note that some of the command line arguments might be irrelevant to you as a use
 
 simple usage examples: 
 (1)
-python3.7 ~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --analysis_tool_path ~/qemu_mem_tracer/tests/toy_workloads_and_analysis_tools/tests_bin/simple_analysis --workload_path_on_host /bin/date
+~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --analysis_tool_path ~/qemu_mem_tracer/tests/toy_workloads_and_analysis_tools/tests_bin/simple_analysis --workload_path_on_host /bin/date
 -----> memory_tracer does the following: Start a qemu guest (that was specially prepared for memory_tracer) using the disk image ~/oren_vm_disk2.qcow2 and the internal snapshot `ready_for_memory_tracer`; Send the workload /bin/date from the host to the guest; Run the analysis tool ~/qemu_mem_tracer/tests/toy_workloads_and_analysis_tools/tests_bin/simple_analysis on the host and run the workload (that was sent from the host) on the guest, while sending trace records to the analysis tool.
 
 (2)
-python3.7 ~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --analysis_tool_path ~/qemu_mem_tracer/tests/toy_workloads_and_analysis_tools/tests_bin/simple_analysis --workload_path_on_guest /bin/date
+~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --analysis_tool_path ~/qemu_mem_tracer/tests/toy_workloads_and_analysis_tools/tests_bin/simple_analysis --workload_path_on_guest /bin/date
 -----> Same as (1), but with a workload that was already inside the guest.
 
 (3)
 mkfifo ~/tmp_example_fifo
 cat ~/tmp_example_fifo > ~/trace_records.bin &
-python3.7 ~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --trace_fifo_path ~/tmp_example_fifo --workload_path_on_guest /bin/date
+~/qemu_mem_tracer/memory_tracer.py ~/oren_vm_disk2.qcow2 ready_for_memory_tracer ~/qemu_with_GMBEOO --trace_fifo_path ~/tmp_example_fifo --workload_path_on_guest /bin/date
 rm ~/tmp_example_fifo
 -----> memory_tracer starts a qemu guest using the disk image ~/oren_vm_disk2.qcow2 and the internal snapshot `ready_for_memory_tracer`, and runs the workload /bin/date (that was already inside the guest) on the guest, while sending trace records to the FIFO ~/tmp_example_fifo.
 

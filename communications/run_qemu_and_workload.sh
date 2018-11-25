@@ -144,7 +144,7 @@ set pty_reader_spawn_id $spawn_id
 
 sleep 0.5
 debug_print "\n---writing executables to $pty_path---\n"
-exec python3.7 $write_executables_to_serial_path $file1_to_write_to_serial_path \
+exec $write_executables_to_serial_path $file1_to_write_to_serial_path \
                $file2_to_write_to_serial_path $pty_path
 
 # The guest would now receive the executables and run the first one.

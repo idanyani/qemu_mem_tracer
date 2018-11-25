@@ -1,4 +1,4 @@
-#!/usr/bin/python3.7
+#!/usr/bin/env python3
 
 import sys
 import subprocess
@@ -8,9 +8,6 @@ import argparse
 import tempfile
 import fcntl
 import stat
-
-if not sys.version.startswith('3.7.'):
-    raise RuntimeError('Please use python3.7 to run this script.')
 
 F_SETPIPE_SZ = 1031  # Linux 2.6.35+
 F_GETPIPE_SZ = 1032  # Linux 2.6.35+
@@ -147,7 +144,7 @@ def parse_cmd_args():
                     '\n\n'
                     'simple usage examples: \n'
                     '(1)\n'
-                    'python3.7 ~/qemu_mem_tracer/memory_tracer.py '
+                    '~/qemu_mem_tracer/memory_tracer.py '
                     '~/oren_vm_disk2.qcow2 '
                     'ready_for_memory_tracer ~/qemu_with_GMBEOO '
                     '--analysis_tool_path ~/qemu_mem_tracer/tests/'
@@ -164,7 +161,7 @@ def parse_cmd_args():
                     '(that was sent from the host) on the guest, while sending '
                     'trace records to the analysis tool.\n\n'
                     '(2)\n'
-                    'python3.7 ~/qemu_mem_tracer/memory_tracer.py '
+                    '~/qemu_mem_tracer/memory_tracer.py '
                     '~/oren_vm_disk2.qcow2 '
                     'ready_for_memory_tracer ~/qemu_with_GMBEOO '
                     '--analysis_tool_path ~/qemu_mem_tracer/tests/'
@@ -176,7 +173,7 @@ def parse_cmd_args():
                     '(3)\n'
                     'mkfifo ~/tmp_example_fifo\n'
                     'cat ~/tmp_example_fifo > ~/trace_records.bin &\n'
-                    'python3.7 ~/qemu_mem_tracer/memory_tracer.py '
+                    '~/qemu_mem_tracer/memory_tracer.py '
                     '~/oren_vm_disk2.qcow2 '
                     'ready_for_memory_tracer ~/qemu_with_GMBEOO '
                     '--trace_fifo_path ~/tmp_example_fifo '

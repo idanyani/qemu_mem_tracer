@@ -1,4 +1,4 @@
-#!/usr/bin/python3.7
+#!/usr/bin/env python3
 
 import subprocess
 import os
@@ -69,7 +69,7 @@ def get_mem_tracer_cmd(this_script_location, memory_tracer_script_path,
         verbose_cmd_arg = '--verbose'
     else:
         verbose_cmd_arg = ''
-    return (f'python3.7 {memory_tracer_script_path} '
+    return (f'{memory_tracer_script_path} '
             f'"{guest_image_path}" '
             f'"{snapshot_name}" '
             f'"{qemu_with_GMBEOO_path}" '
@@ -841,7 +841,7 @@ def test_timeout(this_script_location,
         f'--workload_path_on_host {workload_path} --timeout 4')
     
     duration = get_duration_from_mem_tracer_output(mem_tracer_output)
-    assert(3.7 <= duration <= 25)
+    assert(3.8 <= duration <= 25)
     if (duration > 10):
         print(f'Maybe this isn\'t an error, but it took the workload '
               f'{duration} seconds, while it should have taken around 4-5 '

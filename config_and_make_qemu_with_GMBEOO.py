@@ -1,4 +1,4 @@
-#!/usr/bin/python3.7
+#!/usr/bin/env python3
 
 import subprocess
 import os
@@ -17,7 +17,7 @@ def get_current_branch_name(repo_path):
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Call qemu_with_GMBEOO\'s configure and make scripts.\n\n'
-                'Run `python3.7 build.py -h` for help about the cmd arguments.')
+                'Run `build.py -h` for help about the cmd arguments.')
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('--enable_debug', dest='debug_flag',
                     action='store_const',

@@ -1,4 +1,4 @@
-#!/usr/bin/python3.7
+#!/usr/bin/env python3
 
 import subprocess
 import os
@@ -20,6 +20,9 @@ RUN_SCRIPT_FROM_SERIAL_ELF_REL_PATH = os.path.join(
 RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME = f'{RUN_SCRIPT_FROM_SERIAL_ELF_NAME}.c'
 RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH = os.path.join(
     COMMUNICATIONS_DIR_NAME, RUN_SCRIPT_FROM_SERIAL_SOURCE_NAME)
+WRITE_EXECUTABLES_TO_SERIAL_SCRIPT_NAME = 'write_executables_to_serial.py'
+WRITE_EXECUTABLES_TO_SERIAL_SCRIPT_REL_PATH = os.path.join(
+    COMMUNICATIONS_DIR_NAME, WRITE_EXECUTABLES_TO_SERIAL_SCRIPT_NAME)
 RUN_QEMU_AND_WORKLOAD_REL_PATH = os.path.join(
     COMMUNICATIONS_DIR_NAME, RUN_QEMU_AND_WORKLOAD_SCRIPT_NAME)
 RUN_WORKLOAD_NATIVELY_REL_PATH = os.path.join(
@@ -33,7 +36,7 @@ def execute_cmd_in_dir(cmd, dir_path='.'):
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description='Build memory_tracer.\n\n'
-                'Run `python3.7 memory_tracer.py -h` for help about arguments '
+                'Run `memory_tracer.py -h` for help about arguments '
                 'that both memory_tracer.py and this script receive.')
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('--enable_debug',
@@ -78,10 +81,12 @@ if not os.path.isdir(to_run_on_guest_dir_path):
 
 run_qemu_and_workload_path = os.path.join(
     this_script_location, RUN_QEMU_AND_WORKLOAD_REL_PATH)
-os.chmod(run_qemu_and_workload_path, stat.S_IXUSR | stat.S_IRUSR)
+os.chmod(run_qemu_and_workload_path,
+         os.stat(run_qemu_and_workload_path).st_mode | stat.S_IXUSR | stat.S_IRUSR)
 run_workload_natively_path = os.path.join(
     this_script_location, RUN_WORKLOAD_NATIVELY_REL_PATH)
-os.chmod(run_workload_natively_path, stat.S_IXUSR | stat.S_IRUSR)
+os.chmod(run_workload_natively_path,
+         os.stat(run_workload_natively_path).st_mode | stat.S_IXUSR | stat.S_IRUSR)
 
 run_script_from_serial_source_path = os.path.join(
     this_script_location, RUN_SCRIPT_FROM_SERIAL_SOURCE_REL_PATH)
@@ -92,10 +97,18 @@ compile_cmd = (f'gcc -Werror -Wall -pedantic '
                f'-o {run_script_from_serial_elf_path}')
 execute_cmd_in_dir(compile_cmd, this_script_location)
 
+run_executables_to_serial_script_path = os.path.join(
+    this_script_location, WRITE_EXECUTABLES_TO_SERIAL_SCRIPT_REL_PATH)
+os.chmod(run_executables_to_serial_script_path,
+         os.stat(run_executables_to_serial_script_path).st_mode |
+         stat.S_IXUSR | stat.S_IRUSR)
+
 if not args.dont_compile_qemu:
     build_qemu_script_path = os.path.join(this_script_location,
                                           BUILD_QEMU_SCRIPT_NAME)
-    build_qemu_cmd = (f'python3.7 {build_qemu_script_path} '
+    os.chmod(build_qemu_script_path,
+             os.stat(build_qemu_script_path).st_mode | stat.S_IXUSR | stat.S_IRUSR)
+    build_qemu_cmd = (f'{build_qemu_script_path} '
                       f'{args.qemu_with_GMBEOO_path} {args.enable_debug}')
     execute_cmd_in_dir(build_qemu_cmd, this_script_location)
 
@@ -106,12 +119,15 @@ if args.run_tests:
             raise RuntimeError(f'--run_tests was specified, but '
                                f'--{arg_name} was not specified.')
     tests_dir_path = os.path.join(this_script_location, TESTS_DIR_NAME)
-    build_and_run_tests_script_path = os.path.join(
-        tests_dir_path, BUILD_AND_RUN_TESTS_SCRIPT_NAME)
     memory_tracer_script_path = os.path.join(
         this_script_location, QEMU_MEM_TRACER_SCRIPT_NAME)
-    
-    execute_cmd_in_dir(f'python3.7 {build_and_run_tests_script_path} '
+    os.chmod(memory_tracer_script_path,
+             os.stat(memory_tracer_script_path).st_mode | stat.S_IXUSR | stat.S_IRUSR)
+    build_and_run_tests_script_path = os.path.join(
+        tests_dir_path, BUILD_AND_RUN_TESTS_SCRIPT_NAME)
+    os.chmod(build_and_run_tests_script_path,
+             os.stat(build_and_run_tests_script_path).st_mode | stat.S_IXUSR | stat.S_IRUSR)
+    execute_cmd_in_dir(f'{build_and_run_tests_script_path} '
                        f'{memory_tracer_script_path} '
                        f'{args.qemu_with_GMBEOO_path} '
                        f'{args.guest_image_path} '
