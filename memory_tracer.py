@@ -61,7 +61,11 @@ def parse_cmd_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='Run a workload on a single-core QEMU guest while writing '
                     'optimized GMBE trace records to a FIFO or to an analysis '
-                    'tool.'
+                    'tool.\n'
+                    '(See https://csl-wiki.cs.technion.ac.il/mediawiki'
+                    '/index.php/Qemu_tracing '
+                    'for more high level info. Don\'t worry if you don\'t have '
+                    'permissions. There isn\'t any essential info there.)'
                     '\n\n'
                     '(memory_tracer.py assumes you have already run build.py '
                     'successfully. See SETUP_README for setup instructions.)'
