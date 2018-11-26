@@ -10,7 +10,7 @@ usage: memory_tracer.py [-h]
                         [--guest_RAM_in_MBs GUEST_RAM_IN_MBS] [--verbose]
                         guest_image_path snapshot_name qemu_with_GMBEOO_path
 
-Run a workload on a QEMU guest while writing optimized GMBE trace records to a FIFO or to an analysis tool.
+Run a workload on a single-core QEMU guest while writing optimized GMBE trace records to a FIFO or to an analysis tool.
 
 (memory_tracer.py assumes you have already run build.py successfully. See SETUP_README for setup instructions.)
 
@@ -246,4 +246,9 @@ future work (i.e. ideas for ways to improve memory_tracer):
    to store for each trace record in trace_buf whether it is valid or not. Then,
    you might also use x86's bit scan instructions to find the first invalid
    trace record.
+6. Make memory_tracer support also a multi-core guest. To do that, I think that
+   the main thing you would have to do is to think whether our code in
+   qemu_with_GMBEOO/trace/simple.c is thread safe (and change it if it isn't).
+   You would probably also want to add an identifier of the CPU that performed
+   the memory access to `struct GMBEOO_TraceRecord`.
 
