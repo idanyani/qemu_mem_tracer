@@ -21,8 +21,8 @@
 }
 
 #define PIPE_MAX_SIZE_ON_MY_UBUNTU      (1 << 20)
-#define OUR_ARR_LEN                     (10000)
-#define OUR_BUF_SIZE                    (OUR_ARR_LEN * sizeof(int))
+#define OUR_BUF_LEN                     (10000)
+#define OUR_BUF_SIZE                    (OUR_BUF_LEN * sizeof(int))
 
 
 
@@ -68,7 +68,7 @@ uint64_t our_buf_addr = 0;
 uint64_t our_buf_end_addr = 0;
 int argc_global;
 char **argv_global;
-int counter_arr[OUR_BUF_SIZE];
+int counter_arr[OUR_BUF_LEN];
 
 void handle_end_analysis_signal(int unused_signum) {
     PRINT_STR("-----begin analysis output-----");
@@ -98,7 +98,7 @@ void handle_end_analysis_signal(int unused_signum) {
            num_of_mem_accesses_by_non_CPL3_after_another_by_CPL3,
            num_of_CPL3_accesses_code_to_cpu_entry_area_after_by_CPL3);
     printf("counter_arr:\n");
-    for (int i = 0; i < OUR_ARR_LEN; ++i) {
+    for (int i = 0; i < OUR_BUF_LEN; ++i) {
         printf("%d,", counter_arr[i]);
     }
     printf("\n");
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
     int ret_val = 0;
     bool was_last_access_by_CPL3_code = false;
 
-    memset(counter_arr, 0, sizeof(counter_arr[0]) * OUR_ARR_LEN);
+    memset(counter_arr, 0, OUR_BUF_SIZE);
     argc_global = argc;
     argv_global = argv;
 

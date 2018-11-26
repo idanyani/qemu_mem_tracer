@@ -14,6 +14,7 @@ setup:
 - >> sudo apt-get install pkg-config
 - >> sudo apt-get install libglib2.0-dev
 - >> sudo apt-get install libpixman-1-dev
+- >> sudo apt-get install zlib1g-dev
 - >> chmod u+x qemu_mem_tracer/build.py
 - >> qemu_mem_tracer/build.py <qemu_with_GMBEOO_path>
 - Either ask orenmn@gmail.com for a qemu image for memory_tracer, or create
@@ -67,7 +68,5 @@ setup:
             + >> savevm ready_for_memory_tracer
         ~ Close qemu_with_GMBEOO.
 - >> qemu_mem_tracer/build.py <qemu_with_GMBEOO_path> --dont_compile_qemu --run_tests --guest_image_path <GUEST_IMAGE_PATH> --snapshot_name <SNAPSHOT_NAME>
-
-
-
-
+    * Note that if you use orenmn's guest image, then the snapshot name is
+      "ready_for_memory_tracer".
