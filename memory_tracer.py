@@ -538,7 +538,7 @@ if __name__ == '__main__':
                 this_script_location, RUN_WORKLOAD_NATIVELY_EXPECT_SCRIPT_REL_PATH)
             run_workload_cmd = [run_workload_natively_expect_script_path,
                                 executable1_path,
-                                args.verbose
+                                str(args.verbose),
                                 ]
 
             execute_cmd_in_dir(run_workload_cmd, temp_dir_path, sys.stdout)
