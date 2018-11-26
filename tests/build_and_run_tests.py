@@ -22,8 +22,8 @@ def execute_cmd_in_dir(cmd, dir_path):
     subprocess.run(cmd, check=True, cwd=dir_path)
 
 def does_dir_contain_c_files(dir_path):
-    return subprocess.run(['ls', f'{dir_path}/*.c', f'{dir_path}/*.C'],
-                          check=False, capture_output=True).stdout != b''
+    return subprocess.run(f'ls {dir_path}/*.c {dir_path}/*.C',
+                          shell=True, check=False, capture_output=True).stdout != b''
 
 def compile_c_files(dir_path):
     for root_dir_path, dir_names, file_fullnames in os.walk(dir_path):
