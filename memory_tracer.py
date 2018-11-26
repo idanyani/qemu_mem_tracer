@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 
 import sys
 import subprocess
@@ -59,8 +59,9 @@ def verify_arg_is_in_range(arg, arg_name, low, high):
 def parse_cmd_args():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description='Run a workload on a QEMU guest while writing optimized GMBE '
-                    'trace records to a FIFO or to an analysis tool.'
+        description='Run a workload on a single-core QEMU guest while writing '
+                    'optimized GMBE trace records to a FIFO or to an analysis '
+                    'tool.'
                     '\n\n'
                     '(memory_tracer.py assumes you have already run build.py '
                     'successfully. See SETUP_README for setup instructions.)'

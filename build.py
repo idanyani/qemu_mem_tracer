@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 
 import subprocess
 import os
@@ -41,7 +41,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('qemu_with_GMBEOO_path', type=str)
 parser.add_argument('--enable_debug',
                     action='store_const',
-                    const='--enable_debug', default='',
+                    const=['--enable_debug'], default=[],
                     help='If specified, `--enable-debug` is passed to the '
                          'configure script of qemu_with_GMBEOO, instead of: '
                          '`--disable-debug-mutex --disable-qom-cast-debug '
@@ -108,9 +108,8 @@ if not args.dont_compile_qemu:
                                           BUILD_QEMU_SCRIPT_NAME)
     os.chmod(build_qemu_script_path,
              os.stat(build_qemu_script_path).st_mode | stat.S_IXUSR | stat.S_IRUSR)
-    build_qemu_cmd = (build_qemu_script_path,
-                      args.qemu_with_GMBEOO_path,
-                      args.enable_debug)
+    build_qemu_cmd = [build_qemu_script_path,
+                      args.qemu_with_GMBEOO_path] + args.enable_debug
     execute_cmd_in_dir(build_qemu_cmd, this_script_location)
 
 
