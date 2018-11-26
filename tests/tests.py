@@ -928,13 +928,13 @@ def test_dont_use_nographic(this_script_location,
                        OUR_ARR_LEN, SMALL_NUM_OF_ITERS_OVER_OUR_ARR)
 
 # Remove the prefix '_' if you wish build_and_run_tests.py run this test.
-def test_toy_workload_duration_and_MAPS(this_script_location,
+def _test_toy_workload_duration_and_MAPS(this_script_location,
                                         memory_tracer_script_path,
                                         qemu_with_GMBEOO_path, guest_image_path,
                                         snapshot_name):
     workload_path = get_toy_elf_path(this_script_location,
-                                     'simple_user_memory_intensive_workload')
-                                     # 'simple_long_user_memory_intensive_workload')
+                                     # 'simple_user_memory_intensive_workload')
+                                     'simple_long_user_memory_intensive_workload')
     print_workload_durations_and_MAPS(
         this_script_location,
         memory_tracer_script_path,
@@ -946,7 +946,7 @@ def test_toy_workload_duration_and_MAPS(this_script_location,
         dont_add_communications=True)
 
 # Remove the prefix '_' if you wish build_and_run_tests.py run this test.
-def test_mcf_duration_and_MAPS(this_script_location,
+def _test_mcf_duration_and_MAPS(this_script_location,
                                memory_tracer_script_path,
                                qemu_with_GMBEOO_path, guest_image_path,
                                snapshot_name):
@@ -966,6 +966,6 @@ def test_mcf_duration_and_MAPS(this_script_location,
         workload_path_on_guest=mcf_path_on_guest,
         workload_path_on_host=mcf_runner_path_on_host,
         log_of_GMBE_tracing_ratio=10,
-        timeout=6
+        # timeout=6
         )
 
