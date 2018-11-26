@@ -246,8 +246,8 @@ future work (i.e. ideas for ways to improve memory_tracer):
    to store for each trace record in trace_buf whether it is valid or not. Then,
    you might also use x86's bit scan instructions to find the first invalid
    trace record.
-6. Make memory_tracer support also a multi-core guest. To do that, I think that
-   the main thing you would have to do is to think whether our code in
+6. Make memory_tracer support also a multi-core guest. I think that the main
+   thing you would have to do is to think whether our code in
    qemu_with_GMBEOO/trace/simple.c is thread safe (and change it if it isn't).
    You would probably also want to add an identifier of the CPU that performed
    the memory access to `struct GMBEOO_TraceRecord`.
