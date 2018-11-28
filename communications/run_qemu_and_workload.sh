@@ -113,12 +113,14 @@ debug_print "---start run_qemu_and_workload.sh---\n"
 #   The monitor is redirected to our process' stdin and stdout.
 #   /dev/ttyS0 of the guest is redirected to pseudo-terminal that qemu creates.
 #   The snapshot $snapshot_name is loaded immediately.
-debug_print "---starting qemu---\n"
+debug_print "---starting qemu by executing:---\n"
 if {$dont_use_nographic == "True"} {
+    debug_print "$qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m $guest_RAM_in_MBs -hda $guest_image_path -monitor stdio -serial pty -loadvm $snapshot_name\n"
     spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 \
         -m $guest_RAM_in_MBs -hda $guest_image_path -monitor stdio \
         -serial pty -loadvm $snapshot_name
 } else {
+    debug_print "$qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 -m $guest_RAM_in_MBs -hda $guest_image_path -nographic -serial pty -loadvm $snapshot_name\n"
     spawn $qemu_with_GMBEOO_dir_path/x86_64-softmmu/qemu-system-x86_64 \
         -m $guest_RAM_in_MBs -hda $guest_image_path -nographic \
         -serial pty -loadvm $snapshot_name
