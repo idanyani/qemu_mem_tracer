@@ -44,5 +44,5 @@ configure_cmd = ['./configure',
                  '--target-list=x86_64-softmmu',
                  '--enable-trace-backends=simple'] + args.debug_flag
 execute_cmd_in_dir(configure_cmd, qemu_with_GMBEOO_path)
-execute_cmd_in_dir('make', qemu_with_GMBEOO_path)
+execute_cmd_in_dir(['make', '-j4'], qemu_with_GMBEOO_path)
 

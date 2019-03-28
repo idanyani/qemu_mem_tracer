@@ -1,0 +1,51 @@
+[1] How do I work with QEMU? Does it have a graphic interface?
+        QEMU is an open source VM and has no graphic. 
+        All actions, like open an image, load snapshot, etc, are done with a textual window that is called Monitor.
+        You can learn about the commands here: https://en.wikibooks.org/wiki/QEMU/Monitor 
+        You don't need to download the qemu independently, one of the setup steps is cloning QEMU 3.0 
+        (every time you see in the tracer files the word QEMU, it refers to qemu_with_GMBEOO).
+    
+[2] Where should I run QEMU?
+        You will probably connect to a remote server (using ssh -X, see question [3]). If you use a Windows
+        computer, it is recommended to use a Linux VM, for example, VMware Workstation Player, which is free.
+        (Windows' bash interface doesn't work properly with VNC, which we will use in order to see the
+        guest's graphic window).
+    
+[3] Connect to a remote server by using ssh -X: (notice that the X is a capital letter)
+        The flag -X is needed in order to use the guest's graphical environment from the QEMU interface.
+        Therefore, in every terminal/tab that you use to work with qemu, don't forget the flag -X.
+        For example, if you work on the lab's servers, with out0.cslcs.technion.ac.il as a gateway to the
+        server tapuz20.cslcs.technion.ac.il:
+        >> ssh -X youtUserName@out0.cslcs.technion.ac.il
+        >> ssh -X ssh -X tapuz20.cslcs.technion.ac.il 
+           (you already logged in with your user, so it's not necessary to write it again).
+    
+[4] When I start QEMU with my image, I don't see the guest's terminal. Instead, I see the message: VNC server
+    running on ::1:5900. 
+        In order to see the guest's window, you need to connect to the VNC server in port 5900 
+        (which is the default port) and desktop 1.
+        As part of the installation steps, you installed a VNC tool that is called gvncviewer. 
+        What you need to do is to open a new/window (which connected to the server with ssh -X) 
+        and run the command: 
+        >> gvncviewer localhost::1   
+        After a few seconds, you should see that a new window was opened. This is the guest's window, 
+        and through this window you can use the guest's OS.
+        
+[5] If you face a problem, try to check these:
+        - Check in every tab/window that you don't accidentally try to run the same image from different sessions. 
+        - When you run QEMU, make sure that you don't change the memory size from 2560 (next to the flag -m ).
+        - When you run the tracer (e.g. the script qemu_mem_tracer/memory_tracer.py), check which flag you choose 
+          for the workload's path. If you choose --workload_path_on_guest then you need to transfer the workload's
+          files to the guest.
+          
+[6] How do I transfer files into the guest?       
+        You can make the transfer in 2 ways:
+        1) Connect with QEMU to the guest, and from the guest's terminal run:
+        >> scp yourUserName@10.0.2.2:~/fromHost/file ~/toGuest 
+           (10.0.2.2 is the host when you are inside the guest).
+        2) Create a new port to the guest: (I didn't use this option, but it also should work)
+        >> qemu-system-x86_64 -hda ubuntu.img -loadvm ready_for_memory_tracer <more_options...> -net user,hostfwd=tcp::22222-:22 -enable-kvm
+          (The -enabled-kvm flag makes the guest run in the hardware-assisted mode, rather than emulation only.
+           Connecting through ssh to the guest is slow, and Hardware-assisted mode accelerates it). 
+          From another terminal (in the server you work and run QEMU from):
+        >> scp -p 22222 ~/from/file localhost:~/to/

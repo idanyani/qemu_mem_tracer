@@ -133,7 +133,12 @@ optional arguments:
   --log_of_GMBE_block_len LOG_OF_GMBE_BLOCK_LEN
                         Log of the length of a GMBE_block, i.e. the number of
                         GMBE events in a GMBE_block. (It is used when
-                        determining whether to trace a GMBE event.)
+                        determining whether to trace a GMBE event).
+                        For example, if log_of_GMBE_block_len is 4, then the
+                        GMBE_block size is 2^4=16. If there were 64 memory
+                        accesses, then the tracer will have 4 blocks
+                        (GMBE_blocks) of memory accesses to trace, each block
+                        for 16 memory accesses.
   --log_of_GMBE_tracing_ratio LOG_OF_GMBE_TRACING_RATIO
                         Log of the ratio between the number of blocks of GMBE
                         events we trace to the total number of blocks. E.g. if
@@ -143,7 +148,7 @@ optional arguments:
                         so on. The default is 0, which means that the default
                         tracing ratio is 1, i.e. all of the blocks are traced.
   --timeout TIMEOUT     If specified, the workload would be stopped when the
-                        specified timeout elapses.
+                        specified timeout (in seconds) elapses.
   --dont_add_communications_with_host_to_workload
                         If specified, the workload would not be wrapped with
                         code that handles the required communications between

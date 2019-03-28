@@ -1,7 +1,9 @@
-setup:
+Setup:
+(Instead of running each command manually, you can use the script setup.sh )
+
 - >> git clone https://github.com/orenmn/qemu_with_GMBEOO
-- >> (cd qemu_with_GMBEOO && git submodule init && git submodule update --recursive && git checkout mem_tracer)
 - >> git clone https://github.com/orenmn/qemu_mem_tracer
+- >> cd qemu_with_GMBEOO && git submodule init && git submodule update --recursive && git checkout mem_tracer
 - >> sudo apt-get install python
 - Install python3.7. E.g. (according to
   https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get/865569#865569):
@@ -10,26 +12,38 @@ setup:
     * >> sudo apt-get install python3.7
 - Make sure python3.7 runs when you do: >> /usr/bin/env python3.7
 - >> sudo add-apt-repository universe
+- >> sudo apt-get install gvncviewer
 - >> sudo apt-get install expect
 - >> sudo apt-get install pkg-config
 - >> sudo apt-get install libglib2.0-dev
 - >> sudo apt-get install libpixman-1-dev
 - >> sudo apt-get install zlib1g-dev
-- >> sudo apt-get install libcurl4
-- >> qemu_mem_tracer/build.py <qemu_with_GMBEOO_path>
-- Either ask orenmn@gmail.com for a qemu image for memory_tracer, or create
-  one yourself:
-    * Download ubuntu-18.04.1-live-server-amd64.iso
-       (https://www.ubuntu.com/download/server).
+- >> sudo apt-get install libcurl4-gnutls-dev
+- >> ../qemu_mem_tracer/build.py <qemu_with_GMBEOO_path>
+    * There is no clear message that says that the compilation completed successfully. As long as you didn't 
+      see any error in the shell and the executable file qemu_with_GMBEOO/x86_64-softmmu/qemu-system-x86_64 was 
+      built, the compilation succeeded (In this case, even if you see errors in the config.log file, you can ignore them). 
+- Either use the ready qemu image for the memory tracer 
+  (ubuntu18-server.img, username: elinor, passward: 1234), or create one yourself:
+  (Even if you will use the ready image, I recommend to read this part, 
+  to know how to work with QEMU and see examples).
+    * Download ubuntu-18.04.2-live-server-amd64.iso (LTS version, and amd64 for 64 bit computers)
+        ~ >> wget http://releases.ubuntu.com/18.04/ubuntu-18.04.2-live-server-amd64.iso          
     * Create an "empty" image. E.g.:
         ~ >> qemu_with_GMBEOO/qemu-img create -f qcow2 vm_disk.qcow2 25G
           (See https://en.wikibooks.org/wiki/QEMU/Images#Creating_an_image and
           https://wiki.qemu.org/Hosts/Linux#Getting_the_source_code)
     * Install the Ubuntu Server on it. E.g.:
-        ~ >> qemu_with_GMBEOO/x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda vm_disk.qcow2 -cdrom ubuntu-18.04.1-live-server-amd64.iso -monitor stdio
+        ~ >> qemu_with_GMBEOO/x86_64-softmmu/qemu-system-x86_64 -enable-kvm -smp cores=4 -m 2560 -hda vm_disk.qcow2 -cdrom ubuntu-18.04.2-live-server-amd64.iso -boot d -monitor stdio
+            + If you get an error that related to kvm permission, run the following commands 
+             (and then run the command above again):        
+                * >> sudo modprobe kvm
+                * >> sudo modprobe kvm-intel
+                * >> sudo chmod a+w+r /dev/kvm
             + You can switch between the guest console and qemu monitor using
               Ctrl-a c, and terminate the emulator using Ctrl-a x. See
               https://qemu.weilnetz.de/doc/qemu-doc.html#mux_005fkeys.
+            + If you don't see the guest's terminal opens, see question [4]. 
             + If you get "cannot set up guest memory 'pc.ram': Cannot
               allocate memory", then 2560MB is too much for your machine to
               give qemu, so specify a smaller amount.
@@ -41,8 +55,23 @@ setup:
               diligently but silently): use the qemu’s monitor command
               `info registers` several times. If the registers change, then
               you should probably just wait.
-            + When you are done installing the Ubuntu server,
-              close qemu_with_GMBEOO.
+            + When you will finish all the installation steps the guest will make a restart. 
+              Then you will see some running lines and then a message that says: 
+              "Please remove the installation medium, then press ENTER:". 
+              What you need to do:
+                - In the qemu monitor, run the command: info block.
+                - Find the block's name that connected to the ubuntu iso file (for me it was ide1-cd0).
+                - Still in the qemu monitor, run: eject <block name> (for example: eject ide1-cd0).
+                - If you get an error, try again: : eject <block name>.
+                - To check that is worked run again: info block . 
+                  Now you should see next to the relevant block's name: "not inserted". 
+                - Now you can press ENTER in the guest window to continue the restart.
+              Or: (option 2)
+              - When you see the request to remove the installation medium, quit from the current QEMU running.
+              - Start QEMU with the command: 
+                 >> qemu_with_GMBEOO/x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda vm_disk.qcow2 -monitor stdio -serial pty
+              - Wait until the guest will finish the restart. 
+            + When you are done installing the Ubuntu server, close qemu_with_GMBEOO.
     * Start qemu_with_GMBEOO. E.g.:
         ~ >> qemu_with_GMBEOO/x86_64-softmmu/qemu-system-x86_64 -m 2560 -hda vm_disk.qcow2 -monitor stdio -serial pty
     * I highly recommend giving your qemu guest some time to completely
@@ -67,6 +96,5 @@ setup:
           you used to start qemu_with_GMBEOO). E.g.:
             + >> savevm ready_for_memory_tracer
         ~ Close qemu_with_GMBEOO.
-- >> qemu_mem_tracer/build.py <qemu_with_GMBEOO_path> --dont_compile_qemu --run_tests --guest_image_path <GUEST_IMAGE_PATH> --snapshot_name <SNAPSHOT_NAME>
-    * Note that if you use orenmn's guest image, then the snapshot name is
-      "ready_for_memory_tracer".
+- >> ../qemu_mem_tracer/build.py <qemu_with_GMBEOO_path> --dont_compile_qemu --run_tests --guest_image_path <GUEST_IMAGE_PATH> --snapshot_name <SNAPSHOT_NAME>
+    * Note that if you use the ready guest image, then the snapshot name is "ready_for_memory_tracer".
