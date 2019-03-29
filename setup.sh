@@ -5,13 +5,9 @@
 #  setup.sh <guest_image_path> <snapshot_name>	
 
 set -e 
-set -o pipefailcd
+set -o pipefail
 
-GUEST_IMAGE_PATH=$1
-SNAPSHOT_NAME=$2
-
-
-checkPackages() 
+checkPackages()
 {
     if (( "$#" < 1 )); then
         echo "Usage: $0 LIST_OF_PACKAGES"
@@ -21,7 +17,8 @@ checkPackages()
     packages="$@"
     declare -a packages_to_install
     for package in $packages; do
-        dpkg-query --show --showformat='${Status}' $package > /dev/null 2>&1
+        dpkg-query --show --showformat='${Status}' $package
+        echo ""
         if (( $? > 0 )); then
             packages_to_install+=($package)
         fi
@@ -41,6 +38,14 @@ checkPackages()
 
 }
 
+if (( "$#" < 2 )); then
+    echo "Usage: $0 <guest_image_path> <snapshot_name>"
+    exit -1
+fi
+
+
+GUEST_IMAGE_PATH=$1
+SNAPSHOT_NAME=$2
 
 checkPackages python python3.7 expect pkg-config libglib2.0-dev libpixman-1-dev zlib1g-dev libcurl4-gnutls-dev
 git clone https://github.com/orenmn/qemu_with_GMBEOO
@@ -60,3 +65,5 @@ sudo apt-get -y install zlib1g-dev
 sudo apt-get -y install libcurl4-gnutls-dev
 ../qemu_mem_tracer/build.py `pwd` 
 ../qemu_mem_tracer/build.py `pwd` --dont_compile_qemu --run_tests --guest_image_path $GUEST_IMAGE_PATH --snapshot_name $SNAPSHOT_NAME
+
+echo "Setup Completed successfully."
